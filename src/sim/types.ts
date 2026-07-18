@@ -102,6 +102,12 @@ export interface Subsystems {
   ecm: number
 }
 
+/** Navigační plán autopilota (nastavují rozkazy setCourse/intercept). */
+export type NavPlan =
+  | { kind: 'course'; dest: Vec2; arriveAtRest: boolean }
+  | { kind: 'intercept'; targetId: number }
+  | null
+
 /** Orientace boku vůči světu: heading = směr přídě (rad). */
 export interface ShipState {
   id: number
@@ -114,6 +120,8 @@ export interface ShipState {
   heading: number
   /** aktuální rozkazová akcelerace 0–1 (podíl max; 0.8 = standard) */
   throttle: number
+  /** aktivní navigační plán autopilota */
+  nav: NavPlan
   /** klín zapnut (vypnutý = stealth, nulová akcelerace, žádné bočníky) */
   wedgeOn: boolean
   /** aktivní senzory zapnuty */
