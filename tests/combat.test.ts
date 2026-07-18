@@ -54,7 +54,7 @@ function makeShip(id: number, classId: string, over: Partial<ShipState> = {}): S
 function makeMissile(id: number, targetId: number, over: Partial<MissileState> = {}): MissileState {
   return {
     id, side: 'enemy', def: 'std-shipkiller',
-    pos: vec(3_000_000, 0), vel: vec(-40_000, 0),
+    pos: vec(3_000_000, 0), vel: vec(-20_000, 0),
     targetId, mode: 1, driveRemaining: 60, phase: 'boost', lock: 1.0, salvoId: 1,
     ...over,
   }

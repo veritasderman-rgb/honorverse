@@ -65,7 +65,7 @@ export function applyBeamDamage(
   target.hull -= dmg
 
   // Zásah subsystémů: šance úměrná prošlému poškození, 1–2 systémy.
-  if (rand(state.rng) < Math.min(1, dmg / 30)) {
+  if (rand(state.rng) < Math.min(1, dmg / 45)) {
     const nHits = rand(state.rng) < 0.35 ? 2 : 1
     for (let i = 0; i < nHits; i++) {
       let key: keyof Subsystems
