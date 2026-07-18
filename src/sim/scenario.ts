@@ -74,6 +74,15 @@ function evalCondition(state: SimState, c: TriggerCondition): boolean {
       return byId(state, c.shipId)?.destroyed === true
     case 'flag':
       return c.flag !== undefined && state.flags[c.flag] === true
+    case 'wedgeOn': {
+      // splněno, když loď žije a má zapnutý klín (prozrazení — mise 4)
+      const ship = byId(state, c.shipId)
+      return !!ship && !ship.destroyed && ship.wedgeOn
+    }
+    case 'shipsDestroyedCount':
+      // splněno, když počet zničených lodí dané strany >= count
+      if (c.side === undefined || c.count === undefined) return false
+      return state.ships.filter(s => s.side === c.side && s.destroyed).length >= c.count
   }
 }
 
@@ -127,6 +136,16 @@ function applyAction(state: SimState, a: TriggerAction): void {
       }
       break
     }
+    case 'addObjective':
+      // nový úkol za běhu (zvraty misí 3/4) — id nesmí kolidovat s existujícím
+      if (a.objectiveId !== undefined && a.text !== undefined
+        && !state.objectives.some(o => o.id === a.objectiveId)) {
+        state.objectives.push({ id: a.objectiveId, text: a.text, state: 'open' })
+        state.events.push({
+          t: state.t, kind: 'objective', text: `Nový úkol: ${a.text}`, slowdown: true,
+        })
+      }
+      break
     case 'winMission':
     case 'loseMission':
       if (state.outcome === 'running') {

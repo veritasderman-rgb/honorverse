@@ -187,17 +187,23 @@ export interface SimEvent {
 
 export interface TriggerCondition {
   kind: 'time' | 'distanceBelow' | 'distanceAbove' | 'shipDestroyed' | 'flag'
+    | 'wedgeOn' | 'shipsDestroyedCount'
   t?: number
   shipA?: number
   shipB?: number
   distance?: number
   shipId?: number
   flag?: string
+  /** shipsDestroyedCount: strana, jejíž ztráty se počítají */
+  side?: Side
+  /** shipsDestroyedCount: splněno při počtu zničených lodí strany >= count */
+  count?: number
 }
 
 export interface TriggerAction {
   kind: 'message' | 'setDoctrine' | 'spawnShip' | 'revealClass' | 'setFlag'
     | 'objectiveComplete' | 'objectiveFail' | 'winMission' | 'loseMission'
+    | 'addObjective'
   text?: string
   shipId?: number
   doctrine?: string

@@ -6,6 +6,7 @@ import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { Panels, esc, fmtTime } from './ui/panels'
 import { UIController } from './ui/input'
+import { SCENARIOS } from './data/missions'
 import type { Scenario, SimState } from './sim/types'
 
 const canvas = document.getElementById('plot') as HTMLCanvasElement
@@ -18,6 +19,7 @@ const panels = new Panels(sidebar, topbar, a => controller.handleAction(a))
 const controller = new UIController(bridge, plot, panels)
 
 let outcomeShown = false
+let currentMissionId = ''
 
 function overlay(html: string): HTMLElement {
   const el = document.createElement('div')
@@ -25,6 +27,29 @@ function overlay(html: string): HTMLElement {
   el.innerHTML = `<div class="box">${html}</div>`
   document.body.appendChild(el)
   return el
+}
+
+/** první věta briefingu (do karty výběru mise) */
+function firstSentence(text: string): string {
+  const i = text.indexOf('.')
+  return i >= 0 ? text.slice(0, i + 1) : text
+}
+
+/** úvodní menu: seznam misí kampaně, kliknutí spouští bridge.start(id) */
+function showMissionSelect(): void {
+  const rows = Object.values(SCENARIOS).map(sc =>
+    `<div class="mission-row">`
+    + `<button data-mission="${esc(sc.id)}">${esc(sc.title)}</button>`
+    + `<div class="mission-desc">${esc(firstSentence(sc.briefing))}</div>`
+    + `</div>`,
+  ).join('')
+  const el = overlay(`<h2>VÝBĚR MISE</h2>${rows}`)
+  el.querySelectorAll<HTMLButtonElement>('button[data-mission]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.remove()
+      bridge.start(btn.dataset.mission!)
+    })
+  })
 }
 
 function showBriefing(sc: Scenario): void {
@@ -49,12 +74,22 @@ function showOutcome(state: SimState): void {
     `<h2 class="${win ? 'win' : 'lose'}">${win ? 'VÍTĚZSTVÍ' : 'PORÁŽKA'}</h2>`
     + `<div class="brief">Mise ukončena v čase ${fmtTime(state.t)}.</div>`
     + objs
-    + `<div style="margin-top:14px"><button id="btn-again">ZNOVU</button></div>`,
+    + `<div style="margin-top:14px">`
+    + `<button id="btn-again">ZNOVU</button> `
+    + `<button id="btn-menu">VÝBĚR MISE</button>`
+    + `</div>`,
   )
-  el.querySelector('#btn-again')?.addEventListener('click', () => location.reload())
+  // ZNOVU = reload se stejnou misí; VÝBĚR MISE = reload bez parametru → menu
+  el.querySelector('#btn-again')?.addEventListener('click', () => {
+    location.href = `${location.pathname}?mission=${encodeURIComponent(currentMissionId)}`
+  })
+  el.querySelector('#btn-menu')?.addEventListener('click', () => {
+    location.href = location.pathname
+  })
 }
 
 bridge.onReady = scenario => {
+  currentMissionId = scenario.id
   showBriefing(scenario)
   plot.start()
 }
@@ -68,4 +103,7 @@ bridge.onSnapshot = (state, compression) => {
   }
 }
 
-bridge.start('mission01')
+// start: ?mission=id přeskočí menu (tlačítko ZNOVU), jinak výběr mise
+const requested = new URLSearchParams(location.search).get('mission')
+if (requested && SCENARIOS[requested]) bridge.start(requested)
+else showMissionSelect()

@@ -34,6 +34,24 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 0, magazineCMs: 10,
     wedgeDetectionRange: 60_000_000, activeSensorRange: 2_000_000, ecm: 0.05,
   },
+  /** Q-ship: havenský pomocný křižník maskovaný jako obchodník — mise 3 (zvrat) */
+  'merch-qship': {
+    id: 'merch-qship', name: 'pomocný křižník (Q-ship)', hullCode: 'MERCH', tonnage: 3_000_000,
+    maxAccelG: 310, sidewallStrength: 15, hullPoints: 110,
+    tubesPerBroadside: 6, cmLaunchers: 6, pdlcClusters: 8,
+    energyMountsPerBroadside: 3, energyDamage: 30,
+    magazineMissiles: 140, magazineCMs: 160,
+    wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.35,
+  },
+  /** kurýrní loď: rychlá, beze zbraní — mise 4 (zvrat) */
+  'disp-courier': {
+    id: 'disp-courier', name: 'kurýrní loď', hullCode: 'DB', tonnage: 20_000,
+    maxAccelG: 560, sidewallStrength: 6, hullPoints: 25,
+    tubesPerBroadside: 0, cmLaunchers: 2, pdlcClusters: 2,
+    energyMountsPerBroadside: 0, energyDamage: 0,
+    magazineMissiles: 0, magazineCMs: 30,
+    wedgeDetectionRange: 80_000_000, activeSensorRange: 3_000_000, ecm: 0.25,
+  },
   /** „obchodník" s vojenským kompenzátorem — mise 1 (zvrat) */
   'merch-runner': {
     id: 'merch-runner', name: 'nákladní loď (?)', hullCode: 'MERCH', tonnage: 2_000_000,

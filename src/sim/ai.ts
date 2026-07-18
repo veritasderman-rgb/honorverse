@@ -132,6 +132,18 @@ function pirateOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
   rollOrders(state, ship, orders)
 }
 
+/** hunter: intercept nejbližší nepřátelské lodi JAKÉHOKOLI typu + standardní palba */
+function hunterOrders(state: SimState, ship: ShipState, hostiles: Contact[], orders: Order[]): void {
+  const near = nearest(ship, hostiles)
+  if (near) {
+    if (!(ship.nav?.kind === 'intercept' && ship.nav.targetId === near.c.shipId)) {
+      orders.push({ kind: 'intercept', shipId: ship.id, targetId: near.c.shipId })
+    }
+    fireOrders(ship, near, SALVO_RANGE_LO, 0, orders)
+  }
+  rollOrders(state, ship, orders)
+}
+
 /** eskorta: intercept nejbližší nepřátelské válečné lodi, palba dle dosahu */
 function escortOrders(state: SimState, ship: ShipState, hostiles: Contact[], orders: Order[]): void {
   // hrozba = vše, co prokazatelně NENÍ obchodník (neznámé kontakty jsou hrozba)
@@ -164,6 +176,7 @@ export function collectAIOrders(state: SimState): Order[] {
 
     if (doctrine === 'runner') runnerOrders(state, ship, hostiles, orders)
     else if (doctrine === 'pirate') pirateOrders(state, ship, hostiles, orders)
+    else if (doctrine === 'hunter') hunterOrders(state, ship, hostiles, orders)
     else if (doctrine === 'escort') escortOrders(state, ship, hostiles, orders)
   }
   return orders
