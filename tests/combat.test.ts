@@ -67,7 +67,7 @@ function makeMissile(id: number, targetId: number, over: Partial<MissileState> =
  */
 function runSalvoVsCA(seed: number, healthyDefense: boolean): { hits: number; rngS: number } {
   const state = makeState(seed)
-  const ca = makeShip(1, 'ca-star-knight', { hull: 1e9 })
+  const ca = makeShip(1, 'ca-bastion', { hull: 1e9 })
   if (!healthyDefense) {
     ca.subsystems = fullSubsystems(0) // vyřazená obrana
     ca.cms = 0
@@ -104,8 +104,8 @@ describe('rng (mulberry32)', () => {
 describe('launchSalvo', () => {
   it('respektuje šachty, munici a cooldown', () => {
     const state = makeState(1)
-    const dd = makeShip(1, 'dd-havoc', { missiles: 5 }) // 3 šachty na bok
-    const target = makeShip(2, 'ca-star-knight', { side: 'enemy', pos: vec(2_000_000, 0) })
+    const dd = makeShip(1, 'dd-vichr', { missiles: 5 }) // 3 šachty na bok
+    const target = makeShip(2, 'ca-bastion', { side: 'enemy', pos: vec(2_000_000, 0) })
     state.ships.push(dd, target)
 
     launchSalvo(state, dd, 2, 10, 1) // chce 10, šachty dovolí 3
@@ -129,7 +129,7 @@ describe('launchSalvo', () => {
 
   it('rakety dědí vektor lodi a sdílejí salvoId', () => {
     const state = makeState(2)
-    const dd = makeShip(1, 'dd-havoc', { pos: vec(100, 200), vel: vec(5000, -1000) })
+    const dd = makeShip(1, 'dd-vichr', { pos: vec(100, 200), vel: vec(5000, -1000) })
     state.ships.push(dd)
     launchSalvo(state, dd, 99, 3, 0)
     expect(state.missiles.length).toBe(3)
@@ -144,7 +144,7 @@ describe('launchSalvo', () => {
   })
 
   it('poškozené šachty snižují velikost salvy (lepší bok, floor)', () => {
-    const dd = makeShip(1, 'dd-havoc')
+    const dd = makeShip(1, 'dd-vichr')
     dd.subsystems.tubesPort = 0.4
     dd.subsystems.tubesStbd = 0.9
     expect(effectiveTubes(dd)).toBe(2) // floor(3 · 0.9)
@@ -183,7 +183,7 @@ describe('vrstvená obrana — statistika (200 seedů)', () => {
 describe('bočníky a aspekty', () => {
   it('bočník blokuje slabé paprsky na boku, hrdlo dostává plné poškození ·1.25', () => {
     const state = makeState(3)
-    const ca = makeShip(1, 'ca-star-knight') // sidewallStrength 22
+    const ca = makeShip(1, 'ca-bastion') // sidewallStrength 22
     state.ships.push(ca)
 
     applyBeamDamage(state, ca, 14, 'stbd') // 14 < 22 → pohlceno
@@ -195,7 +195,7 @@ describe('bočníky a aspekty', () => {
 
   it('oslabený bočník už paprsek propustí', () => {
     const state = makeState(4)
-    const ca = makeShip(1, 'ca-star-knight')
+    const ca = makeShip(1, 'ca-bastion')
     ca.subsystems.sidewallStbd = 0.3 // práh 6.6
     state.ships.push(ca)
     applyBeamDamage(state, ca, 14, 'stbd')
@@ -203,7 +203,7 @@ describe('bočníky a aspekty', () => {
   })
 
   it('attackAspect rozliší hrdlo, záď a boky', () => {
-    const ship = makeShip(1, 'ca-star-knight', { heading: 0 })
+    const ship = makeShip(1, 'ca-bastion', { heading: 0 })
     expect(attackAspect(ship, vec(1000, 0))).toBe('throat')
     expect(attackAspect(ship, vec(-1000, 0))).toBe('kilt')
     expect(attackAspect(ship, vec(0, 1000))).toBe('port')
@@ -212,8 +212,8 @@ describe('bočníky a aspekty', () => {
 
   it('energetická palba na max. dosah neprorazí zdravý bočník', () => {
     const state = makeState(5)
-    const dd = makeShip(1, 'dd-havoc', { pos: vec(0, 450_000) }) // z boku (port)
-    const ca = makeShip(2, 'ca-star-knight', { side: 'enemy' })
+    const dd = makeShip(1, 'dd-vichr', { pos: vec(0, 450_000) }) // z boku (port)
+    const ca = makeShip(2, 'ca-bastion', { side: 'enemy' })
     state.ships.push(dd, ca)
     fireEnergy(state, dd, ca)
     // 25 · ~0.26 ≈ 6.5 na paprsek < práh 22 → žádné poškození, ale výstřel proběhl
@@ -228,7 +228,7 @@ describe('bočníky a aspekty', () => {
 describe('poškození po subsystémech', () => {
   it('loď degraduje po částech a subsystémy padají dřív, než zemře', () => {
     const state = makeState(6)
-    const ca = makeShip(1, 'ca-star-knight')
+    const ca = makeShip(1, 'ca-bastion')
     state.ships.push(ca)
 
     let beamsToKill = 0
@@ -251,7 +251,7 @@ describe('poškození po subsystémech', () => {
 
   it('zničení vyvolá event shipDestroyed se slowdown', () => {
     const state = makeState(7)
-    const dd = makeShip(1, 'dd-havoc', { hull: 5 })
+    const dd = makeShip(1, 'dd-vichr', { hull: 5 })
     state.ships.push(dd)
     applyBeamDamage(state, dd, 30, 'throat')
     expect(dd.destroyed).toBe(true)

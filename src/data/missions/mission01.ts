@@ -1,23 +1,23 @@
 /**
- * Mise 1 — „Hlídka na Basilisku" (tutoriál, DD).
- * Celní kontrola u wormhole terminálu; „obchodník" Sirius má vojenský
+ * Mise 1 — „Hlídka u Strážné brány" (tutoriál, DD).
+ * Celní kontrola u wormhole terminálu; „obchodník" Cygnus má vojenský
  * kompenzátor a po výzvě prchá k hyperlimitu. Viz docs/GAME_DESIGN.md kap. 7.
  *
  * Id lodí (pořadí pole ships, od 1):
- *   1 = HMS Fearless (hráč), 2 = Sirius, 3 = bóje „Hyperlimit"
+ *   1 = ANS Dauntless (hráč), 2 = Cygnus, 3 = bóje „Hyperlimit"
  */
 import type { Scenario } from '../../sim/types'
 
-const FEARLESS = 1
-const SIRIUS = 2
+const DAUNTLESS = 1
+const CYGNUS = 2
 const BUOY = 3
 
 export const mission01: Scenario = {
   id: 'mission01',
-  title: 'Hlídka na Basilisku',
+  title: 'Hlídka u Strážné brány',
   briefing:
-    'HMS Fearless drží celní hlídku u basiliského wormhole terminálu. '
-    + 'Basilisk Control hlásí nákladní loď Sirius s podezřelým manifestem — '
+    'ANS Dauntless drží celní hlídku u wormhole terminálu Strážné brány. '
+    + 'Kontrola Brány hlásí nákladní loď Cygnus s podezřelým manifestem — '
     + 'proveďte kontrolu: přibližte se na 1 milion km a nedovolte jí '
     + 'opustit soustavu přes hyperlimit.',
   seed: 19881003, // pevný seed — determinismus
@@ -25,12 +25,12 @@ export const mission01: Scenario = {
   ships: [
     {
       // hráčův torpédoborec, v klidu u terminálu
-      classId: 'dd-havoc', side: 'player', name: 'HMS Fearless',
+      classId: 'dd-vichr', side: 'player', name: 'ANS Dauntless',
       pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'player',
     },
     {
       // „obchodník" — ve skutečnosti runner s vojenským kompenzátorem
-      classId: 'merch-runner', side: 'enemy', name: 'Sirius',
+      classId: 'merch-runner', side: 'enemy', name: 'Cygnus',
       pos: { x: 40_000_000, y: 0 }, vel: { x: 500, y: 0 }, doctrine: 'freighter',
     },
     {
@@ -48,16 +48,16 @@ export const mission01: Scenario = {
 
   triggers: [
     {
-      // zvrat: při přiblížení hráče Sirius odhodí masku a prchá
+      // zvrat: při přiblížení hráče Cygnus odhodí masku a prchá
       id: 'trg-runner-flees', once: true,
       conditions: [
-        { kind: 'distanceBelow', shipA: FEARLESS, shipB: SIRIUS, distance: 5_000_000 },
+        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: CYGNUS, distance: 5_000_000 },
       ],
       actions: [
-        { kind: 'message', text: 'Sirius zrychluje! Vojenský kompenzátor!' },
-        { kind: 'setDoctrine', shipId: SIRIUS, doctrine: 'runner' },
+        { kind: 'message', text: 'Cygnus zrychluje! Vojenský kompenzátor!' },
+        { kind: 'setDoctrine', shipId: CYGNUS, doctrine: 'runner' },
         { kind: 'setFlag', flag: 'runner-fleeing' },
-        { kind: 'revealClass', shipId: SIRIUS },
+        { kind: 'revealClass', shipId: CYGNUS },
       ],
     },
     {
@@ -65,39 +65,39 @@ export const mission01: Scenario = {
       id: 'trg-inspection-done', once: true,
       conditions: [
         { kind: 'flag', flag: 'runner-fleeing' },
-        { kind: 'distanceBelow', shipA: FEARLESS, shipB: SIRIUS, distance: 1_000_000 },
+        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: CYGNUS, distance: 1_000_000 },
       ],
       actions: [
         { kind: 'objectiveComplete', objectiveId: 'obj-inspect' },
       ],
     },
     {
-      // Sirius zničen ⇒ vítězství
-      id: 'trg-sirius-destroyed', once: true,
-      conditions: [{ kind: 'shipDestroyed', shipId: SIRIUS }],
+      // Cygnus zničen ⇒ vítězství
+      id: 'trg-cygnus-destroyed', once: true,
+      conditions: [{ kind: 'shipDestroyed', shipId: CYGNUS }],
       actions: [
-        { kind: 'message', text: 'Basilisk Control: dobrá práce.' },
+        { kind: 'message', text: 'Kontrola Brány: dobrá práce.' },
         { kind: 'objectiveComplete', objectiveId: 'obj-no-escape' },
         { kind: 'winMission' },
       ],
     },
     {
-      // Sirius doletěl k hyperlimitní bóji ⇒ únik, prohra
-      id: 'trg-sirius-escaped', once: true,
+      // Cygnus doletěl k hyperlimitní bóji ⇒ únik, prohra
+      id: 'trg-cygnus-escaped', once: true,
       conditions: [
-        { kind: 'distanceBelow', shipA: SIRIUS, shipB: BUOY, distance: 5_000_000 },
+        { kind: 'distanceBelow', shipA: CYGNUS, shipB: BUOY, distance: 5_000_000 },
       ],
       actions: [
         { kind: 'objectiveFail', objectiveId: 'obj-no-escape' },
-        { kind: 'loseMission', text: 'Sirius unikl do hyperprostoru.' },
+        { kind: 'loseMission', text: 'Cygnus unikl do hyperprostoru.' },
       ],
     },
     {
       // zničení hráče ⇒ prohra
       id: 'trg-player-destroyed', once: true,
-      conditions: [{ kind: 'shipDestroyed', shipId: FEARLESS }],
+      conditions: [{ kind: 'shipDestroyed', shipId: DAUNTLESS }],
       actions: [
-        { kind: 'loseMission', text: 'HMS Fearless byla zničena.' },
+        { kind: 'loseMission', text: 'ANS Dauntless byla zničena.' },
       ],
     },
   ],

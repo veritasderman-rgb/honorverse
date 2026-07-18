@@ -1,16 +1,16 @@
 /**
- * Mise 2 — „Konvoj Silesií" (eskorta, DD + 4 obchodníci).
+ * Mise 2 — „Konvoj Pomezím" (eskorta, DD + 4 obchodníci).
  * Ochrana konvoje proti pirátům; první raider je návnada — když se za ním
  * eskorta rozjede, z opačné strany konvoje startují dva další.
  * Lekce: pozice > agrese. Viz docs/GAME_DESIGN.md kap. 7.
  *
  * Id lodí (pořadí pole ships, od 1):
- *   1 = HMS Fearless (hráč), 2–5 = obchodníci, 6 = cílová bóje,
+ *   1 = ANS Dauntless (hráč), 2–5 = obchodníci, 6 = cílová bóje,
  *   7 = pirát Karakal; zvratem spawnuté 8 + 9 = piráti Šakal a Hyena.
  */
 import type { Scenario } from '../../sim/types'
 
-const FEARLESS = 1
+const DAUNTLESS = 1
 const MERCH = [2, 3, 4, 5]
 const BUOY = 6
 const PIRATE1 = 7
@@ -36,16 +36,16 @@ const winTrio = (trio: number[], n: number): Scenario['triggers'][0] => ({
   conditions: trio.map(id => ({ kind: 'flag' as const, flag: arrived(id) })),
   actions: [
     { kind: 'objectiveComplete', objectiveId: 'obj-convoy' },
-    { kind: 'winMission', text: 'Konvoj dosáhl cíle. Silesiánská trasa je zajištěna.' },
+    { kind: 'winMission', text: 'Konvoj dosáhl cíle. Trasa Pomezím je zajištěna.' },
   ],
 })
 
 export const mission02: Scenario = {
   id: 'mission02',
-  title: 'Konvoj Silesií',
+  title: 'Konvoj Pomezím',
   briefing:
-    'HMS Fearless eskortuje konvoj čtyř obchodních lodí silesiánským '
-    + 'prostorem k navigační bóji na okraji soustavy. Zpravodajství hlásí '
+    'ANS Dauntless eskortuje konvoj čtyř obchodních lodí Pomezím — '
+    + 'pirátským hraničním pásmem — k navigační bóji na okraji soustavy. Zpravodajství hlásí '
     + 'v oblasti pirátské nájezdníky. Drž krycí pozici mezi hrozbou '
     + 'a konvojem — intercepty trvají desítky minut a obchodníci se sami '
     + 'neubrání. Doveď k cíli aspoň tři ze čtyř lodí.',
@@ -54,7 +54,7 @@ export const mission02: Scenario = {
   ships: [
     {
       // hráčův torpédoborec, drží se u konvoje
-      classId: 'dd-havoc', side: 'player', name: 'HMS Fearless',
+      classId: 'dd-vichr', side: 'player', name: 'ANS Dauntless',
       pos: { x: 1_000_000, y: 0 }, vel: { x: 300, y: 0 }, doctrine: 'player',
     },
     // konvoj: formace s rozestupy ~200 tis. km, kurz na bóji
@@ -70,7 +70,7 @@ export const mission02: Scenario = {
     },
     {
       // pirát #1 — návnada; najíždí z boku (~30 mil. km od konvoje)
-      classId: 'cl-courageous', side: 'enemy', name: 'Karakal',
+      classId: 'cl-sokol', side: 'enemy', name: 'Karakal',
       pos: { x: 20_000_000, y: 30_000_000 }, vel: { x: 0, y: -200 },
       doctrine: 'pirate', activeSensors: true,
     },
@@ -86,7 +86,7 @@ export const mission02: Scenario = {
       // ZVRAT: eskorta se rozjela za návnadou → z opačné strany startují dva DD
       id: 'trg-ambush', once: true,
       conditions: [
-        { kind: 'distanceBelow', shipA: FEARLESS, shipB: PIRATE1, distance: 10_000_000 },
+        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: PIRATE1, distance: 10_000_000 },
       ],
       actions: [
         { kind: 'message', text: 'Další dva impelerové kontakty! Byla to návnada!' },
@@ -94,7 +94,7 @@ export const mission02: Scenario = {
         {
           kind: 'spawnShip',
           ship: {
-            classId: 'dd-havoc', side: 'enemy', name: 'Šakal',
+            classId: 'dd-vichr', side: 'enemy', name: 'Šakal',
             pos: { x: 25_000_000, y: -25_000_000 }, vel: { x: 0, y: 150 },
             doctrine: 'pirate', activeSensors: true,
           },
@@ -102,7 +102,7 @@ export const mission02: Scenario = {
         {
           kind: 'spawnShip',
           ship: {
-            classId: 'dd-havoc', side: 'enemy', name: 'Hyena',
+            classId: 'dd-vichr', side: 'enemy', name: 'Hyena',
             pos: { x: 32_000_000, y: -25_000_000 }, vel: { x: 0, y: 150 },
             doctrine: 'pirate', activeSensors: true,
           },
@@ -148,9 +148,9 @@ export const mission02: Scenario = {
     {
       // prohra: zničení hráče
       id: 'trg-player-destroyed', once: true,
-      conditions: [{ kind: 'shipDestroyed', shipId: FEARLESS }],
+      conditions: [{ kind: 'shipDestroyed', shipId: DAUNTLESS }],
       actions: [
-        { kind: 'loseMission', text: 'HMS Fearless byla zničena.' },
+        { kind: 'loseMission', text: 'ANS Dauntless byla zničena.' },
       ],
     },
   ],

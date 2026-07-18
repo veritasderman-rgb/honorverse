@@ -29,14 +29,14 @@ describe('spawnShip', () => {
   it('přiděluje id dle pořadí pole ships od 1 a plní výchozí hodnoty z defs', () => {
     const scenario = makeScenario({
       ships: [
-        { classId: 'dd-havoc', side: 'player', name: 'A', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
+        { classId: 'dd-vichr', side: 'player', name: 'A', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
         { classId: 'merch-runner', side: 'enemy', name: 'B', pos: { x: 1, y: 0 }, vel: { x: 0, y: 0 } },
       ],
     })
     const state = build(scenario)
     expect(state.ships.map(s => s.id)).toEqual([1, 2])
     const dd = state.ships[0]
-    expect(dd.hull).toBe(60)                     // hullPoints dd-havoc
+    expect(dd.hull).toBe(60)                     // hullPoints dd-vichr
     expect(dd.missiles).toBe(90)                 // magazineMissiles
     expect(dd.throttle).toBe(STANDARD_THROTTLE)
     expect(dd.wedgeOn).toBe(true)
@@ -52,7 +52,7 @@ describe('senzory', () => {
   const twoShips = (targetPos: { x: number; y: number }, wedgeOn: boolean) =>
     build(makeScenario({
       ships: [
-        { classId: 'dd-havoc', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
+        { classId: 'dd-vichr', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
         { classId: 'merch-freighter', side: 'enemy', name: 'M', pos: targetPos, vel: { x: 0, y: 0 }, wedgeOn },
       ],
     }))
@@ -81,7 +81,7 @@ describe('senzory', () => {
   it('age odpovídá vzdálenosti/C a pozice je zpožděný obraz', () => {
     const state = build(makeScenario({
       ships: [
-        { classId: 'dd-havoc', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
+        { classId: 'dd-vichr', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
         { classId: 'merch-freighter', side: 'enemy', name: 'M', pos: { x: 10_000_000, y: 0 }, vel: { x: 500, y: 0 } },
       ],
     }))
@@ -127,7 +127,7 @@ describe('senzory', () => {
 describe('triggery', () => {
   const scenarioWithTriggers = (): Scenario => makeScenario({
     ships: [
-      { classId: 'dd-havoc', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
+      { classId: 'dd-vichr', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
       { classId: 'merch-runner', side: 'enemy', name: 'R', pos: { x: 2_000_000, y: 0 }, vel: { x: 0, y: 0 } },
     ],
     objectives: [{ id: 'obj-a', text: 'Úkol A', state: 'open' }],
@@ -196,8 +196,8 @@ describe('triggery', () => {
 describe('AI doktríny', () => {
   const runnerScenario = (playerPos: { x: number; y: number }) => makeScenario({
     ships: [
-      { classId: 'dd-havoc', side: 'player', name: 'DD', pos: playerPos, vel: { x: 0, y: 0 } },
-      { classId: 'merch-runner', side: 'enemy', name: 'Sirius', pos: { x: 40_000_000, y: 0 }, vel: { x: 500, y: 0 }, doctrine: 'runner' },
+      { classId: 'dd-vichr', side: 'player', name: 'DD', pos: playerPos, vel: { x: 0, y: 0 } },
+      { classId: 'merch-runner', side: 'enemy', name: 'Cygnus', pos: { x: 40_000_000, y: 0 }, vel: { x: 500, y: 0 }, doctrine: 'runner' },
     ],
   })
 
@@ -237,7 +237,7 @@ describe('AI doktríny', () => {
   it('freighter a buoy negenerují rozkazy', () => {
     const state = build(makeScenario({
       ships: [
-        { classId: 'dd-havoc', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
+        { classId: 'dd-vichr', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
         { classId: 'merch-freighter', side: 'enemy', name: 'M', pos: { x: 1_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'freighter' },
         { classId: 'merch-freighter', side: 'neutral', name: 'B', pos: { x: 2_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'buoy', wedgeOn: false },
       ],
@@ -250,7 +250,7 @@ describe('AI doktríny', () => {
     const state = build(makeScenario({
       ships: [
         { classId: 'merch-freighter', side: 'player', name: 'Obchodník', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
-        { classId: 'cl-courageous', side: 'enemy', name: 'Pirát', pos: { x: 10_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'pirate', activeSensors: true },
+        { classId: 'cl-sokol', side: 'enemy', name: 'Pirát', pos: { x: 10_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'pirate', activeSensors: true },
       ],
     }))
     runSensors(state)
@@ -269,14 +269,14 @@ describe('AI doktríny', () => {
   })
 })
 
-describe('mise 1 — Hlídka na Basilisku', () => {
+describe('mise 1 — Hlídka u Strážné brány', () => {
   it('je registrovaná v SCENARIOS a má 3 lodě + 2 objectives', () => {
     expect(SCENARIOS['mission01']).toBe(mission01)
     expect(mission01.ships).toHaveLength(3)
     expect(mission01.objectives).toHaveLength(2)
   })
 
-  it('zvrat: přiblížení na 5 mil. km přepne Sirius na runnera a odhalí třídu', () => {
+  it('zvrat: přiblížení na 5 mil. km přepne Cygnus na runnera a odhalí třídu', () => {
     const scenario = structuredClone(mission01)
     const state = build(scenario)
     // hráč se přiblížil na 4 mil. km
@@ -293,7 +293,7 @@ describe('mise 1 — Hlídka na Basilisku', () => {
     expect(c?.classGuess).toBe('merch-runner')
   })
 
-  it('zničení Siriusu vyhrává misi, dojezd k bóji prohrává', () => {
+  it('zničení Cygnusu vyhrává misi, dojezd k bóji prohrává', () => {
     // výhra
     let scenario = structuredClone(mission01)
     let state = build(scenario)
@@ -302,7 +302,7 @@ describe('mise 1 — Hlídka na Basilisku', () => {
     expect(state.outcome).toBe('win')
     expect(state.objectives.find(o => o.id === 'obj-no-escape')?.state).toBe('done')
 
-    // prohra: Sirius u hyperlimitní bóje
+    // prohra: Cygnus u hyperlimitní bóje
     scenario = structuredClone(mission01)
     state = build(scenario)
     state.ships[1].pos = { x: 247_000_000, y: 0 }

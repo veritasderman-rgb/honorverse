@@ -2,24 +2,24 @@ import type { ShipClassDef, MissileDef } from '../sim/types'
 
 /** Třídy lodí — éra knih 1–6, hodnoty viz docs/GAME_DESIGN.md kap. 2. */
 export const SHIP_CLASSES: Record<string, ShipClassDef> = {
-  'dd-havoc': {
-    id: 'dd-havoc', name: 'třída Havoc', hullCode: 'DD', tonnage: 75_000,
+  'dd-vichr': {
+    id: 'dd-vichr', name: 'třída Vichr', hullCode: 'DD', tonnage: 75_000,
     maxAccelG: 520, sidewallStrength: 12, hullPoints: 60,
     tubesPerBroadside: 3, cmLaunchers: 4, pdlcClusters: 6,
     energyMountsPerBroadside: 2, energyDamage: 25,
     magazineMissiles: 90, magazineCMs: 120,
     wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35,
   },
-  'cl-courageous': {
-    id: 'cl-courageous', name: 'třída Courageous', hullCode: 'CL', tonnage: 130_000,
+  'cl-sokol': {
+    id: 'cl-sokol', name: 'třída Sokol', hullCode: 'CL', tonnage: 130_000,
     maxAccelG: 505, sidewallStrength: 16, hullPoints: 90,
     tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
     energyMountsPerBroadside: 3, energyDamage: 30,
     magazineMissiles: 150, magazineCMs: 180,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4,
   },
-  'ca-star-knight': {
-    id: 'ca-star-knight', name: 'třída Star Knight', hullCode: 'CA', tonnage: 300_000,
+  'ca-bastion': {
+    id: 'ca-bastion', name: 'třída Bastion', hullCode: 'CA', tonnage: 300_000,
     maxAccelG: 490, sidewallStrength: 22, hullPoints: 150,
     tubesPerBroadside: 8, cmLaunchers: 10, pdlcClusters: 12,
     energyMountsPerBroadside: 4, energyDamage: 40,
@@ -34,7 +34,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 0, magazineCMs: 10,
     wedgeDetectionRange: 60_000_000, activeSensorRange: 2_000_000, ecm: 0.05,
   },
-  /** Q-ship: havenský pomocný křižník maskovaný jako obchodník — mise 3 (zvrat) */
+  /** Q-ship: direktoriátní pomocný křižník maskovaný jako obchodník — mise 3 (zvrat) */
   'merch-qship': {
     id: 'merch-qship', name: 'pomocný křižník (Q-ship)', hullCode: 'MERCH', tonnage: 3_000_000,
     maxAccelG: 310, sidewallStrength: 15, hullPoints: 110,
@@ -64,7 +64,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
 }
 
 export const MISSILES: Record<string, MissileDef> = {
-  /** standardní útočná raketa éry (Mk padesátky) */
+  /** standardní útočná raketa éry */
   'std-shipkiller': {
     id: 'std-shipkiller', name: 'útočná raketa',
     accelG: [46_000, 92_000], driveTime: [180, 60],

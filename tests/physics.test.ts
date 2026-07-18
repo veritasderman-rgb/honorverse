@@ -24,8 +24,8 @@ function makeShip(over: Partial<ShipState> = {}): ShipState {
   return {
     id: 1,
     side: 'player',
-    classId: 'dd-havoc',
-    name: 'HMS Test',
+    classId: 'dd-vichr',
+    name: 'ANS Test',
     pos: vec(0, 0),
     vel: vec(0, 0),
     heading: 0,
@@ -62,8 +62,8 @@ function makeState(ships: ShipState[]): SimState {
   }
 }
 
-/** plná akcelerace DD Havoc (km/s²) */
-const DD_ACCEL = SHIP_CLASSES['dd-havoc']!.maxAccelG * G
+/** plná akcelerace DD Vichr (km/s²) */
+const DD_ACCEL = SHIP_CLASSES['dd-vichr']!.maxAccelG * G
 
 describe('updateShipPhysics — akcelerace', () => {
   it('zrychluje po headingu k cíli kurzu (semi-implicitní Euler)', () => {

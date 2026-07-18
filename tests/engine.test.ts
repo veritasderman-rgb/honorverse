@@ -8,17 +8,17 @@ import { SIM_DT } from '../src/sim/constants'
 import { dist } from '../src/sim/vec'
 import { mission01 } from '../src/data/missions/mission01'
 
-const FEARLESS = 1
-const SIRIUS = 2
+const DAUNTLESS = 1
+const CYGNUS = 2
 
-/** vzdálenost hráč–Sirius */
+/** vzdálenost hráč–Cygnus */
 const gap = (state: SimState): number =>
   dist(state.ships[0].pos, state.ships[1].pos)
 
-/** počáteční rozkazy hráče: plný tah + intercept Siriusu */
+/** počáteční rozkazy hráče: plný tah + intercept Cygnusu */
 function openingOrders(state: SimState): void {
-  sim.applyOrder(state, { kind: 'setThrottle', shipId: FEARLESS, throttle: 1 })
-  sim.applyOrder(state, { kind: 'intercept', shipId: FEARLESS, targetId: SIRIUS })
+  sim.applyOrder(state, { kind: 'setThrottle', shipId: DAUNTLESS, throttle: 1 })
+  sim.applyOrder(state, { kind: 'intercept', shipId: DAUNTLESS, targetId: CYGNUS })
 }
 
 /** bojová logika hráče v jednom ticku: salva kdykoli to cooldown a dosah dovolí */
@@ -26,7 +26,7 @@ function fightStep(state: SimState): void {
   const player = state.ships[0]
   if (player.destroyed) return
   if (player.tubeCooldown <= 0 && gap(state) < 6_000_000) {
-    sim.applyOrder(state, { kind: 'launchSalvo', shipId: FEARLESS, targetId: SIRIUS, count: 6, mode: 0 })
+    sim.applyOrder(state, { kind: 'launchSalvo', shipId: DAUNTLESS, targetId: CYGNUS, count: 6, mode: 0 })
   }
 }
 
@@ -44,7 +44,7 @@ describe('determinismus', () => {
   })
 })
 
-describe('E2E mise 1 — Hlídka na Basilisku', () => {
+describe('E2E mise 1 — Hlídka u Strážné brány', () => {
   it('intercept → zvrat → pronásledování → souboj → konec mise', () => {
     const state = sim.create(mission01)
     expect(state.ships.map(s => s.id)).toEqual([1, 2, 3])
@@ -61,7 +61,7 @@ describe('E2E mise 1 — Hlídka na Basilisku', () => {
     expect(state.ships[1].doctrine).toBe('runner')
     expect(state.events.some(e => e.kind === 'message' && e.text.includes('Vojenský kompenzátor'))).toBe(true)
 
-    // (b) Sirius zrychluje pryč (+x)
+    // (b) Cygnus zrychluje pryč (+x)
     const vx0 = state.ships[1].vel.x
     for (let i = 0; i < 1200 && state.outcome === 'running'; i++) {
       sim.tick(state, SIM_DT)
@@ -70,21 +70,21 @@ describe('E2E mise 1 — Hlídka na Basilisku', () => {
     expect(state.ships[1].vel.x).toBeGreaterThan(vx0)
 
     // (c) hráč se drží na dostřel a pálí salvy — boj reálně probíhá
-    const siriusFullHull = 70 // merch-runner hullPoints
+    const cygnusFullHull = 70 // merch-runner hullPoints
     while (state.outcome === 'running' && state.t < 6 * 3600) {
       sim.tick(state, SIM_DT)
       fightStep(state)
     }
     expect(state.ships[0].missiles).toBeLessThan(90) // salvy odešly
     expect(
-      state.outcome !== 'running' || state.ships[1].hull < siriusFullHull,
+      state.outcome !== 'running' || state.ships[1].hull < cygnusFullHull,
     ).toBe(true)
 
-    // (d) deterministický výsledek: Sirius zničen, mise vyhrána do ~6 h
+    // (d) deterministický výsledek: Cygnus zničen, mise vyhrána do ~6 h
     expect(state.outcome).toBe('win')
     expect(state.ships[1].destroyed).toBe(true)
     expect(state.objectives.find(o => o.id === 'obj-no-escape')?.state).toBe('done')
-    expect(state.events.some(e => e.kind === 'shipDestroyed' && e.shipId === SIRIUS)).toBe(true)
+    expect(state.events.some(e => e.kind === 'shipDestroyed' && e.shipId === CYGNUS)).toBe(true)
   })
 })
 
@@ -92,7 +92,7 @@ describe('applyOrder — validace', () => {
   it('rozkaz zničené lodi je ignorován', () => {
     const state = sim.create(mission01)
     state.ships[0].destroyed = true
-    sim.applyOrder(state, { kind: 'setThrottle', shipId: FEARLESS, throttle: 0.1 })
+    sim.applyOrder(state, { kind: 'setThrottle', shipId: DAUNTLESS, throttle: 0.1 })
     expect(state.ships[0].throttle).not.toBe(0.1)
     sim.applyOrder(state, { kind: 'setCourse', shipId: 999, dest: { x: 0, y: 0 }, arriveAtRest: false })
     expect(state.ships.every(s => s.id !== 999)).toBe(true)
@@ -100,16 +100,16 @@ describe('applyOrder — validace', () => {
 
   it('setThrottle se ořezává na 0–1', () => {
     const state = sim.create(mission01)
-    sim.applyOrder(state, { kind: 'setThrottle', shipId: FEARLESS, throttle: 5 })
+    sim.applyOrder(state, { kind: 'setThrottle', shipId: DAUNTLESS, throttle: 5 })
     expect(state.ships[0].throttle).toBe(1)
-    sim.applyOrder(state, { kind: 'setThrottle', shipId: FEARLESS, throttle: -3 })
+    sim.applyOrder(state, { kind: 'setThrottle', shipId: DAUNTLESS, throttle: -3 })
     expect(state.ships[0].throttle).toBe(0)
   })
 
   it('launchSalvo na zničený cíl neodpálí nic', () => {
     const state = sim.create(mission01)
     state.ships[1].destroyed = true
-    sim.applyOrder(state, { kind: 'launchSalvo', shipId: FEARLESS, targetId: SIRIUS, count: 6, mode: 0 })
+    sim.applyOrder(state, { kind: 'launchSalvo', shipId: DAUNTLESS, targetId: CYGNUS, count: 6, mode: 0 })
     expect(state.missiles).toHaveLength(0)
     expect(state.ships[0].missiles).toBe(90)
   })

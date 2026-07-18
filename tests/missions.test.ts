@@ -29,7 +29,7 @@ describe('nové podmínky triggerů', () => {
   it('wedgeOn: splněno jen se zapnutým klínem živé lodi', () => {
     const scenario = makeScenario({
       ships: [{
-        classId: 'cl-courageous', side: 'player', name: 'A',
+        classId: 'cl-sokol', side: 'player', name: 'A',
         pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, wedgeOn: false,
       }],
       triggers: [{
@@ -58,10 +58,10 @@ describe('nové podmínky triggerů', () => {
   it('shipsDestroyedCount: počítá zničené lodě jen dané strany', () => {
     const scenario = makeScenario({
       ships: [
-        { classId: 'dd-havoc', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
+        { classId: 'dd-vichr', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
         { classId: 'merch-freighter', side: 'player', name: 'M1', pos: { x: 1, y: 0 }, vel: { x: 0, y: 0 } },
         { classId: 'merch-freighter', side: 'player', name: 'M2', pos: { x: 2, y: 0 }, vel: { x: 0, y: 0 } },
-        { classId: 'cl-courageous', side: 'enemy', name: 'E', pos: { x: 3, y: 0 }, vel: { x: 0, y: 0 } },
+        { classId: 'cl-sokol', side: 'enemy', name: 'E', pos: { x: 3, y: 0 }, vel: { x: 0, y: 0 } },
       ],
       triggers: [{
         id: 't-losses', once: true,
@@ -93,7 +93,7 @@ describe('registrace misí', () => {
   })
 })
 
-describe('mise 2 — Konvoj Silesií (E2E)', () => {
+describe('mise 2 — Konvoj Pomezím (E2E)', () => {
   it('obchodníci letí k cíli, zvrat spawne 2 piráty a piráti pronásledují konvoj', () => {
     const state = sim.create(mission02)
     expect(state.ships.map(s => s.id)).toEqual([1, 2, 3, 4, 5, 6, 7])
@@ -120,7 +120,7 @@ describe('mise 2 — Konvoj Silesií (E2E)', () => {
     for (const id of [8, 9]) {
       const p = state.ships.find(s => s.id === id)!
       expect(p.side).toBe('enemy')
-      expect(p.classId).toBe('dd-havoc')
+      expect(p.classId).toBe('dd-vichr')
       expect(p.doctrine).toBe('pirate')
       expect(p.pos.y).toBeLessThan(0) // opačná strana konvoje než návnada
     }
@@ -166,7 +166,7 @@ describe('mise 3 — Q-ship (E2E)', () => {
   it('zvrat vyžaduje čas > 1800 s I přiblížení pod 800 tis. km (AND)', () => {
     const scenario = structuredClone(mission03)
     const state = sim.create(scenario)
-    state.ships[0].pos = { x: 1_500_000, y: 0 } // 500 tis. km od Sirius-B
+    state.ships[0].pos = { x: 1_500_000, y: 0 } // 500 tis. km od Mercatoru
     updateTriggers(state, scenario)
     expect(state.flags['qship-revealed']).toBeUndefined() // čas ještě neuplynul
     state.t = 1800
@@ -261,7 +261,7 @@ describe('mise 4 — Tichý pozorovatel', () => {
     const state = sim.create(mission04)
     expect(state.ships[0].wedgeOn).toBe(false)
 
-    // 8 mil. km od hlídky Rousseau (CL, pasivní dosah 6 mil. km)
+    // 8 mil. km od hlídky Antares (CL, pasivní dosah 6 mil. km)
     state.ships[0].pos = { x: 60_000_000, y: 18_000_000 }
     runSensors(state)
     expect(contactsFor(state, 'enemy').some(c => c.shipId === 1)).toBe(false)
@@ -286,13 +286,13 @@ describe('mise 4 — Tichý pozorovatel', () => {
   it('přiblížení pod 4 mil. km k hlídce prozradí i bez klínu', () => {
     const scenario = structuredClone(mission04)
     const state = sim.create(scenario)
-    state.ships[0].pos = { x: 60_000_000, y: 13_500_000 } // 3.5 mil. km od Rousseau
+    state.ships[0].pos = { x: 60_000_000, y: 13_500_000 } // 3.5 mil. km od Antaresu
     updateTriggers(state, scenario)
     expect(state.flags['detected']).toBe(true)
     expect(state.ships[1].doctrine).toBe('hunter')
   })
 
-  it('zmapování všech hlídek spawne kurýra Ariel; záchrana a únik vyhrávají', () => {
+  it('zmapování všech hlídek spawne kurýra Hermes; záchrana a únik vyhrávají', () => {
     const scenario = structuredClone(mission04)
     const state = sim.create(scenario)
 
@@ -309,17 +309,17 @@ describe('mise 4 — Tichý pozorovatel', () => {
     expect(state.flags['detected']).toBeUndefined() // pořád nezpozorován
     expect(objState(state, 'obj-map')).toBe('done')
 
-    // (b) zvrat: kurýr Ariel spawnut + volitelný úkol přidán za běhu
-    expect(state.events.some(e => e.kind === 'message' && e.text.includes('Ariel'))).toBe(true)
-    const ariel = state.ships.find(s => s.id === 6)
-    expect(ariel).toBeDefined()
-    expect(ariel?.classId).toBe('disp-courier')
-    expect(ariel?.side).toBe('player')
-    expect(ariel?.wedgeOn).toBe(false) // driftuje bez pohonu
+    // (b) zvrat: kurýr Hermes spawnut + volitelný úkol přidán za běhu
+    expect(state.events.some(e => e.kind === 'message' && e.text.includes('Hermes'))).toBe(true)
+    const hermes = state.ships.find(s => s.id === 6)
+    expect(hermes).toBeDefined()
+    expect(hermes?.classId).toBe('disp-courier')
+    expect(hermes?.side).toBe('player')
+    expect(hermes?.wedgeOn).toBe(false) // driftuje bez pohonu
     expect(objState(state, 'obj-rescue')).toBe('open')
 
     // (c) záchrana: přiblížení na 500 tis. km ke kurýrovi
-    state.ships[0].pos = { x: ariel!.pos.x, y: ariel!.pos.y + 300_000 }
+    state.ships[0].pos = { x: hermes!.pos.x, y: hermes!.pos.y + 300_000 }
     updateTriggers(state, scenario)
     expect(objState(state, 'obj-rescue')).toBe('done')
     expect(state.events.some(e => e.text.includes('na palubě'))).toBe(true)

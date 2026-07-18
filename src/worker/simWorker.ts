@@ -19,17 +19,17 @@ const DEMO_SCENARIO: Scenario = {
   title: 'Cvičný střet',
   briefing:
     'CVIČNÁ MISE (demo)\n\n'
-    + 'HMS Fearless (CL) na hlídce zachytila neznámý impelerový kontakt. '
+    + 'ANS Dauntless (CL) na hlídce zachytila neznámý impelerový kontakt. '
     + 'Rozvědka hlásí v sektoru pirátský torpédoborec.\n\n'
     + 'Úkol: zachytit kontakt a zničit ho.',
   seed: 1337,
   ships: [
     {
-      classId: 'cl-courageous', side: 'player', name: 'HMS Fearless',
+      classId: 'cl-sokol', side: 'player', name: 'ANS Dauntless',
       pos: { x: 0, y: 0 }, vel: { x: 20, y: 0 }, heading: 0, doctrine: 'player',
     },
     {
-      classId: 'dd-havoc', side: 'enemy', name: 'Pirát',
+      classId: 'dd-vichr', side: 'enemy', name: 'Pirát',
       pos: { x: 40_000_000, y: 5_000_000 }, vel: { x: -80, y: 0 },
       heading: Math.PI, doctrine: 'attack',
     },

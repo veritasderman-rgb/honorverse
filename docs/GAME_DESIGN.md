@@ -4,6 +4,12 @@
 > ze světa Honor Harringtonové (David Weber). Kampaň o 10 misích, důraz na věrný
 > fyzikální model, ne na grafiku.
 
+> **Poznámka:** Hra samotná („Wall of Battle") běží z právních důvodů ve
+> vlastním původním světě — Hvězdné království Albion vs. Vegský direktoriát
+> (kompletní mapování jmen viz commit, který tento svět zavádí). Tento dokument
+> slouží jako rešerše předlohy a zdroj fyzikálního modelu; jména v něm zůstávají
+> původní, do hry se nepřenášejí.
+
 ---
 
 ## Obsah
