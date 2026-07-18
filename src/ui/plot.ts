@@ -1,0 +1,435 @@
+/**
+ * TacticalPlot — vektorový CIC displej (canvas 2D).
+ * Svět: km, y nahoru. Obrazovka: px, y dolů. Kamera sleduje vybranou
+ * vlastní loď (followId) + pan tažením, log-zoom kolečkem.
+ * Mezi snapshoty extrapoluje pozice vel·(reálný čas · komprese).
+ */
+import { SHIP_CLASSES } from '../data/defs'
+import { CM_INTERCEPT_RANGE, ENERGY_MAX_RANGE } from '../sim/constants'
+import type { Contact, ShipState, SimState, Vec2 } from '../sim/types'
+
+const ZOOM_MIN = 50        // km/px
+const ZOOM_MAX = 500_000   // km/px
+const PICK_PX = 15
+/** přibližná obálka útočných raket (km) — viz GAME_DESIGN kap. 2 */
+const MISSILE_ENVELOPE = 7_000_000
+
+const CLR = {
+  bg: '#05080a',
+  grid: '#0d1c10',
+  gridLabel: '#31563a',
+  own: '#58e06a',
+  ownDim: '#2f8a3c',
+  rolled: '#d8b34f',
+  wedge: '#8fe08a',
+  contactUnknown: '#e0c05a',
+  contactHostile: '#e06c5a',
+  missileOwn: '#9fe08a',
+  missileFoe: '#ff705c',
+  ring: '#2a5a2e',
+  ringLabel: '#4a7a4e',
+  sel: '#eaffea',
+  label: '#6fae74',
+  path: '#3a8a44',
+}
+
+interface Pickable { id: number; x: number; y: number }
+
+const trimNum = (v: number): string => {
+  const s = v.toFixed(1)
+  return s.endsWith('.0') ? s.slice(0, -2) : s
+}
+
+const fmtDist = (km: number): string => {
+  const a = Math.abs(km)
+  if (a >= 1e6) return trimNum(km / 1e6) + 'M km'
+  if (a >= 1e3) return trimNum(km / 1e3) + 'k km'
+  return Math.round(km) + ' km'
+}
+
+export class TacticalPlot {
+  readonly canvas: HTMLCanvasElement
+  private ctx: CanvasRenderingContext2D
+  private state: SimState | null = null
+  private snapAt = 0
+  private compression = 0
+  private kmPerPx = 20_000
+  /** posun kamery vůči sledované lodi (km) */
+  private pan: Vec2 = { x: 0, y: 0 }
+  /** loď, na které je střed (vybraná vlastní loď) */
+  followId: number | null = null
+  selectedId: number | null = null
+  /** klik do plotu: nejbližší loď/kontakt do ~15 px (jinak null) + světová pozice */
+  onPick: ((id: number | null, world: Vec2) => void) | null = null
+
+  private pickables: Pickable[] = []
+  private raf = 0
+  private drag: { x: number; y: number; moved: boolean } | null = null
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('canvas 2d nedostupný')
+    this.ctx = ctx
+
+    canvas.addEventListener('pointerdown', e => {
+      this.drag = { x: e.clientX, y: e.clientY, moved: false }
+      canvas.setPointerCapture(e.pointerId)
+    })
+    canvas.addEventListener('pointermove', e => {
+      if (!this.drag) return
+      const dx = e.clientX - this.drag.x
+      const dy = e.clientY - this.drag.y
+      if (!this.drag.moved && Math.hypot(dx, dy) < 4) return
+      this.drag.moved = true
+      this.pan.x -= dx * this.kmPerPx
+      this.pan.y += dy * this.kmPerPx
+      this.drag.x = e.clientX
+      this.drag.y = e.clientY
+    })
+    canvas.addEventListener('pointerup', e => {
+      const wasClick = this.drag !== null && !this.drag.moved
+      this.drag = null
+      if (!wasClick) return
+      const r = canvas.getBoundingClientRect()
+      const sx = e.clientX - r.left
+      const sy = e.clientY - r.top
+      this.onPick?.(this.pick(sx, sy), this.screenToWorld(sx, sy))
+    })
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault()
+      const r = canvas.getBoundingClientRect()
+      const sx = e.clientX - r.left
+      const sy = e.clientY - r.top
+      const before = this.screenToWorld(sx, sy)
+      const f = Math.exp(e.deltaY * 0.0012)
+      this.kmPerPx = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.kmPerPx * f))
+      const after = this.screenToWorld(sx, sy)
+      this.pan.x += before.x - after.x
+      this.pan.y += before.y - after.y
+    }, { passive: false })
+  }
+
+  setSnapshot(state: SimState, compression: number): void {
+    this.state = state
+    this.compression = compression
+    this.snapAt = performance.now()
+  }
+
+  setCourseCursor(on: boolean): void {
+    this.canvas.style.cursor = on ? 'crosshair' : 'default'
+  }
+
+  /** vycentruje kameru zpět na sledovanou loď */
+  recenter(): void {
+    this.pan = { x: 0, y: 0 }
+  }
+
+  start(): void {
+    if (this.raf) return
+    const loop = (): void => {
+      this.draw()
+      this.raf = requestAnimationFrame(loop)
+    }
+    this.raf = requestAnimationFrame(loop)
+  }
+
+  // ---------- transformace ----------
+
+  /** sim-sekundy uplynulé od snapshotu (extrapolace, se stropem) */
+  private extraDt(): number {
+    if (!this.state) return 0
+    const real = (performance.now() - this.snapAt) / 1000
+    return Math.min(real * this.compression, this.compression * 0.25 + 2)
+  }
+
+  private exPos(pos: Vec2, vel: Vec2, extra = 0): Vec2 {
+    const dt = this.extraDt() + extra
+    return { x: pos.x + vel.x * dt, y: pos.y + vel.y * dt }
+  }
+
+  private camCenter(): Vec2 {
+    let base: Vec2 = { x: 0, y: 0 }
+    if (this.state && this.followId != null) {
+      const ship = this.state.ships.find(sh => sh.id === this.followId)
+      if (ship) base = this.exPos(ship.pos, ship.vel)
+    }
+    return { x: base.x + this.pan.x, y: base.y + this.pan.y }
+  }
+
+  private worldToScreen(p: Vec2): Vec2 {
+    const w = this.canvas.clientWidth
+    const h = this.canvas.clientHeight
+    const c = this.camCenter()
+    return { x: w / 2 + (p.x - c.x) / this.kmPerPx, y: h / 2 - (p.y - c.y) / this.kmPerPx }
+  }
+
+  screenToWorld(sx: number, sy: number): Vec2 {
+    const w = this.canvas.clientWidth
+    const h = this.canvas.clientHeight
+    const c = this.camCenter()
+    return { x: c.x + (sx - w / 2) * this.kmPerPx, y: c.y - (sy - h / 2) * this.kmPerPx }
+  }
+
+  private pick(sx: number, sy: number): number | null {
+    let best: number | null = null
+    let bd = PICK_PX
+    for (const p of this.pickables) {
+      const d = Math.hypot(p.x - sx, p.y - sy)
+      if (d <= bd) { bd = d; best = p.id }
+    }
+    return best
+  }
+
+  // ---------- kreslení ----------
+
+  private draw(): void {
+    const dpr = window.devicePixelRatio || 1
+    const w = this.canvas.clientWidth
+    const h = this.canvas.clientHeight
+    if (w === 0 || h === 0) return
+    const pw = Math.round(w * dpr)
+    const ph = Math.round(h * dpr)
+    if (this.canvas.width !== pw || this.canvas.height !== ph) {
+      this.canvas.width = pw
+      this.canvas.height = ph
+    }
+    const ctx = this.ctx
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.fillStyle = CLR.bg
+    ctx.fillRect(0, 0, w, h)
+    ctx.font = '10px Consolas, Menlo, monospace'
+
+    this.pickables = []
+    this.drawGrid(ctx, w, h)
+
+    const s = this.state
+    if (!s) return
+
+    this.drawRangeRings(ctx)
+    for (const m of s.missiles) this.drawMissile(ctx, m.pos, m.vel, m.side === 'player', m.phase)
+    for (const ship of s.ships) {
+      if (ship.side === 'player' && !ship.destroyed) this.drawOwnShip(ctx, ship)
+    }
+    for (const c of s.contacts.player) this.drawContact(ctx, c)
+    this.drawSelectionMarker(ctx)
+  }
+
+  private drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    // krok mřížky: 1/2/5 × 10^n tak, aby dílek vyšel na ~120 px
+    const target = 120 * this.kmPerPx
+    const pow = Math.pow(10, Math.floor(Math.log10(target)))
+    let step = pow * 10
+    for (const m of [1, 2, 5, 10]) {
+      if (m * pow >= target) { step = m * pow; break }
+    }
+    const c = this.camCenter()
+    const x0 = c.x - (w / 2) * this.kmPerPx
+    const x1 = c.x + (w / 2) * this.kmPerPx
+    const y0 = c.y - (h / 2) * this.kmPerPx
+    const y1 = c.y + (h / 2) * this.kmPerPx
+
+    ctx.strokeStyle = CLR.grid
+    ctx.fillStyle = CLR.gridLabel
+    ctx.lineWidth = 1
+    for (let wx = Math.ceil(x0 / step) * step; wx <= x1; wx += step) {
+      const sx = w / 2 + (wx - c.x) / this.kmPerPx
+      ctx.beginPath()
+      ctx.moveTo(sx, 0)
+      ctx.lineTo(sx, h)
+      ctx.stroke()
+      ctx.fillText(fmtDist(wx), sx + 3, h - 6)
+    }
+    for (let wy = Math.ceil(y0 / step) * step; wy <= y1; wy += step) {
+      const sy = h / 2 - (wy - c.y) / this.kmPerPx
+      ctx.beginPath()
+      ctx.moveTo(0, sy)
+      ctx.lineTo(w, sy)
+      ctx.stroke()
+      ctx.fillText(fmtDist(wy), 4, sy - 3)
+    }
+    ctx.fillText('dílek = ' + fmtDist(step) + '   měřítko ' + fmtDist(this.kmPerPx) + '/px', 4, 14)
+  }
+
+  private drawRangeRings(ctx: CanvasRenderingContext2D): void {
+    const s = this.state
+    if (!s) return
+    // kružnice kolem vybrané vlastní lodi (jinak sledované)
+    let ship = s.ships.find(x => x.id === this.selectedId && x.side === 'player' && !x.destroyed)
+    if (!ship) ship = s.ships.find(x => x.id === this.followId && !x.destroyed)
+    if (!ship) return
+    const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
+    const rings: { r: number; label: string }[] = [
+      { r: MISSILE_ENVELOPE, label: 'rakety ~7M km' },
+      { r: CM_INTERCEPT_RANGE, label: 'CM 2,5M km' },
+      { r: ENERGY_MAX_RANGE, label: 'energie 500k km' },
+    ]
+    ctx.save()
+    ctx.setLineDash([4, 6])
+    ctx.strokeStyle = CLR.ring
+    ctx.fillStyle = CLR.ringLabel
+    for (const ring of rings) {
+      const rPx = ring.r / this.kmPerPx
+      if (rPx < 12 || rPx > 6000) continue
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, rPx, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.fillText(ring.label, p.x + rPx * 0.7071 + 4, p.y - rPx * 0.7071 - 4)
+    }
+    ctx.restore()
+  }
+
+  private drawVelVector(ctx: CanvasRenderingContext2D, p: Vec2, vel: Vec2, color: string): void {
+    const v = Math.hypot(vel.x, vel.y)
+    if (v < 0.5) return
+    // délka úměrná |vel| (dráha za 120 s ve světovém měřítku), s rozumným stropem
+    const px = Math.min(160, Math.max(8, (v * 120) / this.kmPerPx))
+    const nx = vel.x / v
+    const ny = vel.y / v
+    ctx.strokeStyle = color
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.lineTo(p.x + nx * px, p.y - ny * px)
+    ctx.stroke()
+  }
+
+  private drawHullIcon(ctx: CanvasRenderingContext2D, hullCode: string): void {
+    // lokální souřadnice: +x = příď
+    ctx.beginPath()
+    switch (hullCode) {
+      case 'DD':
+        ctx.moveTo(8, 0); ctx.lineTo(-6, 5); ctx.lineTo(-6, -5)
+        break
+      case 'MERCH':
+        ctx.moveTo(-7, -5); ctx.lineTo(7, -5); ctx.lineTo(7, 5); ctx.lineTo(-7, 5)
+        break
+      case 'CL':
+        ctx.moveTo(8, 0); ctx.lineTo(0, 5); ctx.lineTo(-8, 0); ctx.lineTo(0, -5)
+        break
+      default: // CA a těžší — větší kosočtverec
+        ctx.moveTo(10, 0); ctx.lineTo(0, 6); ctx.lineTo(-10, 0); ctx.lineTo(0, -6)
+        break
+    }
+    ctx.closePath()
+    ctx.stroke()
+  }
+
+  private drawWedge(ctx: CanvasRenderingContext2D): void {
+    // dva krátké oblouky nad/pod osou heading (lokálně: nad/pod osou x)
+    ctx.strokeStyle = CLR.wedge
+    ctx.beginPath()
+    ctx.arc(0, -6, 10, -2.5, -0.64)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(0, 6, 10, 0.64, 2.5)
+    ctx.stroke()
+  }
+
+  private drawOwnShip(ctx: CanvasRenderingContext2D, ship: ShipState): void {
+    const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
+    this.pickables.push({ id: ship.id, x: p.x, y: p.y })
+    const hull = SHIP_CLASSES[ship.classId]?.hullCode ?? 'DD'
+
+    // predikce dráhy: extrapolace 10 min, tečkovaně
+    const fut = this.worldToScreen(this.exPos(ship.pos, ship.vel, 600))
+    ctx.save()
+    ctx.strokeStyle = CLR.path
+    ctx.setLineDash([2, 6])
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.lineTo(fut.x, fut.y)
+    ctx.stroke()
+    ctx.restore()
+
+    this.drawVelVector(ctx, p, ship.vel, CLR.ownDim)
+
+    ctx.save()
+    ctx.translate(p.x, p.y)
+    ctx.rotate(-ship.heading) // svět y nahoru → obrazovka y dolů
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
+    this.drawHullIcon(ctx, hull)
+    if (ship.wedgeOn) this.drawWedge(ctx)
+    ctx.restore()
+
+    ctx.fillStyle = CLR.label
+    ctx.fillText(ship.name + (ship.activeSensors ? ' [AKT]' : ''), p.x + 12, p.y - 10)
+  }
+
+  private drawContact(ctx: CanvasRenderingContext2D, c: Contact): void {
+    // odhad polohy: poslední známá pozice + vel · (stáří dat + čas od snapshotu)
+    const est = this.exPos(c.pos, c.vel, c.age)
+    const p = this.worldToScreen(est)
+    this.pickables.push({ id: c.shipId, x: p.x, y: p.y })
+    const color = c.idQuality === 0 ? CLR.contactUnknown : CLR.contactHostile
+
+    // kroužek nejistoty ~ age · |vel|
+    const rKm = c.age * Math.hypot(c.vel.x, c.vel.y)
+    const rPx = Math.min(500, Math.max(6, rKm / this.kmPerPx))
+    ctx.save()
+    ctx.strokeStyle = color
+    ctx.globalAlpha = 0.45
+    ctx.setLineDash([2, 4])
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, rPx, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
+
+    this.drawVelVector(ctx, p, c.vel, color)
+
+    // značka: otevřený kosočtverec natočený po směru letu
+    const ang = Math.hypot(c.vel.x, c.vel.y) > 0.5 ? Math.atan2(c.vel.y, c.vel.x) : 0
+    ctx.save()
+    ctx.translate(p.x, p.y)
+    ctx.rotate(-ang)
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = color
+    ctx.beginPath()
+    ctx.moveTo(6, 0); ctx.lineTo(0, 6); ctx.lineTo(-6, 0); ctx.lineTo(0, -6)
+    ctx.closePath()
+    ctx.stroke()
+    ctx.restore()
+
+    const cls = c.idQuality === 0 ? '???' : (SHIP_CLASSES[c.classGuess]?.hullCode ?? c.classGuess)
+    ctx.fillStyle = color
+    ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
+  }
+
+  private drawMissile(ctx: CanvasRenderingContext2D, pos: Vec2, vel: Vec2, own: boolean, phase: string): void {
+    if (phase === 'dead') return
+    const ex = this.exPos(pos, vel)
+    const p = this.worldToScreen(ex)
+    const w = this.canvas.clientWidth
+    const h = this.canvas.clientHeight
+    if (p.x < -60 || p.x > w + 60 || p.y < -60 || p.y > h + 60) return
+    const color = own ? CLR.missileOwn : CLR.missileFoe
+    // stopa: 6 s zpět po vektoru
+    const tail = this.worldToScreen({ x: ex.x - vel.x * 6, y: ex.y - vel.y * 6 })
+    ctx.save()
+    ctx.globalAlpha = 0.5
+    ctx.strokeStyle = color
+    ctx.beginPath()
+    ctx.moveTo(tail.x, tail.y)
+    ctx.lineTo(p.x, p.y)
+    ctx.stroke()
+    ctx.restore()
+    ctx.fillStyle = color
+    ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3)
+  }
+
+  private drawSelectionMarker(ctx: CanvasRenderingContext2D): void {
+    if (this.selectedId == null) return
+    const p = this.pickables.find(x => x.id === this.selectedId)
+    if (!p) return
+    const r = 12
+    ctx.strokeStyle = CLR.sel
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    // rohové závorky
+    ctx.moveTo(p.x - r, p.y - r + 5); ctx.lineTo(p.x - r, p.y - r); ctx.lineTo(p.x - r + 5, p.y - r)
+    ctx.moveTo(p.x + r - 5, p.y - r); ctx.lineTo(p.x + r, p.y - r); ctx.lineTo(p.x + r, p.y - r + 5)
+    ctx.moveTo(p.x + r, p.y + r - 5); ctx.lineTo(p.x + r, p.y + r); ctx.lineTo(p.x + r - 5, p.y + r)
+    ctx.moveTo(p.x - r + 5, p.y + r); ctx.lineTo(p.x - r, p.y + r); ctx.lineTo(p.x - r, p.y + r - 5)
+    ctx.stroke()
+  }
+}

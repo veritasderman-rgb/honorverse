@@ -5,6 +5,7 @@
  */
 import { sim } from '../sim/engine'
 import { SIM_DT } from '../sim/constants'
+import { SCENARIOS } from '../data/missions'
 import type { Scenario, SimState, WorkerInMsg, WorkerOutMsg } from '../sim/types'
 
 /** interval smyčky (ms) */
@@ -46,19 +47,9 @@ const post = (msg: WorkerOutMsg): void => {
   ;(self as unknown as { postMessage(m: unknown): void }).postMessage(msg)
 }
 
-/**
- * Scénáře vznikají paralelně (src/data/missions.ts) — dynamický import,
- * aby worker fungoval i dřív, než modul existuje (fallback na demo).
- */
-async function loadScenario(id: string): Promise<Scenario> {
-  try {
-    const mod = (await import('../data/missions')) as { SCENARIOS?: Record<string, Scenario> }
-    const sc = mod.SCENARIOS?.[id]
-    if (sc) return sc
-  } catch {
-    /* modul misí zatím není — použij demo scénář */
-  }
-  return DEMO_SCENARIO
+/** Scénář z src/data/missions, fallback na demo pro vývoj UI. */
+function loadScenario(id: string): Scenario {
+  return SCENARIOS?.[id] ?? DEMO_SCENARIO
 }
 
 function sendSnapshot(): void {
@@ -70,15 +61,15 @@ function sendSnapshot(): void {
 self.onmessage = (e: MessageEvent<WorkerInMsg>) => {
   const msg = e.data
   switch (msg.kind) {
-    case 'init':
-      void loadScenario(msg.scenarioId).then(scenario => {
-        state = sim.create(scenario)
-        compression = 0
-        stepAcc = 0
-        post({ kind: 'ready', scenario })
-        sendSnapshot()
-      })
+    case 'init': {
+      const scenario = loadScenario(msg.scenarioId)
+      state = sim.create(scenario)
+      compression = 0
+      stepAcc = 0
+      post({ kind: 'ready', scenario })
+      sendSnapshot()
       break
+    }
     case 'order':
       if (state) sim.applyOrder(state, msg.order)
       break
