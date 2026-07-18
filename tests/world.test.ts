@@ -8,7 +8,7 @@ import { sim } from '../src/sim/engine'
 import { C, SENSOR_UPDATE_INTERVAL, STANDARD_THROTTLE } from '../src/sim/constants'
 import { updateSensors, contactsFor } from '../src/sim/sensors'
 import { collectAIOrders } from '../src/sim/ai'
-import { spawnShip, updateTriggers } from '../src/sim/scenario'
+import { updateTriggers } from '../src/sim/scenario'
 import { SCENARIOS } from '../src/data/missions'
 import { mission01 } from '../src/data/missions/mission01'
 
@@ -17,11 +17,9 @@ function makeScenario(partial: Partial<Scenario>): Scenario {
   return { id: 'test', title: 'Test', briefing: '', seed: 1, ships: [], objectives: [], triggers: [], ...partial }
 }
 
-/** postaví stav a naspawnuje lodě scénáře (id od 1 dle pořadí) */
+/** postaví stav — plný create už lodě scénáře spawnuje sám (id od 1 dle pořadí) */
 function build(scenario: Scenario): SimState {
-  const state = sim.create(scenario)
-  for (const spec of scenario.ships) spawnShip(state, spec)
-  return state
+  return sim.create(scenario)
 }
 
 /** vynutí přepočet senzorů (dt = celý interval) */
