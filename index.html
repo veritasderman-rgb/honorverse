@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Honorverse: Tactical</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #05080a; color: #9fd8a0; font-family: "Consolas", "Menlo", monospace; overflow: hidden; }
+    #app { display: flex; height: 100vh; }
+    #plot-container { flex: 1; position: relative; min-width: 0; }
+    #plot { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #sidebar { width: 320px; border-left: 1px solid #1c3a1e; padding: 8px; overflow-y: auto; font-size: 12px; }
+    #topbar { position: absolute; top: 0; left: 0; right: 0; padding: 4px 8px; font-size: 12px; pointer-events: none; z-index: 5; }
+    #topbar > * { pointer-events: auto; }
+    .panel { border: 1px solid #1c3a1e; margin-bottom: 8px; padding: 6px; }
+    .panel h3 { margin: 0 0 4px 0; font-size: 12px; color: #d8b34f; text-transform: uppercase; }
+    button { background: #0b1a0c; color: #9fd8a0; border: 1px solid #2a5a2e; font-family: inherit; font-size: 12px; cursor: pointer; padding: 2px 8px; }
+    button:hover { background: #14301662; }
+    button.active { background: #2a5a2e; color: #eaffea; }
+    .warn { color: #e06c5a; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="plot-container">
+      <canvas id="plot"></canvas>
+      <div id="topbar"></div>
+    </div>
+    <div id="sidebar"></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
