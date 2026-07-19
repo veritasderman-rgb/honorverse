@@ -81,6 +81,8 @@ export interface FireControl {
   driveMode: DriveMode
   /** interní stav enginu: cíl byl minulý tick v poháněné obálce (hrana pro hlášky) */
   engaged: boolean
+  /** autonomní salvy (fire-and-forget): nižší počáteční zámek, ale bez řídicího spoje */
+  autonomous?: boolean
 }
 
 /** Naplánovaná druhá vlna vrstvené salvy (HI follow-up časovaný na společný přílet). */
@@ -120,6 +122,10 @@ export interface MissileState {
   lock: number
   /** id salvy (rakety jedné salvy útočí koordinovaně) */
   salvoId: number
+  /** id lodi, která salvu řídí (řídicí spoj); undefined = bez řízení (testy) */
+  shooterId?: number
+  /** autonomní raketa (fire-and-forget): neeroduje bez kontaktu, bez dosahu řízení */
+  autonomous?: boolean
 }
 
 /** Poškoditelné subsystémy — hodnoty 0–1 (1 = plně funkční). */
@@ -226,9 +232,11 @@ export type Order =
   | { kind: 'setWedge'; shipId: number; on: boolean }
   | { kind: 'setActiveSensors'; shipId: number; on: boolean }
   | { kind: 'roll'; shipId: number; towards: number | null }
-  | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveMode }
+  | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveMode; autonomous?: boolean }
   /** vrstvená salva: hlavní vlna LO hned + follow-up HI časovaný na společný přílet */
   | { kind: 'launchLayered'; shipId: number; targetId: number; countLo: number; countHi: number }
+  /** přesměrování letící salvy (boost/ballistic) na nový cíl — zámek ×0.75, jen v dosahu řízení */
+  | { kind: 'retargetSalvo'; shipId: number; salvoId: number; newTargetId: number }
   | { kind: 'fireEnergy'; shipId: number; targetId: number }
   /** výzva ke kapitulaci — odpověď dorazí po 2·vzdálenost/C (pendingComms) */
   | { kind: 'demandSurrender'; shipId: number; targetId: number }

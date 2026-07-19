@@ -7,7 +7,7 @@
  */
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
 import {
-  C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, LOCK_LOST,
+  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, LOCK_LOST,
   PDLC_PK, PDLC_SATURATION, SATURATION_WINDOW,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
@@ -32,7 +32,18 @@ export function updateDefenses(state: SimState, dt: number): void {
     if (!target || target.destroyed) continue
     const tDef = SHIP_CLASSES[target.classId]
     if (dist(m.pos, target.pos) < tDef.activeSensorRange) {
-      m.lock -= tDef.ecm * target.subsystems.ecm * 0.01 * dt
+      // aktivní vedení: střelec s aktivními senzory a cílem v jejich dosahu
+      // drží track — ECM eroduje zámek řízené salvy pomaleji (×0.6)
+      let ecmFactor = 1
+      if (m.shooterId !== undefined && m.autonomous !== true) {
+        const shooter = state.ships.find(s => s.id === m.shooterId && !s.destroyed)
+        const sDef = shooter ? SHIP_CLASSES[shooter.classId] : undefined
+        if (shooter && sDef && shooter.activeSensors
+          && dist(shooter.pos, target.pos) < sDef.activeSensorRange) {
+          ecmFactor = ACTIVE_GUIDANCE_ECM_FACTOR
+        }
+      }
+      m.lock -= tDef.ecm * target.subsystems.ecm * 0.01 * ecmFactor * dt
       if (m.lock < LOCK_LOST) {
         m.phase = 'dead'
         state.events.push({
@@ -147,6 +158,8 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   state.events.push({
     // side = strana RAKETY (statistika i SFX), shipId = zasažená loď
     t: state.t, kind: 'missileHit', shipId: target.id, side: missile.side,
+    // zásah do lodi hráče je důležitá událost (UI auto-zpomalení)
+    slowdown: target.side === 'player',
     text: `${target.name}: zásah laserovou hlavicí (${hits}× paprsek, ${aspect})`,
   })
   for (let i = 0; i < hits; i++) {

@@ -118,7 +118,9 @@ describe('launchSalvo', () => {
     expect(state.missiles.length).toBe(3)
     expect(dd.missiles).toBe(2)
     expect(dd.tubeCooldown).toBe(TUBE_COOLDOWN)
-    expect(state.events.some(e => e.kind === 'launch' && e.slowdown)).toBe(true)
+    // odpaly salv už čas nezpomalují (auto-zpomalování řeší UI filtr)
+    expect(state.events.some(e => e.kind === 'launch')).toBe(true)
+    expect(state.events.some(e => e.kind === 'launch' && e.slowdown)).toBe(false)
 
     launchSalvo(state, dd, 2, 3, 1) // cooldown běží → nic
     expect(state.missiles.length).toBe(3)

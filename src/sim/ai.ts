@@ -4,6 +4,7 @@
  * NEaplikuje je — to dělá engine přes applyOrder.
  */
 import type { Contact, DriveMode, Order, ShipState, SimState, Side } from './types'
+import { AI_ACTIVE_SENSORS_RANGE } from './constants'
 import { add, angleDiff, angleOf, dist, norm, scale, sub, vec } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
 
@@ -45,6 +46,11 @@ const looksLikeMerch = (c: Contact): boolean =>
 function fireOrders(ship: ShipState, near: Near, salvoRange: number, mode: DriveMode, orders: Order[]): void {
   const def = SHIP_CLASSES[ship.classId]
   if (!def) return
+  // senzorový duel: zahájení palby zblízka → zapnout aktivní senzory
+  // (plné palebné řešení; hráč vidí, že protivník „rozsvítil")
+  if (near.d < AI_ACTIVE_SENSORS_RANGE && !ship.activeSensors) {
+    orders.push({ kind: 'setActiveSensors', shipId: ship.id, on: true })
+  }
   if (near.d < salvoRange && ship.tubeCooldown <= 0 && ship.missiles > 0 && def.tubesPerBroadside > 0) {
     orders.push({
       kind: 'launchSalvo', shipId: ship.id, targetId: near.c.shipId,
@@ -90,6 +96,13 @@ function runnerOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     })
   }
   const near = nearest(ship, hostiles)
+  // útěk s palbou: aktivní senzory zapnout, když je pronásledovatel blízko;
+  // jakmile se utrhne (ústup bez palby), zase EMCON
+  if (near && near.d < AI_ACTIVE_SENSORS_RANGE) {
+    if (!ship.activeSensors) orders.push({ kind: 'setActiveSensors', shipId: ship.id, on: true })
+  } else if (ship.activeSensors) {
+    orders.push({ kind: 'setActiveSensors', shipId: ship.id, on: false })
+  }
   if (near && near.d < RUNNER_SALVO_RANGE && ship.tubeCooldown <= 0 && ship.missiles > 0) {
     orders.push({
       kind: 'launchSalvo', shipId: ship.id, targetId: near.c.shipId,
@@ -105,6 +118,10 @@ function pirateOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
   if (!def) return
 
   if (ship.hull < 0.5 * def.hullPoints) {
+    // ústup bez palby → EMCON: aktivní senzory vypnout (nevyzařovat)
+    if (ship.activeSensors) {
+      orders.push({ kind: 'setActiveSensors', shipId: ship.id, on: false })
+    }
     // zbabělost: otočit a prchat od nejbližší hrozby
     const near = nearest(ship, hostiles)
     if (near) {

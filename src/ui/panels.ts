@@ -7,12 +7,12 @@
  */
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import {
-  ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE, ENERGY_MAX_RANGE, G,
+  CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE, ENERGY_MAX_RANGE, G,
   SURRENDER_COOLDOWN, TUBE_COOLDOWN,
 } from '../sim/constants'
 import { effectiveTubes } from '../sim/damage'
 import { moraleFor, surrenderChance, weaponsOut } from '../sim/surrender'
-import { poweredEnvelope } from '../sim/weapons'
+import { fireSolution, poweredEnvelope } from '../sim/weapons'
 import type { Contact, DriveMode, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { AudioManager } from './audio'
 
@@ -24,6 +24,12 @@ export interface UiState {
   salvoMode: DriveMode
   compression: number
   slowdownText: string | null
+  /** vybraná vlastní salva na plotu (id salvy) */
+  selectedSalvoId: number | null
+  /** další odpaly jako autonomní salvy (fire-and-forget) */
+  autonomousMode: boolean
+  /** auto-zpomalování času u důležitých událostí (toggle ⚠ v topbaru) */
+  autoSlowEnabled: boolean
 }
 
 export type PanelAction =
@@ -263,9 +269,13 @@ export class Panels {
     const btns = COMP_BTNS
       .map(b => `<button data-comp="${b.f}" class="${b.f === ui.compression ? 'active' : ''}">${b.label}</button>`)
       .join('')
+    const autoSlowTip = 'Auto-zpomalování: u důležitých událostí (zásah do naší lodi, nový kontakt, '
+      + 'komunikace, cíle mise) spadne komprese na 1×. Vypnuto: událost jen blikne v liště.'
     this.tbMain.innerHTML =
       `<span class="tb-time">ČAS ${fmtTime(state.t)}</span>`
       + `<span class="tb-comp">${btns}</span>`
+      + `<button data-act="autoSlow" class="${ui.autoSlowEnabled ? 'active' : ''}"`
+      + ` title="${esc(autoSlowTip)}">⚠ ${ui.autoSlowEnabled ? 'ZAP' : 'VYP'}</button>`
       + `<button data-act="help" title="nápověda (H)">?</button>`
       + (ui.slowdownText ? `<span class="tb-slow">⚠ ZPOMALENO: ${esc(ui.slowdownText)}</span>` : '')
   }
@@ -276,6 +286,7 @@ export class Panels {
       this.panelOwnShip(own, state)
       + this.panelContacts(state, own, ui)
       + this.panelTargetDetail(state, own, ui)
+      + this.panelSalvo(state, own, ui)
       + this.panelOrders(own, ui)
       + this.panelObjectives(state)
       + this.panelComms()
@@ -418,6 +429,22 @@ export class Panels {
       + `<div class="row"><span>stáří dat:</span><span>${Math.round(c.age)} s (light-lag)</span></div>`
       + `<div class="row"><span>klasifikace:</span><span>${qLabel}</span></div>`
 
+    // kvalita palebného řešení naší vybrané lodi na tento cíl (senzorový duel)
+    if (tgtShip && !tgtShip.destroyed && !own.destroyed) {
+      const sol = fireSolution(state, own, tgtShip)
+      const ownDef = SHIP_CLASSES[own.classId]
+      const fullActive = own.activeSensors && !!ownDef && d < ownDef.activeSensorRange
+      const hint = tgtShip.activeSensors ? ' (+15 % — cíl vyzařuje)' : ''
+      body += `<div class="row"><span>kvalita řešení:</span>`
+        + `<b class="${sol >= 0.95 ? 'ok' : sol >= 0.8 ? 'amber' : 'bad'}">${Math.round(sol * 100)} %${hint}</b></div>`
+      if (!fullActive) {
+        const near = !!ownDef && d < ownDef.activeSensorRange
+        body += `<div class="row dim"><span>${near
+          ? 'zapni aktivní senzory pro plné řešení'
+          : 'zapni aktivní senzory a přibliž se pro plné řešení'}</span></div>`
+      }
+    }
+
     // kapitulace — výrazný stav (loď se vzdala, nestřílet)
     if (tgtShip?.surrendered) {
       body += `<div class="row surrendered"><b class="ok">▽ KAPITULOVAL</b>`
@@ -520,6 +547,75 @@ export class Panels {
       + (inCooldown ? `<div class="row dim"><span>na výzvu neodpovídá — počkej ${cdLeft} s</span></div>` : '')
   }
 
+  /** SALVA: vybraná vlastní letící salva — počet, zámek, fáze, přesměrování */
+  private panelSalvo(state: SimState, own: ShipState | null, ui: UiState): string {
+    if (ui.selectedSalvoId == null) return ''
+    const ms = state.missiles.filter(m =>
+      m.side === 'player' && m.salvoId === ui.selectedSalvoId && m.phase !== 'dead')
+    if (ms.length === 0) return ''
+
+    const avgLock = ms.reduce((a, m) => a + Math.max(0, Math.min(1, m.lock)), 0) / ms.length
+    const boost = ms.filter(m => m.phase === 'boost').length
+    const ball = ms.length - boost
+    const phaseTxt = [boost > 0 ? `boost ${boost}` : '', ball > 0 ? `balistika ${ball}` : '']
+      .filter(Boolean).join(' · ')
+    const autonomous = ms.every(m => m.autonomous === true)
+
+    // čas do cíle: nejkratší odhad přes rakety (vzdálenost / přibližovací rychlost)
+    let tt = Infinity
+    for (const m of ms) {
+      const tgt = state.ships.find(s => s.id === m.targetId && !s.destroyed)
+      if (!tgt) continue
+      const dx = tgt.pos.x - m.pos.x
+      const dy = tgt.pos.y - m.pos.y
+      const d = Math.hypot(dx, dy)
+      if (d <= 0) { tt = 0; continue }
+      const closing = ((m.vel.x - tgt.vel.x) * dx + (m.vel.y - tgt.vel.y) * dy) / d
+      if (closing > 1) tt = Math.min(tt, d / closing)
+    }
+    const ttTxt = Number.isFinite(tt) ? `~${Math.max(1, Math.round(tt))} s` : '—'
+
+    // dosah řízení: nejbližší raketa salvy vůči vlastní lodi
+    let minD = Infinity
+    if (own && !own.destroyed) {
+      for (const m of ms) minD = Math.min(minD, Math.hypot(m.pos.x - own.pos.x, m.pos.y - own.pos.y))
+    }
+    const inRange = minD < CONTROL_RANGE
+    const ctrlRow = autonomous
+      ? `<div class="row dim"><span>autonomní salva — letí bez řídicího spoje</span></div>`
+      : `<div class="row"><span>řízení:</span><span class="${inRange ? 'ok' : 'amber'}">`
+        + `${Number.isFinite(minD)
+          ? (inRange ? `v dosahu (${fmtKm(minD)})` : `mimo dosah řízení (${fmtKm(minD)})`)
+          : '—'}</span></div>`
+
+    // přesměrování: vyžaduje vybraný klasifikovaný kontakt + dosah řízení
+    const c = ui.targetId != null ? state.contacts.player.find(x => x.shipId === ui.targetId) : undefined
+    const tgtShip = c ? state.ships.find(s => s.id === c.shipId) : undefined
+    const tgtLabel = c ? `${SHIP_CLASSES[c.classGuess]?.hullCode ?? '???'} #${c.shipId}` : 'vybraný cíl'
+    const canRetarget = !!own && !own.destroyed && !!c && c.idQuality >= 1
+      && !!tgtShip && !tgtShip.destroyed && !tgtShip.surrendered && inRange
+    const title = !c
+      ? 'Nejdřív vyber cílový kontakt (klik v plotu nebo v kontaktech).'
+      : c.idQuality < 1
+        ? 'Nový cíl musí být klasifikovaný kontakt (přibliž se / aktivní senzory).'
+        : tgtShip?.surrendered
+          ? 'Cíl kapituloval — nestřílíme na něj.'
+          : !inRange
+            ? 'Salva je mimo dosah řízení (10 M km) — povel k ní nedoletí.'
+            : 'Přesměruje všechny letící rakety salvy (boost/balistika) na vybraný cíl. Penalizace zámku ×0,75.'
+
+    return `<div class="panel"><h3>Salva #${ui.selectedSalvoId}</h3>`
+      + `<div class="row"><span>živých raket:</span><b>${ms.length}</b></div>`
+      + `<div class="row"><span>průměrný zámek:</span>`
+      + `<b class="${avgLock >= 0.7 ? 'ok' : avgLock >= 0.4 ? 'amber' : 'bad'}">${Math.round(avgLock * 100)} %</b></div>`
+      + `<div class="row"><span>fáze:</span><span>${phaseTxt || '—'}</span></div>`
+      + `<div class="row"><span>čas do cíle:</span><span>${ttTxt}</span></div>`
+      + ctrlRow
+      + `<div class="btnrow"><button data-act="retargetSalvo" title="${esc(title)}"${canRetarget ? '' : ' disabled'}>`
+      + `Přesměrovat na ${esc(tgtLabel)}</button></div>`
+      + `</div>`
+  }
+
   private panelOrders(own: ShipState | null, ui: UiState): string {
     const hasTarget = ui.targetId != null
     const dis = (cond: boolean): string => (cond ? '' : ' disabled')
@@ -549,13 +645,18 @@ export class Panels {
       layered: `Vrstvená salva: ${loC}× LO hned + ${hiC}× HI se zpožděním tak, aby obě vlny dorazily spolu `
         + `a saturovaly bodovou obranu (víc raket v okně = nižší Pk obrany).`,
       autoFire: 'AUTO palba: loď sama opakuje plné salvy, dokud je cíl v poháněné obálce. A',
+      autonomous: 'Režim dalších odpalů. ŘÍZENÁ salva: plný zámek dle palebného řešení, loď ji vede '
+        + '(drží zámek, lze ji přesměrovat) — ale eroduje při ztrátě kontaktu na cíl nebo za dosahem '
+        + 'řízení 10 M km. AUTONOMNÍ: zámek ×0,85, ale letí sama — ideální „vystřel a zhasni" '
+        + 's vypnutým klínem.',
       energy: `Lasery/grasery: plné poškození pod ${Math.round(ENERGY_DECISIVE_RANGE / 1000)} tis. km, `
         + `dosah ${Math.round(ENERGY_MAX_RANGE / 1000)} tis. km, nabíjení ${ENERGY_COOLDOWN} s.`,
       rollThreat: 'Odvalí loď klínem k příchozí salvě — nepropustný štít, ale loď nemanévruje a nepálí boky. R',
       rollBack: 'Vrátí loď do normální polohy — boky (šachty, energetika) jsou zase v akci. R',
       wedge: 'Vypnutý klín = EMCON: loď je téměř neviditelná (jen aktivní senzory zblízka), '
         + 'ale má nulovou akceleraci a žádné bočníky.',
-      sensors: `Plná identifikace cílů do ${sensM} mil. km; výrazně tě ale prozradí. `
+      sensors: `Plná identifikace cílů do ${sensM} mil. km + lepší zámek našich raket (plné palebné `
+        + 'řešení 100 % místo 70 %); pozor — vyzařování zlepšuje řešení nepříteli o 15 %. '
         + 'Pasivní detekce cizího klínu funguje vždy.',
     }
 
@@ -573,6 +674,10 @@ export class Panels {
       + `<div class="btnrow">`
       + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva ${loC}+${hiC}</button>`
       + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="${esc(tip.autoFire)}"${dis(canFire || auto)}>AUTO palba: ${auto ? 'ZAP' : 'VYP'}</button>`
+      + `</div>`
+      + `<div class="btnrow">`
+      + `<button data-act="autonomous" class="${ui.autonomousMode ? 'active' : ''}" title="${esc(tip.autonomous)}"${dis(!noShip)}>`
+      + `Salvy: ${ui.autonomousMode ? 'autonomní' : 'řízené'}</button>`
       + `</div>`
       + `<div class="btnrow">`
       + `<button data-act="energy" title="${esc(tip.energy)}"${dis(canFire)}>Energie</button>`

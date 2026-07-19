@@ -6,8 +6,9 @@
  */
 import type { DriveMode, MissileState, ShipState, SimState, Vec2 } from './types'
 import {
-  ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE, ENERGY_MAX_RANGE,
-  G, LOCK_LOST, TUBE_COOLDOWN,
+  AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
+  ENERGY_MAX_RANGE, G, LINK_LOCK_DECAY, LOCK_LOST, RETARGET_LOCK_PENALTY,
+  SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { add, clampLen, dist, dot, len, norm, scale, sub } from './vec'
@@ -16,8 +17,13 @@ import { attackAspect, resolveTerminal } from './defense'
 
 const DEFAULT_MISSILE = 'std-shipkiller'
 
-/** Pokles zámku za letu bez pohonu (balistika) — ~0.01/s. */
-const BALLISTIC_LOCK_DECAY = 0.01
+/**
+ * Pokles zámku za letu bez pohonu (balistika) — ~0.005/s.
+ * (Vyvážení senzorového duelu: startovní zámek je nově 0.7–1.0 dle palebného
+ * řešení, dřívějších 0.01/s by dlouhé balistické dojezdy — HI vlna vrstvené
+ * salvy — zabíjelo ještě před příletem.)
+ */
+const BALLISTIC_LOCK_DECAY = 0.005
 
 /** formát mil. km s českou čárkou („7,2") */
 const fmtMkm = (km: number): string => (km / 1e6).toFixed(1).replace('.', ',')
@@ -64,6 +70,30 @@ export function missileFlightTime(d: number, closing: number, mode: DriveMode): 
 interface LaunchOpts {
   /** druhá vlna vrstvené salvy — šachty už jsou přednabité, cooldown neblokuje */
   ignoreCooldown?: boolean
+  /** autonomní salva (fire-and-forget): počáteční zámek ×0.85, ale bez řídicího spoje */
+  autonomous?: boolean
+}
+
+/**
+ * Kvalita palebného řešení střelec→cíl = počáteční zámek odpalovaných raket:
+ *   0.7  jen z pasivních dat,
+ *   1.0  s aktivními senzory střelce a cílem v jejich dosahu,
+ *   +0.15 když cíl sám vyzařuje (jeho aktivní senzory = maják, bez ohledu na dosah),
+ *   +0.1  za kvalitní track (kontakt strany s idQuality 2),
+ *   × (0.7–1.0) dle stavu subsystému senzorů střelce, cap 1.0.
+ * SYMETRICKÉ pro hráče i AI (launchSalvo ji volá pro každý odpal).
+ */
+export function fireSolution(state: SimState, shooter: ShipState, target: ShipState): number {
+  const def = SHIP_CLASSES[shooter.classId]
+  const activeTrack = !!def && shooter.activeSensors
+    && dist(shooter.pos, target.pos) < def.activeSensorRange
+  let q = activeTrack ? 1.0 : SOLUTION_PASSIVE
+  if (target.activeSensors) q += SOLUTION_EMITTING_BONUS
+  if (state.contacts[shooter.side]?.some(c => c.shipId === target.id && c.idQuality === 2)) {
+    q += SOLUTION_TRACK_BONUS
+  }
+  q *= 0.7 + 0.3 * Math.min(1, Math.max(0, shooter.subsystems.sensors))
+  return Math.min(1, q)
 }
 
 /** hláška posádky hráči (jen lodě ovládané hráčem — AI si nestěžuje) */
@@ -108,6 +138,10 @@ export function launchSalvo(
   const def = MISSILES[DEFAULT_MISSILE]
   // buff taktického důstojníka: lepší palebné řešení = vyšší počáteční zámek
   const lockBonus = state.t < ship.buffs.lockUntil ? ship.buffs.lockBonus : 0
+  // senzorový duel: počáteční zámek = kvalita palebného řešení (0.7–1.0)
+  const autonomous = opts.autonomous === true
+  const solution = target ? fireSolution(state, ship, target) : 1.0
+  const lock0 = solution * (autonomous ? AUTONOMOUS_LOCK_FACTOR : 1) + lockBonus
   const salvoId = state.nextId++
   for (let i = 0; i < n; i++) {
     const m: MissileState = {
@@ -120,17 +154,64 @@ export function launchSalvo(
       mode,
       driveRemaining: def.driveTime[mode],
       phase: 'boost',
-      lock: 1.0 + lockBonus,
+      lock: lock0,
       salvoId,
+      shooterId: ship.id,
+      autonomous,
     }
     state.missiles.push(m)
   }
   ship.missiles -= n
   ship.tubeCooldown = TUBE_COOLDOWN
+  // odpaly NEzpomalují čas (slowdown false) — UI jen loguje
   state.events.push({
-    t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, slowdown: true,
-    text: `${ship.name}: odpálena salva ${n} raket${opts.ignoreCooldown ? ' (druhá vlna)' : ''}`,
+    t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n,
+    text: `${ship.name}: odpálena salva ${n} raket`
+      + `${opts.ignoreCooldown ? ' (druhá vlna)' : ''}${autonomous ? ' (autonomní)' : ''}`,
   })
+}
+
+/**
+ * Přesměrování letící salvy na nový cíl (jen fáze boost/ballistic, terminal ne).
+ * Penalizace zámku ×0.75. Funguje jen dokud je salva v dosahu řízení
+ * (CONTROL_RANGE) od řídící lodi — jinak „salva mimo dosah řízení".
+ * Validace: nový cíl musí být klasifikovaný kontakt střelcovy strany a nesmí
+ * být kapitulovaný.
+ */
+export function retargetSalvo(
+  state: SimState, ship: ShipState, salvoId: number, newTargetId: number,
+): void {
+  const target = state.ships.find(s => s.id === newTargetId && !s.destroyed)
+  if (!target || target.surrendered) {
+    crewSay(state, ship, target?.surrendered
+      ? 'Přesměrování zamítnuto — cíl kapituloval, nestřílíme na něj.'
+      : 'Přesměrování zamítnuto — cíl neexistuje.')
+    return
+  }
+  const contact = state.contacts[ship.side]?.find(c => c.shipId === newTargetId)
+  if (!contact || contact.idQuality < 1) {
+    crewSay(state, ship, 'Přesměrování zamítnuto — nový cíl není klasifikovaný kontakt.')
+    return
+  }
+  const missiles = state.missiles.filter(m => m.side === ship.side && m.salvoId === salvoId
+    && (m.phase === 'boost' || m.phase === 'ballistic'))
+  if (missiles.length === 0) {
+    crewSay(state, ship, 'Přesměrování nelze provést — salva už neletí.')
+    return
+  }
+  let minD = Infinity
+  for (const m of missiles) minD = Math.min(minD, dist(m.pos, ship.pos))
+  if (minD >= CONTROL_RANGE) {
+    crewSay(state, ship,
+      `Salva mimo dosah řízení (${fmtMkm(minD)} mil. km, dosah ${fmtMkm(CONTROL_RANGE)}).`)
+    return
+  }
+  for (const m of missiles) {
+    m.targetId = newTargetId
+    m.lock *= RETARGET_LOCK_PENALTY
+  }
+  crewSay(state, ship,
+    `Salva přesměrována na ${target.name} — ${missiles.length} raket, zámek ×0,75.`)
 }
 
 /** Let raket: navádění, boost/balistika, přechod do terminální fáze. */
@@ -165,6 +246,17 @@ export function updateMissiles(state: SimState, dt: number): void {
       }
     } else {
       m.lock -= BALLISTIC_LOCK_DECAY * dt // bez pohonu zámek pomalu eroduje
+    }
+
+    // řídicí spoj řízené salvy: střelec žije, salva v dosahu řízení a jeho
+    // strana drží senzorový kontakt na cíl — jinak zámek eroduje.
+    // Autonomní salvy (fire-and-forget) spoj nepotřebují.
+    if (m.shooterId !== undefined && m.autonomous !== true) {
+      const shooter = state.ships.find(s => s.id === m.shooterId && !s.destroyed)
+      const linked = !!shooter
+        && dist(shooter.pos, m.pos) < CONTROL_RANGE
+        && state.contacts[m.side].some(c => c.shipId === m.targetId)
+      if (!linked) m.lock -= LINK_LOCK_DECAY * dt
     }
 
     m.vel = clampLen(m.vel, def.maxSpeed)
@@ -223,6 +315,8 @@ export function fireEnergy(state: SimState, shooter: ShipState, target: ShipStat
   shooter.energyCooldown = ENERGY_COOLDOWN
   state.events.push({
     t: state.t, kind: 'energyHit', shipId: target.id, side: target.side,
+    // zásah do lodi hráče je důležitá událost (UI auto-zpomalení)
+    slowdown: target.side === 'player',
     text: `${shooter.name}: energetická salva na ${target.name} (${mounts}× mount, ${aspect})`,
   })
   for (let i = 0; i < mounts; i++) {

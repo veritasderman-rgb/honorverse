@@ -4,12 +4,17 @@
  * mapuje akce na Order objekty a obsluhuje klávesy.
  */
 import { SHIP_CLASSES } from '../data/defs'
-import type { DriveMode, Order, ShipState, SimState, Vec2 } from '../sim/types'
+import type { DriveMode, Order, ShipState, SimEvent, SimState, Vec2 } from '../sim/types'
 import type { SimBridge } from '../worker/bridge'
 import type { TacticalPlot } from './plot'
 import { contactEstPos, type PanelAction, type Panels, type UiState } from './panels'
 
 const COMP_LADDER = [0, 1, 10, 100, 1000, 10000]
+
+/** localStorage klíč přepínače auto-zpomalování (⚠ v topbaru) */
+const AUTOSLOW_KEY = 'wob-autoslow'
+/** grace po ruční změně komprese — žádné auto-zpomalení (ms reálného času) */
+const AUTOSLOW_GRACE_MS = 5000
 
 export class UIController {
   private state: SimState | null = null
@@ -22,6 +27,16 @@ export class UIController {
   private lastRunning = 1
   private slowdownText: string | null = null
   private slowdownUntil = 0
+  /** vybraná vlastní salva (klik na raketu v plotu) */
+  private selectedSalvoId: number | null = null
+  /** další odpaly jako autonomní salvy (fire-and-forget) */
+  private autonomousMode = false
+  /** auto-zpomalování času (⚠ toggle v topbaru, persistentní, default ZAP) */
+  private autoSlow = true
+  /** čas poslední RUČNÍ změny komprese (grace pro auto-zpomalení) */
+  private manualCompAt = -Infinity
+  /** lodě, jejichž contactNew už zpomalil (zpomalí jen první detekce) */
+  private seenContacts = new Set<number>()
 
   constructor(
     private bridge: SimBridge,
@@ -30,6 +45,9 @@ export class UIController {
   ) {
     plot.onPick = (id, world) => this.onPlotClick(id, world)
     window.addEventListener('keydown', e => this.onKey(e))
+    try {
+      this.autoSlow = localStorage.getItem(AUTOSLOW_KEY) !== '0'
+    } catch { /* localStorage nedostupná (testy) — default ZAP */ }
   }
 
   // ---------- snapshoty ----------
@@ -45,26 +63,64 @@ export class UIController {
       if (own) this.ownShipId = own.id
     }
 
-    // auto-slowdown: událost se slowdown → komprese na 1× + indikátor
+    // auto-slowdown: jen důležité události (filtr eventSlows) → komprese na 1×;
+    // při vypnutém přepínači (⚠ VYP) jen indikátor/blik; grace po ruční změně
     for (const ev of state.events) {
-      if (ev.slowdown) {
-        this.slowdownText = ev.text
-        this.slowdownUntil = performance.now() + 8000
-        if (this.compression > 1) this.setCompression(1)
+      if (!this.eventSlows(ev)) continue
+      this.slowdownText = ev.text
+      this.slowdownUntil = performance.now() + 8000
+      if (this.autoSlow && this.compression > 1
+        && performance.now() - this.manualCompAt > AUTOSLOW_GRACE_MS) {
+        this.setCompression(1)
       }
     }
     if (this.slowdownText && performance.now() > this.slowdownUntil) this.slowdownText = null
 
+    // vybraná salva už neexistuje (dorazila/sestřelena) → zrušit výběr
+    if (this.selectedSalvoId != null && !state.missiles.some(m =>
+      m.side === 'player' && m.salvoId === this.selectedSalvoId && m.phase !== 'dead')) {
+      this.selectedSalvoId = null
+    }
+
     this.panels.addEvents(state.events)
     this.plot.followId = this.ownShipId
     this.plot.selectedId = this.targetId ?? this.ownShipId
+    this.plot.selectedSalvoId = this.selectedSalvoId
     this.plot.setSnapshot(state, this.compression)
     this.panels.update(state, this.ui())
   }
 
+  /**
+   * Filtr auto-zpomalení: komunikace, cíle mise, zničení lodi, PRVNÍ detekce
+   * kontaktu, zásah do vlastní lodi a zprávy misí (triggery, bez speakera).
+   * Odpaly salv NEzpomalují (sim už launch eventy neflaguje).
+   */
+  private eventSlows(ev: SimEvent): boolean {
+    switch (ev.kind) {
+      case 'comm':
+      case 'objective':
+      case 'shipDestroyed':
+        return ev.slowdown === true
+      case 'contactNew': {
+        if (ev.slowdown !== true || ev.side !== 'player' || ev.shipId == null) return false
+        if (this.seenContacts.has(ev.shipId)) return false
+        this.seenContacts.add(ev.shipId)
+        return true
+      }
+      case 'missileHit':
+      case 'energyHit':
+        return ev.slowdown === true // sim flaguje jen zásahy do lodí hráče
+      case 'message':
+        return ev.slowdown === true && !ev.speaker // jen zprávy misí (triggery)
+      default:
+        return false
+    }
+  }
+
   // ---------- komprese ----------
 
-  setCompression(f: number): void {
+  setCompression(f: number, manual = false): void {
+    if (manual) this.manualCompAt = performance.now()
     if (f > 0) this.lastRunning = f
     this.compression = f
     this.bridge.setCompression(f)
@@ -75,7 +131,7 @@ export class UIController {
     let i = COMP_LADDER.indexOf(this.compression)
     if (i < 0) i = 1
     const ni = Math.max(0, Math.min(COMP_LADDER.length - 1, i + dir))
-    this.setCompression(COMP_LADDER[ni])
+    this.setCompression(COMP_LADDER[ni], true)
   }
 
   // ---------- akce z panelů ----------
@@ -83,7 +139,7 @@ export class UIController {
   handleAction(a: PanelAction): void {
     switch (a.kind) {
       case 'compression':
-        this.setCompression(a.factor)
+        this.setCompression(a.factor, true)
         break
       case 'select':
         this.targetId = a.id
@@ -98,6 +154,13 @@ export class UIController {
   private doOrder(act: string): void {
     const s = this.state
     if (!s) return
+    // přepínač auto-zpomalování funguje i bez vlastní lodi
+    if (act === 'autoSlow') {
+      this.autoSlow = !this.autoSlow
+      try { localStorage.setItem(AUTOSLOW_KEY, this.autoSlow ? '1' : '0') } catch { /* noop */ }
+      this.refresh()
+      return
+    }
     const own = s.ships.find(sh => sh.id === this.ownShipId)
     if (!own || own.destroyed) return
     const t = this.targetId
@@ -131,6 +194,7 @@ export class UIController {
                 mode: 'auto', targetId: t,
                 salvoSize: SHIP_CLASSES[own.classId]?.tubesPerBroadside ?? 4,
                 driveMode: this.salvoMode,
+                autonomous: this.autonomousMode,
               }
             : { mode: 'hold' },
         })
@@ -138,6 +202,18 @@ export class UIController {
       }
       case 'mode':
         this.salvoMode = this.salvoMode === 1 ? 0 : 1
+        break
+      case 'autonomous':
+        // režim dalších odpalů: řízené / autonomní salvy (fire-and-forget)
+        this.autonomousMode = !this.autonomousMode
+        break
+      case 'retargetSalvo':
+        if (t != null && this.selectedSalvoId != null) {
+          this.send({
+            kind: 'retargetSalvo', shipId: own.id,
+            salvoId: this.selectedSalvoId, newTargetId: t,
+          })
+        }
         break
       case 'help':
         this.toggleHelp()
@@ -169,7 +245,10 @@ export class UIController {
 
   private salvo(own: ShipState, count: number): void {
     if (this.targetId == null || own.missiles <= 0) return
-    this.send({ kind: 'launchSalvo', shipId: own.id, targetId: this.targetId, count, mode: this.salvoMode })
+    this.send({
+      kind: 'launchSalvo', shipId: own.id, targetId: this.targetId,
+      count, mode: this.salvoMode, autonomous: this.autonomousMode,
+    })
   }
 
   /** směr k hrozbě: vybraný cíl, jinak nejbližší kontakt */
@@ -210,6 +289,14 @@ export class UIController {
     }
     if (id == null) {
       this.targetId = null
+      this.selectedSalvoId = null
+      this.refresh()
+      return
+    }
+    // klik na vlastní raketu → výběr celé salvy (panel SALVA + zvýraznění)
+    const missile = this.state?.missiles.find(m => m.id === id)
+    if (missile) {
+      if (missile.side === 'player') this.selectedSalvoId = missile.salvoId
       this.refresh()
       return
     }
@@ -231,7 +318,7 @@ export class UIController {
     switch (e.key) {
       case ' ':
         e.preventDefault()
-        this.setCompression(this.compression > 0 ? 0 : this.lastRunning)
+        this.setCompression(this.compression > 0 ? 0 : this.lastRunning, true)
         break
       case '+': case '=':
         this.stepCompression(1)
@@ -293,7 +380,23 @@ export class UIController {
         <b>Energie</b><span>lasery/grasery — drtivé pod 100 tis. km, max. 500 tis. km</span>
         <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu; loď ale nemanévruje</span>
         <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočníků</span>
-        <b>Akt. senzory</b><span>plná identifikace cílů zblízka — ale prozrazuje</span>
+        <b>Akt. senzory</b><span>plná identifikace zblízka + lepší zámek našich raket; pozor — vyzařování zlepšuje řešení nepříteli o 15 %</span>
+      </div>
+      <h4>Senzorový duel (EMCON)</h4>
+      <div class="help-grid">
+        <b>Palebné řešení</b><span>počáteční zámek raket: 70 % jen z pasivních dat, 100 % s aktivními senzory a cílem v jejich dosahu</span>
+        <b>Vyzařující cíl</b><span>cíl se zapnutými aktivními senzory dává +15 % k řešení PROTI sobě — ticho má cenu</span>
+        <b>Kvalitní track</b><span>plná identifikace cíle (ident.) přidává +10 %; poškozené senzory řešení srážejí</span>
+        <b>Aktivní vedení</b><span>střelec s aktivy a cílem v dosahu drží track — ECM cíle eroduje zámek raket pomaleji</span>
+        <b>AI to hraje taky</b><span>nepřítel „rozsvítí" aktivy, když zahajuje palbu, a zhasne při ústupu — čti to na plotu ([AKT])</span>
+      </div>
+      <h4>Řízení salv</h4>
+      <div class="help-grid">
+        <b>Výběr salvy</b><span>klikni na vlastní raketu v plotu — panel SALVA ukáže počet, zámek, fázi a čas do cíle</span>
+        <b>Přesměrování</b><span>letící salvu lze poslat na jiný klasifikovaný cíl (zámek ×0,75) — jen do 10 M km od lodi</span>
+        <b>Řízená salva</b><span>loď ji vede: při ztrátě kontaktu na cíl nebo za dosahem řízení zámek eroduje</span>
+        <b>Autonomní salva</b><span>zámek ×0,85 při odpalu, ale letí sama — „vystřel a zhasni" s vypnutým klínem</span>
+        <b>⚠ v topbaru</b><span>auto-zpomalování času u důležitých událostí — přepínač ZAP/VYP (odpaly už nezpomalují)</span>
       </div>
       <h4>Mechaniky</h4>
       <div class="help-grid">
@@ -340,6 +443,9 @@ export class UIController {
       salvoMode: this.salvoMode,
       compression: this.compression,
       slowdownText: this.slowdownText,
+      selectedSalvoId: this.selectedSalvoId,
+      autonomousMode: this.autonomousMode,
+      autoSlowEnabled: this.autoSlow,
     }
   }
 
@@ -347,6 +453,7 @@ export class UIController {
   private refresh(): void {
     this.plot.followId = this.ownShipId
     this.plot.selectedId = this.targetId ?? this.ownShipId
+    this.plot.selectedSalvoId = this.selectedSalvoId
     if (this.state) this.panels.update(this.state, this.ui(), true)
   }
 }

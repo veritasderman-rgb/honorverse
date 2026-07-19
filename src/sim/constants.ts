@@ -47,6 +47,26 @@ export const TUBE_COOLDOWN = 25
 /** pod tuto hodnotu zámku raketa ztrácí cíl */
 export const LOCK_LOST = 0.2
 
+/** ---------- senzorový duel / palebné řešení ---------- */
+/** základ palebného řešení jen z pasivních dat */
+export const SOLUTION_PASSIVE = 0.7
+/** bonus řešení, když cíl vyzařuje (jeho aktivní senzory = maják pro navádění) */
+export const SOLUTION_EMITTING_BONUS = 0.15
+/** bonus řešení za kvalitní track (kontakt idQuality 2) */
+export const SOLUTION_TRACK_BONUS = 0.1
+/** dosah řízení letící salvy od řídící lodi (km) — světelný lag řízení */
+export const CONTROL_RANGE = 10_000_000
+/** penalizace zámku při přesměrování salvy za letu */
+export const RETARGET_LOCK_PENALTY = 0.75
+/** autonomní salva (fire-and-forget): násobič počátečního zámku */
+export const AUTONOMOUS_LOCK_FACTOR = 0.85
+/** eroze zámku řízené rakety bez řídicího spoje (podíl/s) */
+export const LINK_LOCK_DECAY = 0.01
+/** aktivní senzory střelce drží track: násobič rychlosti eroze zámku ECM */
+export const ACTIVE_GUIDANCE_ECM_FACTOR = 0.6
+/** AI: vzdálenost, pod kterou si bojové doktríny zapínají aktivní senzory (km) */
+export const AI_ACTIVE_SENSORS_RANGE = 8_000_000
+
 /** kapitulace: cooldown opakované výzvy na tentýž cíl (s) */
 export const SURRENDER_COOLDOWN = 180
 /** kapitulace: bonus šance při vyřazených zbraních / prázdných zásobnících */

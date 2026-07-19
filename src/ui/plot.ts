@@ -6,7 +6,7 @@
  */
 import { SHIP_CLASSES } from '../data/defs'
 import { CM_INTERCEPT_RANGE, ENERGY_MAX_RANGE } from '../sim/constants'
-import type { Contact, Hyperlimit, ShipState, SimState, Vec2 } from '../sim/types'
+import type { Contact, Hyperlimit, MissileState, ShipState, SimState, Vec2 } from '../sim/types'
 
 const ZOOM_MIN = 50        // km/px
 const ZOOM_MAX = 500_000   // km/px
@@ -67,6 +67,8 @@ export class TacticalPlot {
   /** loď, na které je střed (vybraná vlastní loď) */
   followId: number | null = null
   selectedId: number | null = null
+  /** zvýrazněná vlastní salva (id salvy) — nastavuje controller */
+  selectedSalvoId: number | null = null
   /** klik do plotu: nejbližší loď/kontakt do ~15 px (jinak null) + světová pozice */
   onPick: ((id: number | null, world: Vec2) => void) | null = null
 
@@ -223,7 +225,7 @@ export class TacticalPlot {
     for (const ship of s.ships) {
       if (ship.side === 'player' && !ship.destroyed) this.drawNavPlan(ctx, ship)
     }
-    for (const m of s.missiles) this.drawMissile(ctx, m.pos, m.vel, m.side === 'player', m.phase)
+    for (const m of s.missiles) this.drawMissile(ctx, m)
     for (const ship of s.ships) {
       if (ship.side === 'player' && !ship.destroyed) this.drawOwnShip(ctx, ship)
     }
@@ -504,16 +506,19 @@ export class TacticalPlot {
     }
   }
 
-  private drawMissile(ctx: CanvasRenderingContext2D, pos: Vec2, vel: Vec2, own: boolean, phase: string): void {
-    if (phase === 'dead') return
-    const ex = this.exPos(pos, vel)
+  private drawMissile(ctx: CanvasRenderingContext2D, m: MissileState): void {
+    if (m.phase === 'dead') return
+    const own = m.side === 'player'
+    const ex = this.exPos(m.pos, m.vel)
     const p = this.worldToScreen(ex)
     const w = this.canvas.clientWidth
     const h = this.canvas.clientHeight
     if (p.x < -60 || p.x > w + 60 || p.y < -60 || p.y > h + 60) return
+    // vlastní rakety lze klikem vybrat (výběr celé salvy)
+    if (own) this.pickables.push({ id: m.id, x: p.x, y: p.y })
     const color = own ? CLR.missileOwn : CLR.missileFoe
     // stopa: 6 s zpět po vektoru
-    const tail = this.worldToScreen({ x: ex.x - vel.x * 6, y: ex.y - vel.y * 6 })
+    const tail = this.worldToScreen({ x: ex.x - m.vel.x * 6, y: ex.y - m.vel.y * 6 })
     ctx.save()
     ctx.globalAlpha = 0.5
     ctx.strokeStyle = color
@@ -523,7 +528,17 @@ export class TacticalPlot {
     ctx.stroke()
     ctx.restore()
     ctx.fillStyle = color
-    ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3)
+    // zvýraznění vybrané salvy: větší bod + kroužek
+    if (own && this.selectedSalvoId != null && m.salvoId === this.selectedSalvoId) {
+      ctx.fillRect(p.x - 2, p.y - 2, 4, 4)
+      ctx.strokeStyle = CLR.sel
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2)
+      ctx.stroke()
+    } else {
+      ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3)
+    }
   }
 
   private drawSelectionMarker(ctx: CanvasRenderingContext2D): void {

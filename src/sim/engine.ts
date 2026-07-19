@@ -5,7 +5,7 @@
  */
 import type { Order, Scenario, ShipState, SimApi, SimState } from './types'
 import { updateShipPhysics } from './physics'
-import { fireEnergy, launchSalvo, missileFlightTime, updateMissiles } from './weapons'
+import { fireEnergy, launchSalvo, missileFlightTime, retargetSalvo, updateMissiles } from './weapons'
 import { updateDefenses } from './defense'
 import { updateSensors } from './sensors'
 import { updateFireControl } from './firecontrol'
@@ -75,8 +75,12 @@ function applyOrder(state: SimState, order: Order): void {
       break
     case 'launchSalvo':
       if (liveTarget(state, order.targetId)) {
-        launchSalvo(state, ship, order.targetId, order.count, order.mode)
+        launchSalvo(state, ship, order.targetId, order.count, order.mode,
+          { autonomous: order.autonomous === true })
       }
+      break
+    case 'retargetSalvo':
+      retargetSalvo(state, ship, order.salvoId, order.newTargetId)
       break
     case 'launchLayered': {
       // vrstvená salva: LO vlna hned, HI follow-up zpožděný na společný přílet
@@ -118,6 +122,7 @@ function applyOrder(state: SimState, order: Order): void {
       if (order.fc.targetId !== undefined) fc.targetId = order.fc.targetId
       if (order.fc.salvoSize !== undefined) fc.salvoSize = Math.max(1, Math.floor(order.fc.salvoSize))
       if (order.fc.driveMode !== undefined) fc.driveMode = order.fc.driveMode
+      if (order.fc.autonomous !== undefined) fc.autonomous = order.fc.autonomous
       fc.engaged = false // hrana „palebné řešení" se vyhodnotí znovu
       break
     }

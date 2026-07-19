@@ -76,7 +76,8 @@ export function updateFireControl(state: SimState): void {
     }
 
     if (inRange && ship.tubeCooldown <= 0 && effectiveTubes(ship) > 0) {
-      launchSalvo(state, ship, fc.targetId, fc.salvoSize, fc.driveMode)
+      launchSalvo(state, ship, fc.targetId, fc.salvoSize, fc.driveMode,
+        { autonomous: fc.autonomous === true })
     }
   }
 }
