@@ -9,6 +9,7 @@ import { SHIP_CLASSES } from '../data/defs'
 import { TUBE_COOLDOWN } from '../sim/constants'
 import { poweredEnvelope } from '../sim/weapons'
 import type { Contact, DriveMode, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
+import type { AudioManager } from './audio'
 
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
 export interface UiState {
@@ -111,12 +112,21 @@ export class Panels {
   private commLog: { t: number; speaker: string; text: string }[] = []
   private lastSidebarAt = 0
   private toasts: HTMLElement | null = null
+  /** přerenderovávaná část topbaru (audio ovládání se renderuje jen jednou) */
+  private tbMain: HTMLElement
 
   constructor(
     private sidebar: HTMLElement,
     private topbar: HTMLElement,
     private onAction: (a: PanelAction) => void,
+    audio?: AudioManager,
   ) {
+    // dynamická část topbaru (čas, komprese) — přepisuje se každý snapshot;
+    // audio ovládání je samostatný sourozenec, ať slidery nepřijdou o drag
+    this.tbMain = document.createElement('span')
+    this.tbMain.className = 'tb-main'
+    topbar.appendChild(this.tbMain)
+    if (audio) topbar.appendChild(this.buildAudioBar(audio))
     // delegace na pointerdown: elementy se při přerenderu mění, kontejner ne
     const handler = (e: Event): void => {
       const t = e.target as Element | null
@@ -186,11 +196,35 @@ export class Panels {
     this.renderSidebar(state, ui)
   }
 
+  /** audio ovládání topbaru — renderuje se JEDNOU (slidery přežijí drag) */
+  private buildAudioBar(audio: AudioManager): HTMLElement {
+    const bar = document.createElement('span')
+    bar.className = 'tb-audio'
+    bar.innerHTML =
+      `<button class="tb-mute" title="ztlumit / zapnout zvuk">${audio.muted ? '🔇' : '🔊'}</button>`
+      + `<label title="hlasitost hudby">♪ <input class="tb-vol-music" type="range" min="0" max="100"`
+      + ` value="${Math.round(audio.musicVolume * 100)}"></label>`
+      + `<label title="hlasitost efektů">FX <input class="tb-vol-sfx" type="range" min="0" max="100"`
+      + ` value="${Math.round(audio.sfxVolume * 100)}"></label>`
+    const mute = bar.querySelector<HTMLButtonElement>('.tb-mute')!
+    mute.addEventListener('click', () => {
+      audio.setMuted(!audio.muted)
+      mute.textContent = audio.muted ? '🔇' : '🔊'
+    })
+    bar.querySelector<HTMLInputElement>('.tb-vol-music')!.addEventListener('input', e => {
+      audio.setMusicVolume(Number((e.target as HTMLInputElement).value) / 100)
+    })
+    bar.querySelector<HTMLInputElement>('.tb-vol-sfx')!.addEventListener('input', e => {
+      audio.setSfxVolume(Number((e.target as HTMLInputElement).value) / 100)
+    })
+    return bar
+  }
+
   private renderTopbar(state: SimState, ui: UiState): void {
     const btns = COMP_BTNS
       .map(b => `<button data-comp="${b.f}" class="${b.f === ui.compression ? 'active' : ''}">${b.label}</button>`)
       .join('')
-    this.topbar.innerHTML =
+    this.tbMain.innerHTML =
       `<span class="tb-time">ČAS ${fmtTime(state.t)}</span>`
       + `<span class="tb-comp">${btns}</span>`
       + `<button data-act="help" title="nápověda (H)">?</button>`

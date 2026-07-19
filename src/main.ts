@@ -6,6 +6,7 @@ import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { Panels, esc, fmtTime } from './ui/panels'
 import { UIController } from './ui/input'
+import { AudioManager } from './ui/audio'
 import { SCENARIOS } from './data/missions'
 import type { Scenario, SimState } from './sim/types'
 
@@ -15,7 +16,11 @@ const topbar = document.getElementById('topbar') as HTMLElement
 
 const bridge = new SimBridge()
 const plot = new TacticalPlot(canvas)
-const panels = new Panels(sidebar, topbar, a => controller.handleAction(a))
+// zvuk: AudioContext se odemyká prvním gestem (autoplay politika prohlížečů)
+const audio = new AudioManager()
+audio.setMenuMode(true)
+window.addEventListener('pointerdown', () => audio.unlock())
+const panels = new Panels(sidebar, topbar, a => { audio.uiClick(); controller.handleAction(a) }, audio)
 const controller = new UIController(bridge, plot, panels)
 
 let outcomeShown = false
@@ -70,6 +75,7 @@ function showBriefing(sc: Scenario): void {
   )
   el.querySelector('#btn-start')?.addEventListener('click', () => {
     el.remove()
+    audio.setMenuMode(false) // konec menu/briefingu → adaptivní hudba dle boje
     controller.setCompression(1)
   })
 }
@@ -106,6 +112,7 @@ bridge.onReady = scenario => {
 }
 
 bridge.onSnapshot = (state, compression) => {
+  audio.onSnapshot(state)
   controller.handleSnapshot(state, compression)
   if (!outcomeShown && state.outcome !== 'running') {
     outcomeShown = true

@@ -24,6 +24,12 @@
     #topbar { display: flex; gap: 12px; align-items: center; background: linear-gradient(#05080ae0, #05080a00); }
     .tb-time { color: #eaffea; min-width: 110px; }
     .tb-comp button { margin-right: 2px; }
+    /* --- audio ovládání (renderuje se jednou, mimo přerender topbaru) --- */
+    .tb-main { display: inline-flex; gap: 12px; align-items: center; }
+    .tb-audio { display: inline-flex; gap: 8px; align-items: center; margin-left: auto; }
+    .tb-audio label { display: inline-flex; gap: 3px; align-items: center; color: #6fae74; font-size: 11px; }
+    .tb-audio input[type=range] { width: 64px; height: 12px; margin: 0; accent-color: #2a5a2e; }
+    .tb-audio .tb-mute { min-width: 30px; }
     .tb-slow { color: #e0c05a; font-weight: bold; animation: blink .8s steps(2) infinite; }
     @keyframes blink { 50% { opacity: .25; } }
     .ok { color: #9fd8a0; } .amber { color: #d8b34f; } .bad { color: #e06c5a; } .dim { color: #5a7a5e; }
