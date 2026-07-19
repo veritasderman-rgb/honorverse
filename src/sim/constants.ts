@@ -121,7 +121,7 @@ export const PDLC_ROLLED_FACTOR = 0.6
 /**
  * Základ šance svedení útočné rakety návnadou:
  *   P = DECOY_SEDUCE_BASE · (0.5 + ecm třídy) · (1 − lock/2)
- * — kvalitní albionská elektronika (ecm 0.35–0.5) svádí výrazně líp než
+ * — kvalitní avalonská elektronika (ecm 0.35–0.5) svádí výrazně líp než
  * pirátská (0.15–0.2). Svedená raketa návnadu ZNIČÍ (jedna návnada ≈ jedna
  * pohlcená raketa); zásoba se odečítá až zničením.
  */
@@ -147,7 +147,7 @@ export const RETARGET_LOCK_PENALTY = 0.75
 /** autonomní salva (fire-and-forget): násobič počátečního zámku */
 export const AUTONOMOUS_LOCK_FACTOR = 0.85
 /**
- * Strop počátečního zámku KVALITNÍCH raket (missileQuality > 1): albionská
+ * Strop počátečního zámku KVALITNÍCH raket (missileQuality > 1): avalonská
  * elektronika smí zámek přetáhnout nad 1.0 — přebytek funguje jako rezerva
  * proti ECM erozi za letu. Pro missileQuality ≤ 1 se cap neuplatní
  * (součin řešení × kvalita je pod 1.0 sám od sebe).

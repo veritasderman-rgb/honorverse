@@ -32,7 +32,7 @@ export const mission03: Scenario = {
       pos: { x: 0, y: 0 }, vel: { x: 200, y: 0 }, doctrine: 'player',
     },
     {
-      // „poškozený obchodník" — ve skutečnosti direktoriátní Q-ship;
+      // „poškozený obchodník" — ve skutečnosti imperiální Q-ship;
       // bez nav plánu jen driftuje ~200 km/s ke stanici
       classId: 'merch-qship', side: 'enemy', name: 'Mercator',
       pos: { x: 2_000_000, y: 0 }, vel: { x: 200, y: 0 }, doctrine: 'freighter',
@@ -69,16 +69,16 @@ export const mission03: Scenario = {
         { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: MERCATOR, distance: 800_000 },
       ],
       actions: [
-        { kind: 'message', text: 'Kontejnery odhozeny — raketová lůžka! Je to direktoriátní pomocný křižník!' },
+        { kind: 'message', text: 'Kontejnery odhozeny — raketová lůžka! Je to imperiální pomocný křižník!' },
         { kind: 'revealClass', shipId: MERCATOR },
         { kind: 'setDoctrine', shipId: MERCATOR, doctrine: 'hunter' },
         { kind: 'setFlag', flag: 'qship-revealed' },
         { kind: 'objectiveFail', objectiveId: 'obj-escort', text: 'Doprovod byl léčka — obchodník je nepřátelská bojová loď.' },
         { kind: 'addObjective', objectiveId: 'obj-destroy', text: 'Znič pomocný křižník' },
         {
-          // výsměšná zpráva direktoriátního kapitána
+          // výsměšná zpráva imperiálního kapitána
           kind: 'comm', speaker: 'enemy-captain',
-          text: '„Vaše Království si myslí, že mu Pomezí patří. Tohle je odpověď Direktoriátu, Dauntless. Doufám, že jste si užili eskortní službu."',
+          text: '„Vaše Království si myslí, že mu Pomezí patří. Historické právo říká něco jiného — a tohle je odpověď Impéria, Dauntless. Doufám, že jste si užili eskortní službu."',
         },
         {
           // hráčova (automatická) výzva ke kapitulaci
@@ -107,7 +107,7 @@ export const mission03: Scenario = {
         },
         {
           kind: 'winMission',
-          text: 'Mercator kapituloval — zajali jsme direktoriátní pomocný křižník i s kódy a dokumentací. Zpravodajská trofej první třídy.',
+          text: 'Mercator kapituloval — zajali jsme imperiální pomocný křižník i s kódy a dokumentací. Zpravodajská trofej první třídy.',
         },
       ],
     },

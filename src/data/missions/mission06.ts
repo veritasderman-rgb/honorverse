@@ -1,6 +1,6 @@
 /**
  * Mise 6 — „Ústup od Tharsis" (running fight, poškozený CA).
- * Po ztraceném střetnutí ústup poškozené lodi před rychlejším direktoriátním
+ * Po ztraceném střetnutí ústup poškozené lodi před rychlejším imperiálním
  * svazem. Lekce: geometrie zadního aspektu, mikrořízení poškozených systémů,
  * krytí zádě rolováním. Zvrat: „záchranná" eskadra vysílá správné kódy…
  * ale je to léčka — poznáš to jen z detailu v signálu.
@@ -9,7 +9,7 @@
  * Id lodí (pořadí pole ships, od 1):
  *   1 = ANS Resolute (hráč), 2–4 = pronásledovatelé, 5 = bóje „Hyperlimit".
  * Zvratem spawnuté lodě mají pevná id: 9041 = ANS Vytrvalá, 9042 = ANS Naděje
- * (ve skutečnosti direktoriátní léčka — trigger je přepne na stranu enemy).
+ * (ve skutečnosti imperiální léčka — trigger je přepne na stranu enemy).
  */
 import type { Scenario } from '../../sim/types'
 
@@ -25,7 +25,7 @@ export const mission06: Scenario = {
   briefing:
     'Střetnutí u Tharsis jsme prohráli. ANS Resolute ustupuje s vyřazeným '
     + 'zadním impelerovým prstencem, potrhaným pravým bočníkem a polovinou '
-    + 'levobokých šachet — a za zádí visí direktoriátní svaz, který je '
+    + 'levobokých šachet — a za zádí visí imperiální svaz, který je '
     + 'RYCHLEJŠÍ než ty. Jediná šance: udržet náskok do hyperlimitu, krýt '
     + 'záď rolováním a nenechat se stáhnout do boje. Každý zbytečný manévr '
     + 'tě stojí metry náskoku.',
@@ -50,17 +50,17 @@ export const mission06: Scenario = {
     },
     {
       // pronásledovatelé: nepoškození a rychlejší — dohánějí
-      classId: 'ca-bastion', side: 'enemy', name: 'VDS Vega',
+      classId: 'ca-bastion', side: 'enemy', name: 'IDS Vega',
       pos: { x: -35_000_000, y: 2_000_000 }, vel: { x: 9_000, y: 0 },
       doctrine: 'hunter', activeSensors: true,
     },
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'VDS Deneb',
+      classId: 'ca-bastion', side: 'enemy', name: 'IDS Deneb',
       pos: { x: -35_000_000, y: -2_000_000 }, vel: { x: 9_000, y: 0 },
       doctrine: 'hunter', activeSensors: true,
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'VDS Mizar',
+      classId: 'cl-sokol', side: 'enemy', name: 'IDS Mizar',
       pos: { x: -37_000_000, y: 0 }, vel: { x: 9_000, y: 0 },
       doctrine: 'hunter', activeSensors: true,
     },
@@ -93,7 +93,7 @@ export const mission06: Scenario = {
       id: 'trg-rescue-spawn', once: true,
       conditions: [{ kind: 'time', t: 1_800 }],
       actions: [
-        { kind: 'message', text: 'Dva impelerové kontakty vpředu — vysílají albionské identifikační kódy a zvou tě k sobě.' },
+        { kind: 'message', text: 'Dva impelerové kontakty vpředu — vysílají avalonské identifikační kódy a zvou tě k sobě.' },
         {
           // „eskadra" číhá kousek POD únikovou osou — přímý kurz k bóji vede
           // do pasti (< 12 mil. km), vyhnutí obloukem nad osu je možné
@@ -134,14 +134,14 @@ export const mission06: Scenario = {
       id: 'trg-trap', once: true,
       conditions: [{ kind: 'flag', flag: 'trap-sprung' }],
       actions: [
-        { kind: 'message', text: 'Léčka! „Záchranná eskadra" shazuje falešné transpondéry — jsou to direktoriátní křižníky!' },
+        { kind: 'message', text: 'Léčka! „Záchranná eskadra" shazuje falešné transpondéry — jsou to imperiální křižníky!' },
         { kind: 'setSide', shipId: DECOY1, side: 'enemy' },
         { kind: 'setSide', shipId: DECOY2, side: 'enemy' },
         { kind: 'setDoctrine', shipId: DECOY1, doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: DECOY2, doctrine: 'hunter' },
         {
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Kastor (alias „Vytrvalá"): „Výborně, Resolute, přesně podle plánu. Kladivo za vámi, kovadlina před vámi. Vypněte klín."',
+          text: 'IDS Pollux (alias „Vytrvalá"): „Výborně, Resolute, přesně podle plánu. Kladivo za vámi, kovadlina před vámi. Vypněte klín."',
         },
       ],
     },

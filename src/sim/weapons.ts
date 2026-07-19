@@ -186,8 +186,8 @@ export function launchSalvo(
   // buff taktického důstojníka: lepší palebné řešení = vyšší počáteční zámek
   const lockBonus = state.t < ship.buffs.lockUntil ? ship.buffs.lockBonus : 0
   // senzorový duel: počáteční zámek = kvalita palebného řešení (0.7–1.0)
-  // × kvalita raketové elektroniky třídy (asymetrie stran: Albion 1.08,
-  // Direktoriát 1.0, piráti 0.9); kvalitní elektronika smí zámek přetáhnout
+  // × kvalita raketové elektroniky třídy (asymetrie stran: Avalon 1.08,
+  // Impérium 1.0, piráti 0.9); kvalitní elektronika smí zámek přetáhnout
   // až na MISSILE_QUALITY_LOCK_CAP — rezerva proti ECM erozi za letu
   const autonomous = opts.autonomous === true
   const shipDef = SHIP_CLASSES[ship.classId]

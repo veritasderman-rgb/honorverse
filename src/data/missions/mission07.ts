@@ -1,7 +1,7 @@
 /**
- * Mise 7 — „Nájezd na konvoj" (role se obrací, BC).
- * Hráč poprvé útočí: bitevní křižník Praporec proti direktoriátnímu konvoji
- * s eskortou. Volba cílů — rozstřílet eskortu, nebo maximalizovat zničený
+ * Mise 7 — „Zlatá flotila" (role se obrací, BC).
+ * Hráč poprvé útočí: bitevní křižník Praporec proti imperiální zlaté flotile
+ * izotopů s eskortou. Volba cílů — rozstřílet eskortu, nebo maximalizovat zničený
  * tonáž a utéct před reakcí? Zvrat: eskortní křižník tahá raketové pody —
  * první salva proti hráči je čtyřnásobná (ochutnávka pozdější éry).
  * Viz docs/GAME_DESIGN.md kap. 7.
@@ -40,10 +40,11 @@ const sunkTrio = (trio: number[], n: number): Scenario['triggers'][0] => ({
 
 export const mission07: Scenario = {
   id: 'mission07',
-  title: 'Nájezd na konvoj',
+  title: 'Zlatá flotila',
   briefing:
-    'Role se obrací: bitevní křižník ANS Praporec přepadá direktoriátní '
-    + 'zásobovací konvoj v soustavě Kerav. Čtyři obchodníci, eskorta dvou '
+    'Role se obrací: bitevní křižník ANS Praporec přepadá imperiální '
+    + 'zlatou flotilu — konvoj palivových izotopů mířící přes soustavu '
+    + 'Kerav do Cádizu. Čtyři obchodníci, eskorta dvou '
     + 'torpédoborců a lehkého křižníku. Rozkaz zní: potopit aspoň tři '
     + 'obchodníky a zmizet za hyperlimit dřív, než dorazí reakční svaz. '
     + 'Vybírej cíle chytře — eskortu nemusíš zničit, jen ji přežít.',
@@ -59,27 +60,27 @@ export const mission07: Scenario = {
       pos: { x: 40_000_000, y: 0 }, vel: { x: -1_500, y: 0 }, doctrine: 'player',
     },
     // konvoj: rozestupy ~1 mil. km, kurz k „bóji" hluboko za hyperlimitem na −x
-    merchant('Dunaj', 1_500_000),
-    merchant('Ural', 500_000),
-    merchant('Ladoga', -500_000),
-    merchant('Bajkal', -1_500_000),
+    merchant('Ebro', 1_500_000),
+    merchant('Tajo', 500_000),
+    merchant('Duero', -500_000),
+    merchant('Guadiana', -1_500_000),
     // Eskorta: zadní zástěna konvoje. Vyvážení nájezdu (mise má být o volbě
     // cílů, ne o sebevraždě proti třem plným zásobníkům): eskorta jede na
     // úsporný výkon kompenzátorů (throttle 0.5 — vlečou pody a šetří stroje)
     // a nese jen pohotovostní palebný příděl raket — zato má PODY (zvrat).
     {
-      classId: 'dd-vichr', side: 'enemy', name: 'VDS Strela',
+      classId: 'dd-vichr', side: 'enemy', name: 'IDS Lanza',
       pos: { x: 5_000_000, y: 2_500_000 }, vel: { x: -300, y: 0 },
       doctrine: 'escort', activeSensors: true, throttle: 0.5, missiles: 30,
     },
     {
-      classId: 'dd-vichr', side: 'enemy', name: 'VDS Groza',
+      classId: 'dd-vichr', side: 'enemy', name: 'IDS Tormenta',
       pos: { x: 5_000_000, y: -2_500_000 }, vel: { x: -300, y: 0 },
       doctrine: 'escort', activeSensors: true, throttle: 0.5, missiles: 30,
     },
     {
       // eskortní lehký křižník — na vleku raketové pody (zvrat!)
-      classId: 'cl-sokol', side: 'enemy', name: 'VDS Vympel',
+      classId: 'cl-sokol', side: 'enemy', name: 'IDS Centinela',
       pos: { x: 8_000_000, y: 0 }, vel: { x: -300, y: 0 },
       doctrine: 'escort', activeSensors: true, throttle: 0.5, missiles: 40,
     },
@@ -92,7 +93,7 @@ export const mission07: Scenario = {
   ],
 
   objectives: [
-    { id: 'obj-merch', text: 'Znič aspoň 3 obchodníky konvoje', state: 'open' },
+    { id: 'obj-merch', text: 'Znič aspoň 3 obchodníky zlaté flotily', state: 'open' },
     { id: 'obj-escape', text: 'Unikni za hyperlimit (k bóji)', state: 'open' },
   ],
 
@@ -104,7 +105,7 @@ export const mission07: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Vympel: „Albionské plavidlo, tady eskorta konvoje Kerav. Otočte se, dokud můžete — tenhle konvoj není bez zubů."',
+          text: 'IDS Centinela: „Avalonské plavidlo, tady eskorta zlaté flotily. Tento konvoj pluje pod ochranou caudilla a předurčení Impéria. Otočte se, dokud můžete — není bez zubů."',
         },
       ],
     },
@@ -118,7 +119,7 @@ export const mission07: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Vympel: „Máme pro tebe překvapení, albionský pirátě."',
+          text: 'IDS Centinela: „Máme pro tebe překvapení, avalonský pirátě."',
         },
         { kind: 'podSalvo', shipId: ESCORT_CL, targetId: PRAPOREC, count: 24 },
         { kind: 'message', text: 'Taktický: „Odpaly! Mnohonásobné odpaly — to nejsou šachty křižníku, ti parchanti tahali PODY!"' },
@@ -145,7 +146,7 @@ export const mission07: Scenario = {
       ],
       actions: [
         { kind: 'objectiveComplete', objectiveId: 'obj-escape' },
-        { kind: 'winMission', text: 'Konvoj rozbit, Praporec za hyperlimitem. Direktoriát dnes počítá ztráty.' },
+        { kind: 'winMission', text: 'Zlatá flotila rozbita, Praporec za hyperlimitem. Impérium dnes počítá ztráty — a dvůr účty.' },
       ],
     },
     {

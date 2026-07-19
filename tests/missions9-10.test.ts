@@ -1,9 +1,9 @@
 /**
  * Testy misí 9–10 (finále kampaně) a nových podmínek triggerů
- * (flagNot, hullBelow). Mise 9: dva sledy invaze s dreadnoughtem Ural
+ * (flagNot, hullBelow). Mise 9: dva sledy invaze s dreadnoughtem Toledo
  * v čele, obranné pody stanice, win AND přes všech osm útočníků; hráč velí
  * eskadře pěti lodí s vlajkovým dreadnoughtem ANS Vladař. Mise 10: zástěna
- * čtyř křižníků + strážný DN Ural, pole podů, politický rozkaz a TŘI konce
+ * čtyř křižníků + strážný DN Sevilla, pole podů, politický rozkaz a TŘI konce
  * (rozkaz / duch rozkazu / čisté vítězství). E2E běh mise 9 s pevným
  * seedem — deterministický; hráč orchestrován přes applyOrder.
  */
@@ -84,7 +84,7 @@ describe('registrace misí 9–10', () => {
     expect(station.pos).toEqual({ x: 0, y: 0 })
   })
 
-  it('M10: vlajkový Vladař + Praporec + Vanguard + Aurora; nedostavěná základna; strážný Ural', () => {
+  it('M10: vlajkový Vladař + Praporec + Vanguard + Aurora; nedostavěná základna; strážná Sevilla', () => {
     const state = sim.create(mission10)
     const ctrl = controllableShips(state)
     expect(ctrl.map(s => s.name)).toEqual(['ANS Vladař', 'ANS Praporec', 'ANS Vanguard', 'ANS Aurora'])
@@ -111,8 +111,8 @@ describe('registrace misí 9–10', () => {
   })
 })
 
-describe('mise 9 — Obrana Albionu', () => {
-  it('sled 1 přistává v t=300 s dreadnoughtem Ural v čele (plná kvalita, oslabené zásobníky)', () => {
+describe('mise 9 — Velká armáda', () => {
+  it('sled 1 přistává v t=300 s dreadnoughtem Toledo v čele (plná kvalita, oslabené zásobníky)', () => {
     const scenario = structuredClone(mission09)
     const state = sim.create(scenario)
     expect(shipById(state, 9101)).toBeUndefined()
@@ -158,14 +158,14 @@ describe('mise 9 — Obrana Albionu', () => {
       && e.text.includes('MEZI vámi a stanicí'))).toBe(true)
   })
 
-  it('úvodní rozkaz guvernéra a direktoriátní ultimátum (comm)', () => {
+  it('úvodní rozkaz guvernéra a imperiální ultimátum (comm)', () => {
     const scenario = structuredClone(mission09)
     const state = sim.create(scenario)
     state.t = 420
     updateTriggers(state, scenario)
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'governor')).toBe(true)
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'enemy-captain'
-      && e.text.includes('historická nutnost'))).toBe(true)
+      && e.text.includes('historické právo'))).toBe(true)
   })
 
   it('stanice odpálí obranné pody (16 raket) na prvního útočníka pod 10 mil. km — jen JEDNOU', () => {
@@ -244,7 +244,7 @@ describe('mise 9 — Obrana Albionu', () => {
    * (vlajkový dreadnought Vladař uprostřed) drží pozici v protiraketovém
    * deštníku stanice (oblastní obrana), soustředěnou AUTO palbou s palebnou
    * kázní (na odvalený cíl nestřílet) rozbíjí oba sledy včetně dreadnoughtu
-   * Ural; torpédoborce s vystřílenými zásobníky se odpoutají hluboko do
+   * Toledo; torpédoborce s vystřílenými zásobníky se odpoutají hluboko do
    * deštníku stanice a zbytek dorazí poslední útočníky energetickou palbou
    * zblízka a výzvami ke kapitulaci. Deterministický win s pevným seedem.
    */
@@ -371,11 +371,11 @@ describe('mise 9 — Obrana Albionu', () => {
   }, 240_000)
 })
 
-describe('mise 10 — Kastor (finále, dva konce)', () => {
+describe('mise 10 — Cádiz (finále, dva konce)', () => {
   it('fáze 1: zástěna (a strážný DN) se budí detekcí svazu pod 40 mil. km', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    // 38 mil. km od hlídkového CL (VDS Altair, [−66M, 0]), 92M od základny
+    // 38 mil. km od hlídkového CL (IDS Altair, [−66M, 0]), 92M od základny
     shipById(state, 1)!.pos = { x: -28_000_000, y: 0 }
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
@@ -383,7 +383,7 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
       expect(shipById(state, id)?.doctrine).toBe('hunter')
     }
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'enemy-captain'
-      && e.text.includes('hlídka soustavy Kastor'))).toBe(true)
+      && e.text.includes('hlídka soustavy Cádiz'))).toBe(true)
     // pole podů se v této vzdálenosti ještě NEspustilo
     expect(state.missiles).toHaveLength(0)
   })
@@ -522,7 +522,7 @@ describe('příběh misí 9–10 (story.ts)', () => {
     expect(/Auror/.test(MISSION_STORY.mission10.prolog)).toBe(true)   // mapy z mise 4
     expect(/Kerav/.test(MISSION_STORY.mission10.prolog)).toBe(true)   // konvoj z mise 7
     expect(/Vladař/.test(MISSION_STORY.mission10.prolog)).toBe(true)  // dreadnought ve finále
-    expect(MISSION_STORY.mission09.epilog).toContain('Kastor')        // M9 → M10
+    expect(MISSION_STORY.mission09.epilog).toContain('Cádiz')         // M9 → M10
   })
 })
 

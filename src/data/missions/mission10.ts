@@ -1,7 +1,7 @@
 /**
- * Mise 10 — „Kastor" (FINÁLE, dva konce).
+ * Mise 10 — „Cádiz" (FINÁLE, dva konce).
  * Kruh se uzavírá: s daty z mise 4 a časem vykoupeným misí 7 vede Rowan
- * útok na nedostavěnou kastorskou základnu. Fáze: průlom zástěnou →
+ * útok na nedostavěnou cádizskou základnu. Fáze: průlom zástěnou →
  * pole raketových podů na předvídané ose útoku (zvrat A) → politický
  * rozkaz přerušit útok (zvrat B). Dva plnohodnotné konce: doslovné splnění
  * rozkazu (ústup), nebo jeho duch (dorazit základnu). Padne-li základna
@@ -10,9 +10,9 @@
  *
  * Id lodí (pořadí pole ships, od 1):
  *   1 = ANS Vladař (DN, vlajková, hráč), 2 = ANS Praporec (BC),
- *   3 = ANS Vanguard (CA), 4 = ANS Aurora (CL — táž loď, která Kastor
- *   zmapovala v misi 4), 5 = základna Kastor, 6–7 = hlídkové CA,
- *   8–9 = hlídkové CL, 10 = DN Ural (strážce základny),
+ *   3 = ANS Vanguard (CA), 4 = ANS Aurora (CL — táž loď, která Cádiz
+ *   zmapovala v misi 4), 5 = základna Cádiz, 6–7 = hlídkové CA,
+ *   8–9 = hlídkové CL, 10 = DN Sevilla (strážce základny),
  *   11 = ústupová bóje na hyperlimitu.
  */
 import type { Scenario, Subsystems } from '../../sim/types'
@@ -21,7 +21,7 @@ const FLAGSHIP = 1
 const BASE = 5
 /** zástěna základny: 2× CA + 2× CL předsunuté na ose útoku */
 const PATROL = [6, 7, 8, 9]
-/** dreadnought Ural — poslední strážce základny, drží se u ní */
+/** dreadnought Sevilla — poslední strážce základny, drží se u ní */
 const GUARDIAN = 10
 const BUOY = 11
 
@@ -36,20 +36,20 @@ const unfinishedBase = (): Subsystems => ({
 
 export const mission10: Scenario = {
   id: 'mission10',
-  title: 'Kastor',
+  title: 'Cádiz',
   briefing:
-    'Finále: útok na soustavu Kastor. Mapy z průzkumu Aurory znáš nazpaměť '
-    + 'a díky rozbité logistice je základna pořád jen napůl dostavěná — '
+    'Finále: útok na soustavu Cádiz. Mapy z průzkumu Aurory znáš nazpaměť '
+    + 'a díky potopené zlaté flotile je základna pořád jen napůl dostavěná — '
     + 'teď, nebo nikdy. Vedeš úderný svaz: vlajkový dreadnought ANS Vladař, '
     + 'bitevní křižník ANS Praporec, těžký křižník ANS Vanguard a lehký '
     + 'křižník ANS Aurora. Od hyperlimitu k základně je hluboko — nejdřív '
     + 'prorazíš zástěnu dvou těžkých a dvou lehkých křižníků, pak přijde '
     + 'všechno, co si obránce na předvídané ose útoku připravil — a u '
-    + 'základny čeká dreadnought Ural, poslední, který Direktoriátu zbývá. '
+    + 'základny čeká dreadnought Sevilla, poslední, který Impériu zbývá. '
     + 'Rozkaz Admirality zní: základna nesmí být nikdy dokončena.',
   seed: 20051123, // pevný seed — determinismus
 
-  // hyperlimit Kastoru — svaz přistál na +x a padá dovnitř
+  // hyperlimit Cádizu — svaz přistál na +x a padá dovnitř
   hyperlimit: { kind: 'lineX', x: 150_000_000 },
 
   ships: [
@@ -73,7 +73,7 @@ export const mission10: Scenario = {
     {
       // nedostavěná základna hluboko v soustavě: nehybná, ale střílí —
       // AUTO palba na vlajkovou loď, jakmile se dostane do poháněné obálky
-      classId: 'station-zeta', side: 'enemy', name: 'Základna Kastor',
+      classId: 'station-zeta', side: 'enemy', name: 'Základna Cádiz',
       pos: { x: -120_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0, nav: null,
       hull: 600, subsystems: unfinishedBase(), activeSensors: true,
@@ -83,32 +83,32 @@ export const mission10: Scenario = {
     // na detekci svazu (< 40 mil. km) přejde do lovu — FÁZE 1 (průlom)
     // leží záměrně DALEKO před polem podů (< 60 mil. km od základny)
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'VDS Zarja',
+      classId: 'ca-bastion', side: 'enemy', name: 'IDS Córdoba',
       pos: { x: -70_000_000, y: 6_000_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'VDS Uragan',
+      classId: 'ca-bastion', side: 'enemy', name: 'IDS Granada',
       pos: { x: -70_000_000, y: -6_000_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'VDS Altair',
+      classId: 'cl-sokol', side: 'enemy', name: 'IDS Altair',
       pos: { x: -66_000_000, y: 0 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'VDS Sirius',
+      classId: 'cl-sokol', side: 'enemy', name: 'IDS Sirius',
       pos: { x: -68_000_000, y: 2_500_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
-      // DN Ural — poslední dreadnought Direktoriátu drží stráž u základny;
+      // DN Sevilla — poslední dreadnought Impéria drží stráž u základny;
       // budí se spolu se zástěnou (setDoctrine v trg-patrol-wakes)
-      classId: 'dn-ural', side: 'enemy', name: 'VDS Ural',
+      classId: 'dn-ural', side: 'enemy', name: 'IDS Sevilla',
       pos: { x: -115_000_000, y: 3_000_000 }, vel: { x: 0, y: 0 },
       doctrine: 'freighter', activeSensors: true,
-      missiles: 400, cms: 350, // podříznutá logistika — mise 7
+      missiles: 400, cms: 350, // potopená zlatá flotila — mise 7
     },
     {
       // ústupová bóje na hyperlimitu (konec A: doslovné splnění rozkazu)
@@ -119,7 +119,7 @@ export const mission10: Scenario = {
   ],
 
   objectives: [
-    { id: 'obj-base', text: 'Znič nedostavěnou základnu Kastor', state: 'open' },
+    { id: 'obj-base', text: 'Znič nedostavěnou základnu Cádiz', state: 'open' },
   ],
 
   triggers: [
@@ -153,7 +153,7 @@ export const mission10: Scenario = {
         { kind: 'setDoctrine', shipId: GUARDIAN, doctrine: 'hunter' },
         {
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Zarja: „Albionský svaze, tady hlídka soustavy Kastor. Věděli jsme, že přijdete — historická nutnost má i vaše souřadnice. Palba bez další výzvy."',
+          text: 'IDS Córdoba: „Avalonský svaze, tady hlídka soustavy Cádiz. Věděli jsme, že přijdete — předurčení Impéria zná i vaše souřadnice. Palba bez další výzvy."',
         },
       ],
     },
@@ -200,7 +200,7 @@ export const mission10: Scenario = {
       conditions: [{ kind: 'shipSurrendered', shipId: BASE }],
       actions: [
         { kind: 'setFlag', flag: 'base-down' },
-        { kind: 'message', text: 'Základna Kastor vypíná zbraňové systémy a kapituluje.' },
+        { kind: 'message', text: 'Základna Cádiz vypíná zbraňové systémy a kapituluje.' },
       ],
     },
     {
@@ -232,7 +232,7 @@ export const mission10: Scenario = {
       actions: [
         { kind: 'setFlag', flag: 'ending-clean' },
         { kind: 'objectiveComplete', objectiveId: 'obj-base' },
-        { kind: 'winMission', text: 'Základna Kastor je pryč. Rozkaz splněn do písmene — a žádný jiný už nedorazil.' },
+        { kind: 'winMission', text: 'Základna Cádiz je pryč. Rozkaz splněn do písmene — a žádný jiný už nedorazil.' },
       ],
     },
     {
@@ -245,7 +245,7 @@ export const mission10: Scenario = {
       actions: [
         { kind: 'setFlag', flag: 'ending-spirit' },
         { kind: 'objectiveComplete', objectiveId: 'obj-base' },
-        { kind: 'winMission', text: 'Základna padla minutu před platností příměří — Kastor už Direktoriát nikdy neopevní.' },
+        { kind: 'winMission', text: 'Základna padla minutu před platností příměří — Cádiz už Impérium nikdy neopevní.' },
       ],
     },
     {
@@ -260,14 +260,14 @@ export const mission10: Scenario = {
       actions: [
         { kind: 'setFlag', flag: 'ending-orders' },
         { kind: 'objectiveComplete', objectiveId: 'obj-retreat' },
-        { kind: 'winMission', text: 'Svaz se stáhl za hyperlimit. Příměří platí — a základna Kastor stojí. Hořké vítězství je pořád vítězství. Snad.' },
+        { kind: 'winMission', text: 'Svaz se stáhl za hyperlimit. Příměří platí — a základna Cádiz stojí. Hořké vítězství je pořád vítězství. Snad.' },
       ],
     },
     {
       // prohra: zničení vlajkové lodi
       id: 'trg-flagship-destroyed', once: true,
       conditions: [{ kind: 'shipDestroyed', shipId: FLAGSHIP }],
-      actions: [{ kind: 'loseMission', text: 'ANS Vladař zůstal v Kastoru navždy. Válka skončí bez tebe.' }],
+      actions: [{ kind: 'loseMission', text: 'ANS Vladař zůstal v Cádizu navždy. Válka skončí bez tebe.' }],
     },
   ],
 }

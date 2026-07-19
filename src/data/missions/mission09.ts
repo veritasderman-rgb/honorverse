@@ -1,9 +1,9 @@
 /**
- * Mise 9 — „Obrana Albionu" (velká obrana, eskadra s dreadnoughtem).
- * Direktoriát vsadí vše na přímý úder na Albionskou křižovatku. Hráč velí
+ * Mise 9 — „Velká armáda" (velká obrana, eskadra s dreadnoughtem).
+ * Salazar vsadí vše na přímý úder na Avalonskou křižovatku. Hráč velí
  * eskadře pěti lodí u stanice Křižovatka — vlajkou je dreadnought ANS
- * Vladař, technologická odpověď Albionu na direktoriátní tonáž; invaze
- * „přistává" na hyperlimitu a valí se dovnitř v čele s DN Ural. Zvrat:
+ * Vladař, technologická odpověď Avalonu na imperiální tonáž; invaze
+ * „přistává" na hyperlimitu a valí se dovnitř v čele s DN Toledo. Zvrat:
  * druhý sled vystoupí z hyperu na OPAČNÉ straně soustavy — rozdělit stěnu,
  * nebo obětovat vedlejší cíl?
  * Viz docs/GAME_DESIGN.md kap. 7 a docs/LORE.md M9.
@@ -13,7 +13,7 @@
  *   3 = ANS Hradba (CA), 4 = ANS Vichr (DD), 5 = ANS Bouře (DD),
  *   6 = stanice Křižovatka.
  * Lodě spawnuté triggery mají PEVNÁ id (nextId za běhu roste o id raket):
- *   sled 1: 9101–9104 (DN Ural + 2× CA + CL),
+ *   sled 1: 9101–9104 (DN Toledo + 2× CA + CL),
  *   sled 2: 9201–9204 (2× CA + 2× CL, oslabená druhá linie).
  */
 import type { Scenario, Subsystems } from '../../sim/types'
@@ -39,12 +39,12 @@ const attackerNeutralized = (id: number): Scenario['triggers'] => [
     conditions: [{ kind: 'shipSurrendered', shipId: id }],
     actions: [
       { kind: 'setFlag', flag: neutralized(id) },
-      { kind: 'message', text: 'Direktoriátní loď kapitulovala — invaze o jeden klín slabší.' },
+      { kind: 'message', text: 'Imperiální loď kapitulovala — invaze o jeden klín slabší.' },
     ],
   },
 ]
 
-/** druhá linie Direktoriátu: starší senzory, ECM i obranné baterie —
+/** druhá linie Impéria: starší senzory, ECM i obranné baterie —
  * kvantita místo kvality; první sbor dostal, co logistika ještě unesla */
 const secondLine = (): Subsystems => ({
   impellerFwd: 1, impellerAft: 1,
@@ -86,13 +86,13 @@ const invader = (
 
 export const mission09: Scenario = {
   id: 'mission09',
-  title: 'Obrana Albionu',
+  title: 'Velká armáda',
   briefing:
-    'Direktoriát vsadil všechno: invazní svaz míří přímo na Albionskou '
-    + 'křižovatku a v jeho čele poprvé pluje dreadnought třídy Ural. '
+    'Salazar vsadil všechno: Velká armáda míří přímo na Avalonskou '
+    + 'křižovatku a v jejím čele poprvé pluje dreadnought třídy Toledo. '
     + 'Admiralita odpovídá tím nejcennějším, co má — velíš eskadře pěti '
     + 'lodí s vlajkovým dreadnoughtem ANS Vladař: technologická převaha '
-    + 'albionské elektroniky proti direktoriátní tonáži. Bitevní křižník '
+    + 'avalonské elektroniky proti imperiální tonáži. Bitevní křižník '
     + 'ANS Praporec, těžký křižník ANS Hradba a torpédoborce ANS Vichr '
     + 'a ANS Bouře doplňují stěnu — a za zády máš stanici Křižovatka '
     + 'u domovské planety. Útočník musí „přistát" na hyperlimitu a hodiny '
@@ -108,7 +108,7 @@ export const mission09: Scenario = {
 
   ships: [
     {
-      // vlajkový dreadnought eskadry — první loď stěny Albionu
+      // vlajkový dreadnought eskadry — první loď stěny Avalonu
       classId: 'dn-vladar', side: 'player', name: 'ANS Vladař',
       pos: { x: 2_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'player',
     },
@@ -154,25 +154,25 @@ export const mission09: Scenario = {
       ],
     },
     {
-      // SLED 1: dreadnought Ural + dva těžké křižníky + lehký křižník
+      // SLED 1: dreadnought Toledo + dva těžké křižníky + lehký křižník
       id: 'trg-wave1', once: true,
       conditions: [{ kind: 'time', t: 300 }],
       actions: [
         { kind: 'message', text: 'Translace potvrzena — první sled invaze přistál na hyperlimitu a najíždí na Křižovatku! V čele dreadnought!' },
-        invader(9101, 'dn-ural', 'VDS Ural', 200_000_000, 42_000_000, 1),
-        invader(9102, 'ca-bastion', 'VDS Bellatrix', 200_000_000, 40_000_000, 1),
-        invader(9103, 'ca-bastion', 'VDS Antares', 200_000_000, 44_000_000, 1),
-        invader(9104, 'cl-sokol', 'VDS Rigel', 203_000_000, 38_000_000, 1),
+        invader(9101, 'dn-ural', 'IDS Toledo', 200_000_000, 42_000_000, 1),
+        invader(9102, 'ca-bastion', 'IDS Bellatrix', 200_000_000, 40_000_000, 1),
+        invader(9103, 'ca-bastion', 'IDS Antares', 200_000_000, 44_000_000, 1),
+        invader(9104, 'cl-sokol', 'IDS Rigel', 203_000_000, 38_000_000, 1),
       ],
     },
     {
-      // direktoriátní ultimátum — dorazí se zpožděním po přistání sledu 1
+      // imperiální ultimátum — dorazí se zpožděním po přistání sledu 1
       id: 'trg-ultimatum', once: true,
       conditions: [{ kind: 'time', t: 420 }],
       actions: [
         {
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Ural: „Hvězdné království Albion, historická nutnost dorazila na váš práh — a váží šest a půl milionu tun. Vydejte Křižovatku a vaše světy zůstanou obyvatelné. Toto je jediná a poslední nabídka Direktoriátu."',
+          text: 'IDS Toledo: „Hvězdné království Avalon, historické právo Impéria dorazilo na váš práh — a váží šest a půl milionu tun. Caudillo Ferrante Salazar vám nabízí milost: vydejte Křižovatku a vaše světy zůstanou obyvatelné. Toto je jediná a poslední nabídka."',
         },
       ],
     },
@@ -199,10 +199,10 @@ export const mission09: Scenario = {
           kind: 'comm', speaker: 'station',
           text: 'Kontrola Křižovatka: „Nové translační stopy — mínus sto devadesát na mínus šedesát! Jsou za vámi, opakuji, druhý sled je MEZI vámi a stanicí! Vladaři, tady jsou tři tisíce lidí!"',
         },
-        invader(9201, 'ca-bastion', 'VDS Deneb', -190_000_000, -60_000_000, 2),
-        invader(9202, 'ca-bastion', 'VDS Dubhe', -193_000_000, -58_000_000, 2),
-        invader(9203, 'cl-sokol', 'VDS Mizar', -190_000_000, -56_000_000, 2),
-        invader(9204, 'cl-sokol', 'VDS Alkor', -193_000_000, -62_000_000, 2),
+        invader(9201, 'ca-bastion', 'IDS Deneb', -190_000_000, -60_000_000, 2),
+        invader(9202, 'ca-bastion', 'IDS Dubhe', -193_000_000, -58_000_000, 2),
+        invader(9203, 'cl-sokol', 'IDS Mizar', -190_000_000, -56_000_000, 2),
+        invader(9204, 'cl-sokol', 'IDS Alkor', -193_000_000, -62_000_000, 2),
       ],
     },
 
@@ -230,7 +230,7 @@ export const mission09: Scenario = {
       actions: [
         { kind: 'objectiveComplete', objectiveId: 'obj-invasion' },
         { kind: 'objectiveComplete', objectiveId: 'obj-station' },
-        { kind: 'winMission', text: 'Oba sledy invaze zničeny. Kontrola Křižovatka děkuje. Dobrá práce.' },
+        { kind: 'winMission', text: 'Oba sledy Velké armády zničeny. Kontrola Křižovatka děkuje. Dobrá práce.' },
       ],
     },
     {

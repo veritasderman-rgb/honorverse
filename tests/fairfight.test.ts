@@ -385,7 +385,7 @@ describe('tažené návnady (decoye) — spotřeba raketou', () => {
     expect(done).toBe(true)
   })
 
-  it('šance škáluje kvalitou elektroniky: pirát (ecm 0.15) < Albion (ecm 0.45)', () => {
+  it('šance škáluje kvalitou elektroniky: pirát (ecm 0.15) < Avalon (ecm 0.45)', () => {
     // za seed 8 raket a jedna návnada: počítáme stavy, kde návnada pohltila raketu
     const run = (seed: number, classId: string): number => {
       const state = makeState(seed)
@@ -399,13 +399,13 @@ describe('tažené návnady (decoye) — spotřeba raketou', () => {
       return state.events.filter(e => e.cause === 'decoy').length
     }
     const SEEDS = 400
-    let albion = 0
+    let avalon = 0
     let pirate = 0
     for (let seed = 1; seed <= SEEDS; seed++) {
-      albion += run(seed, 'ca-bastion')       // ecm 0.45
+      avalon += run(seed, 'ca-bastion')       // ecm 0.45
       pirate += run(seed + 50_000, 'dd-korzar') // ecm 0.15
     }
-    expect(pirate).toBeLessThan(albion)
+    expect(pirate).toBeLessThan(avalon)
     expect(pirate).toBeGreaterThan(0) // i pirátská návnada občas funguje
   })
 

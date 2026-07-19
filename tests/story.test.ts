@@ -1,7 +1,7 @@
 /**
  * Testy příběhových dat kampaně (src/data/story.ts):
  * každá mise 1–10 má neprázdný prolog i epilog, úvod kampaně existuje
- * a epilogy/prology vážou mise na sebe (kastorská linka).
+ * a epilogy/prology vážou mise na sebe (cádizská linka).
  */
 import { describe, expect, it } from 'vitest'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from '../src/data/story'
@@ -10,10 +10,10 @@ import { SCENARIOS } from '../src/data/missions'
 describe('příběh kampaně (story.ts)', () => {
   it('CAMPAIGN_INTRO je neprázdný a představuje svět i hráče', () => {
     expect(CAMPAIGN_INTRO.length).toBeGreaterThan(200)
-    expect(CAMPAIGN_INTRO).toContain('Albion')
-    expect(CAMPAIGN_INTRO).toContain('irektoriát')
+    expect(CAMPAIGN_INTRO).toContain('Avalon')
+    expect(CAMPAIGN_INTRO).toContain('mpérium')
     expect(CAMPAIGN_INTRO).toContain('Alex Rowan')
-    expect(CAMPAIGN_INTRO).toContain('Kastor')
+    expect(CAMPAIGN_INTRO).toContain('Cádiz')
   })
 
   it('každá mise 1–10 má neprázdný prolog i epilog', () => {
@@ -42,14 +42,14 @@ describe('příběh kampaně (story.ts)', () => {
     }
   })
 
-  it('epilogy vážou mise na sebe (kastorská linka M3 → M4 → M7)', () => {
-    // M3: data z Mercatoru ukazují na Kastor (→ mise 4)
-    expect(MISSION_STORY.mission03.epilog).toContain('Kastor')
+  it('epilogy vážou mise na sebe (cádizská linka M3 → M4 → M7)', () => {
+    // M3: data z Mercatoru ukazují na Cádiz (→ mise 4)
+    expect(MISSION_STORY.mission03.epilog).toContain('Cádiz')
     // M4: záznamy se jednou stanou válečným plánem
     expect(MISSION_STORY.mission04.epilog).toContain('válečným plánem')
-    // M7: prolog odkazuje na průzkum z mise 4 (Aurora / Kastor)
-    expect(/Auror|Kastor/.test(MISSION_STORY.mission07.prolog)).toBe(true)
-    // M2 epilog: piráti jsou zástupci Direktoriátu (→ eskalace)
+    // M7: prolog odkazuje na průzkum z mise 4 (Aurora / Cádiz)
+    expect(/Auror|Cádiz/.test(MISSION_STORY.mission07.prolog)).toBe(true)
+    // M2 epilog: piráti jsou zástupci Impéria (→ eskalace)
     expect(MISSION_STORY.mission02.epilog).toContain('zástupci')
     // M6 epilog: Kaledon podepsal pakt (→ mise 8)
     expect(MISSION_STORY.mission06.epilog).toContain('Kaledon')

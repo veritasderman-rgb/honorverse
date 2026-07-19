@@ -1,8 +1,11 @@
 # Wall of Battle
 
 Browserová taktická simulace vesmírných bitev v původním světě:
-Hvězdné království Albion proti Vegskému direktoriátu, pirátské Pomezí
-mezi nimi. Fyzikální model inspirovaný tvrdou space operou (rozbor viz
+Hvězdné království Avalon (královna Eleanor III. a Parlament) proti
+Doradskému impériu caudilla Ferranteho Salazara, pirátské Pomezí mezi nimi.
+Alžbětinská paralela ve vesmíru: kaperské listy, zlaté flotily izotopů,
+Velká armáda plující na Avalonskou křižovatku — a Cádiz na konci.
+Fyzikální model inspirovaný tvrdou space operou (rozbor viz
 docs/GAME_DESIGN.md): impelerové klíny, rakety s laserovými hlavicemi,
 vrstvená obrana. Kampaň o 10 misích, minimalistická vektorová grafika.
 

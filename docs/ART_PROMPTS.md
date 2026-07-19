@@ -24,7 +24,7 @@ as previous image" — udržíš jednotný vzhled.
 | `img/engineer.png` | palubní inženýr | Portrait of a weary but confident ship's engineer in a stained utility jumpsuit, rolled-up sleeves, tool harness, backdrop of glowing reactor conduits |
 | `img/tactical.png` | taktický důstojník | Portrait of a young intense tactical officer with a targeting monocle HUD over one eye, amber holographic fire-control displays reflected on face |
 | `img/comms.png` | spojařka/spojař | Portrait of a communications officer wearing a slim headset, hand raised to earpiece, listening intently, green waveform displays behind |
-| `img/enemy-captain.png` | direktoriátní kapitán | Portrait of a stern enemy warship commander in a grey high-collared uniform with red state insignia, cold expression, harsh white lighting |
+| `img/enemy-captain.png` | imperiální kapitán | Portrait of a stern enemy warship commander in a grey high-collared uniform with red state insignia, cold expression, harsh white lighting |
 | `img/pirate.png` | pirátský vůdce | Portrait of a scarred pirate leader in mismatched armored clothing, smug grin, cluttered dim cockpit background |
 | `img/station.png` | velitel stanice | Portrait of an older station controller in civilian-military attire, orbital station control room with large windows behind |
 | `img/governor.png` | planetární guvernér(ka) | Portrait of a dignified planetary governor in formal civilian dress with a subtle sash of office, government office backdrop |

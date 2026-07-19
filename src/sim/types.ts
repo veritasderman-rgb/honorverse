@@ -49,8 +49,8 @@ export interface ShipClassDef {
   decoyCount: number
   /**
    * Kvalita raketové elektroniky třídy — násobič počátečního zámku salvy
-   * (technologická asymetrie stran): albionské válečné třídy 1.08 (zámek
-   * smí přetéct až na 1.05 — rezerva proti erozi), direktoriátní 1.0,
+   * (technologická asymetrie stran): avalonské válečné třídy 1.08 (zámek
+   * smí přetéct až na 1.05 — rezerva proti erozi), imperiální 1.0,
    * pirátské kořistní lodě 0.9. Chybí-li, platí 1.0.
    */
   missileQuality?: number

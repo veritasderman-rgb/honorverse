@@ -146,7 +146,7 @@ describe('launchSalvo', () => {
       expect(m.pos).toEqual({ x: 100, y: 200 })
       expect(m.vel).toEqual({ x: 5000, y: -1000 })
       expect(m.phase).toBe('boost')
-      // albionská kvalita raket (missileQuality 1.08, cap 1.05): zámek nad 1.0
+      // avalonská kvalita raket (missileQuality 1.08, cap 1.05): zámek nad 1.0
       // funguje jako rezerva proti ECM erozi za letu
       expect(m.lock).toBe(1.05)
       expect(m.driveRemaining).toBe(180) // LO režim

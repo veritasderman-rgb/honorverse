@@ -133,7 +133,7 @@ describe('fireSolution — kvalita palebného řešení', () => {
     launchSalvo(state, shooter, 2, 2, 0)
     expect(state.missiles.length).toBe(2)
     for (const m of state.missiles) {
-      // albionský CA: řešení 0.7 × kvalita raket 1.08 + buff 0.2
+      // avalonský CA: řešení 0.7 × kvalita raket 1.08 + buff 0.2
       expect(m.lock).toBeCloseTo(0.7 * 1.08 + 0.2, 5)
       expect(m.shooterId).toBe(1)
       expect(m.autonomous).toBe(false)

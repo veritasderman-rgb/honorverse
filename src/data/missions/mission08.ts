@@ -1,6 +1,6 @@
 /**
  * Mise 8 — „Kaledonská hvězda" (spojenci).
- * Společná hlídka s kaledonským lehkým křižníkem Claymore proti direktoriátní
+ * Společná hlídka s kaledonským lehkým křižníkem Claymore proti imperiální
  * stěně. Lekce: boj po boku spojence, kterému nevelíš. Zvrat: kaledonský
  * kapitán v půlce boje poruší rozkazy a vrhne se na stěnu sám — hráč volí:
  * rozbít vlastní plán a krýt ho, nebo ho nechat zemřít.
@@ -8,7 +8,7 @@
  *
  * Id lodí (pořadí pole ships, od 1):
  *   1 = ANS Vanguard (hráč), 2 = KNS Claymore (spojenec),
- *   3–5 = direktoriátní stěna (2× CA + 1× CL).
+ *   3–5 = imperiální stěna (2× CA + 1× CL).
  */
 import type { Scenario } from '../../sim/types'
 
@@ -30,7 +30,7 @@ const wallNeutralized = (id: number): Scenario['triggers'] => [
     conditions: [{ kind: 'shipSurrendered', shipId: id }],
     actions: [
       { kind: 'setFlag', flag: neutralized(id) },
-      { kind: 'message', text: 'Direktoriátní loď kapitulovala — stěna se drolí.' },
+      { kind: 'message', text: 'Imperiální loď kapitulovala — stěna se drolí.' },
     ],
   },
 ]
@@ -41,7 +41,7 @@ export const mission08: Scenario = {
   briefing:
     'První společná operace s Kaledonským královstvím: ANS Vanguard a lehký '
     + 'křižník KNS Claymore hlídkují na okraji kaledonské soustavy. Průzkum '
-    + 'hlásí direktoriátní stěnu — dva těžké křižníky a lehký křižník v tiché '
+    + 'hlásí imperiální stěnu — dva těžké křižníky a lehký křižník v tiché '
     + 'formaci. Znič ji, ale pamatuj: Claymore ti nepodléhá. Kaledonci jsou '
     + 'stateční až k sebevraždě a jejich kapitán má padlého bratra k pomstění.',
   seed: 19980405, // pevný seed — determinismus
@@ -62,26 +62,26 @@ export const mission08: Scenario = {
       pos: { x: -1_500_000, y: 1_500_000 }, vel: { x: 0, y: 0 },
       doctrine: 'escort',
     },
-    // direktoriátní stěna: tichý drift ve formaci; na kontakt přejde do lovu
+    // imperiální stěna: tichý drift ve formaci; na kontakt přejde do lovu
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'VDS Polaris',
+      classId: 'ca-bastion', side: 'enemy', name: 'IDS Polaris',
       pos: { x: 60_000_000, y: 4_000_000 }, vel: { x: -600, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'VDS Procyon',
+      classId: 'ca-bastion', side: 'enemy', name: 'IDS Procyon',
       pos: { x: 60_000_000, y: -4_000_000 }, vel: { x: -600, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'VDS Capella',
+      classId: 'cl-sokol', side: 'enemy', name: 'IDS Capella',
       pos: { x: 63_000_000, y: 0 }, vel: { x: -600, y: 0 },
       doctrine: 'freighter',
     },
   ],
 
   objectives: [
-    { id: 'obj-wall', text: 'Znič nebo donuť ke kapitulaci direktoriátní stěnu', state: 'open' },
+    { id: 'obj-wall', text: 'Znič nebo donuť ke kapitulaci imperiální stěnu', state: 'open' },
   ],
 
   triggers: [
@@ -92,7 +92,7 @@ export const mission08: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'comms',
-          text: 'KNS Claymore: „Vanguarde, tady kapitán MacAllan. Poletíme s vámi, ale Kaledon se neklaní — a direktoriátním vrahům už vůbec ne. Konec."',
+          text: 'KNS Claymore: „Vanguarde, tady kapitán MacAllan. Poletíme s vámi, ale Kaledon se neklaní — a caudillovým vrahům už vůbec ne. Konec."',
         },
       ],
     },
@@ -101,13 +101,13 @@ export const mission08: Scenario = {
       id: 'trg-wall-active', once: true,
       conditions: [{ kind: 'distanceBelow', shipA: VANGUARD, shipB: WALL[0], distance: 30_000_000 }],
       actions: [
-        { kind: 'message', text: 'Direktoriátní stěna mění vektor — jdou po nás. Formace drží.' },
+        { kind: 'message', text: 'Imperiální stěna mění vektor — jdou po nás. Formace drží.' },
         { kind: 'setDoctrine', shipId: WALL[0], doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: WALL[1], doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: WALL[2], doctrine: 'hunter' },
         {
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Polaris: „Albionsko-kaledonská hlídko, direktoriát vám dává jedinou možnost: vypněte klíny. Nevyužijete-li ji, poneseme my vaše jména do hlášení."',
+          text: 'IDS Polaris: „Avalonsko-kaledonská hlídko, Impérium vám dává jedinou možnost: vypněte klíny. Nevyužijete-li ji, poneseme my vaše jména do hlášení."',
         },
       ],
     },
@@ -156,7 +156,7 @@ export const mission08: Scenario = {
       actions: [
         { kind: 'objectiveComplete', objectiveId: 'obj-wall' },
         { kind: 'objectiveComplete', objectiveId: 'obj-claymore', text: 'Úkol splněn: KNS Claymore přežil vlastní statečnost.' },
-        { kind: 'winMission', text: 'Direktoriátní stěna zničena. Kaledonská hvězda je dnes o poznání bezpečnější.' },
+        { kind: 'winMission', text: 'Imperiální stěna zničena. Kaledonská hvězda je dnes o poznání bezpečnější.' },
       ],
     },
     {

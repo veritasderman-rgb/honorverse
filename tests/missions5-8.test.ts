@@ -234,7 +234,7 @@ describe('mise 6 — Ústup od Tharsis', () => {
     state.t = 1_800
     updateTriggers(state, scenario)
 
-    // pronásledovatel si (legitimně) zamkl „albionský" křižník 9041
+    // pronásledovatel si (legitimně) zamkl „avalonský" křižník 9041
     const pursuer = state.ships[1]
     pursuer.fireControl.mode = 'auto'
     pursuer.fireControl.targetId = 9041
@@ -471,7 +471,7 @@ describe('mise 8 — Kaledonská hvězda', () => {
     const scenario = structuredClone(mission08)
     const state = sim.create(scenario)
     for (const i of [2, 3, 4]) expect(state.ships[i].doctrine).toBe('freighter')
-    state.ships[0].pos = { x: 32_000_000, y: 4_000_000 } // < 30M od VDS Polaris
+    state.ships[0].pos = { x: 32_000_000, y: 4_000_000 } // < 30M od IDS Polaris
     updateTriggers(state, scenario)
     for (const i of [2, 3, 4]) expect(state.ships[i].doctrine).toBe('hunter')
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'enemy-captain')).toBe(true)

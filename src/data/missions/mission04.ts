@@ -1,12 +1,12 @@
 /**
  * Mise 4 — „Tichý pozorovatel" (stealth/EMCON, CL).
  * Balistický průlet nepřátelskou soustavou s vypnutým klínem: zmapovat
- * direktoriátní hlídky jen na pasivech. Zapnutí klínu = okamžité prozrazení.
+ * imperiální hlídky jen na pasivech. Zapnutí klínu = okamžité prozrazení.
  * Zvrat: nouzový signál kurýra láká hráče hlouběji do nebezpečí.
  * Viz docs/GAME_DESIGN.md kap. 7.
  *
  * Id lodí (pořadí pole ships, od 1):
- *   1 = ANS Aurora (hráč), 2–4 = direktoriátní hlídky, 5 = úniková bóje;
+ *   1 = ANS Aurora (hráč), 2–4 = imperiální hlídky, 5 = úniková bóje;
  *   zvratem spawnutý 6 = kurýr Hermes.
  */
 import type { Scenario } from '../../sim/types'
@@ -23,7 +23,7 @@ export const mission04: Scenario = {
   id: 'mission04',
   title: 'Tichý pozorovatel',
   briefing:
-    'ANS Aurora vklouzla do direktoriátní soustavy Kastor rychlým průletem '
+    'ANS Aurora vklouzla do imperiální soustavy Cádiz rychlým průletem '
     + 'a zhasla klín — dál letí balisticky 2 000 km/s. Úkol: jen na pasivech '
     + 'zmapovat hlídky (ke každé na 6 mil. km, ale POZOR — pod 4 mil. km tě '
     + 'zaměří i potichu) a uniknout za protější hyperlimit. Bez klínu máš '
@@ -31,7 +31,7 @@ export const mission04: Scenario = {
     + 'Zapnutí impeleru tě prozradí na celou soustavu.',
   seed: 19940829, // pevný seed — determinismus
 
-  // hyperlimit soustavy Kastor — úniková čára na +x (průlet soustavou)
+  // hyperlimit soustavy Cádiz — úniková čára na +x (průlet soustavou)
   hyperlimit: { kind: 'lineX', x: 250_000_000 },
 
   ships: [
@@ -44,18 +44,18 @@ export const mission04: Scenario = {
       doctrine: 'player', wedgeOn: false,
     },
     {
-      // direktoriátní hlídka A — kousek nad driftovou trasou (v koridoru)
-      classId: 'cl-sokol', side: 'enemy', name: 'VDS Antares',
+      // imperiální hlídka A — kousek nad driftovou trasou (v koridoru)
+      classId: 'cl-sokol', side: 'enemy', name: 'IDS Antares',
       pos: { x: 60_000_000, y: 5_000_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
-      // direktoriátní hlídka B — těžký křižník pod trasou (nutná korekce k −y)
-      classId: 'ca-bastion', side: 'enemy', name: 'VDS Rigel',
+      // imperiální hlídka B — těžký křižník pod trasou (nutná korekce k −y)
+      classId: 'ca-bastion', side: 'enemy', name: 'IDS Rigel',
       pos: { x: 95_000_000, y: -7_500_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
-      // direktoriátní hlídka C — nejhlouběji, zpět nad trasou (korekce k +y)
-      classId: 'cl-sokol', side: 'enemy', name: 'VDS Altair',
+      // imperiální hlídka C — nejhlouběji, zpět nad trasou (korekce k +y)
+      classId: 'cl-sokol', side: 'enemy', name: 'IDS Altair',
       pos: { x: 130_000_000, y: 5_500_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
@@ -67,7 +67,7 @@ export const mission04: Scenario = {
   ],
 
   objectives: [
-    { id: 'obj-map', text: 'Zmapuj direktoriátní síly (ke každé hlídce na 6 mil. km)', state: 'open' },
+    { id: 'obj-map', text: 'Zmapuj imperiální síly (ke každé hlídce na 6 mil. km)', state: 'open' },
     { id: 'obj-escape', text: 'Vrať se za hyperlimit', state: 'open' },
   ],
 
@@ -143,9 +143,9 @@ export const mission04: Scenario = {
         { kind: 'setDoctrine', shipId: 3, doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: 4, doctrine: 'hunter' },
         {
-          // direktoriátní rozkaz zastavit
+          // imperiální rozkaz zastavit
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Rigel na všech frekvencích: „Neznámá lodi, tady Vegský direktoriát. Vypněte pohon a vzdejte se, nebo budete zničeni. Druhá výzva nebude."',
+          text: 'IDS Rigel na všech frekvencích: „Neznámá lodi, tady Doradské impérium. Jste v prostoru, který vám nepatří. Vypněte pohon a vzdejte se, nebo budete zničeni. Druhá výzva nebude."',
         },
       ],
     },

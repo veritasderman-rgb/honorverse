@@ -7,9 +7,9 @@ import type { ShipClassDef, MissileDef } from '../sim/types'
  * jeden plný zásah salvy (těžce poškozen), CA ~3–4, BC ~5, DN je pohyblivá
  * pevnost. Vyšší trup = víc mezizásahů = víc subsystémového umírání.
  *
- * Asymetrie stran (missileQuality): Hvězdné království Albion sází na
+ * Asymetrie stran (missileQuality): Hvězdné království Avalon sází na
  * technologickou převahu — méně větších lodí s lepší raketovou elektronikou
- * (1.08). Vegský direktoriát sází na tonáž a kvantitu — víc trupů, víc
+ * (1.08). Doradské impérium sází na tonáž a kvantitu — víc trupů, víc
  * šachet, průměrná elektronika (1.0). Pirátské kořistní lodě létají
  * s elektronikou minulé generace (0.9).
  */
@@ -23,7 +23,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35, decoyCount: 4,
     missileQuality: 1.08,
     lore: 'Páteřní torpédoborec Královského námořnictva, pojmenovaný po náhlých '
-      + 'horských vichrech albionské domoviny. Konstrukce upřednostňuje protiraketové '
+      + 'horských vichrech avalonské domoviny. Konstrukce upřednostňuje protiraketové '
       + 'zásobníky a kadenci obrany před vlastní údernou silou — Vichr je stavěný jako '
       + 'eskortní deštník konvojů. Slabina: pouhé tři šachty na bok a tenké bočníky; '
       + 'v přímém přestřelu s křižníkem nemá co pohledávat.',
@@ -37,7 +37,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4, decoyCount: 6,
     missileQuality: 1.08,
     lore: 'Lehký křižník pro samostatné operace daleko od domovských přístavů — '
-      + 'jméno nese po loveckém sokolovi albionských králů. Vyvážený poměr senzorů, '
+      + 'jméno nese po loveckém sokolovi avalonských králů. Vyvážený poměr senzorů, '
       + 'ECM a výzbroje z něj dělá ideální průzkumník a lovce nájezdníků. Pět šachet '
       + 'na bok mu dává úderné slovo, ale pancéřování zůstává křižníkově tenké — '
       + 'Sokol vítězí manévrem a informacemi, ne výdrží.',
@@ -67,7 +67,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
       + 'jediný obranný cluster. Bez eskorty je bezbranná; s nákladem v hodnotě '
       + 'ročního rozpočtu kolonie je přesně tím, po čem piráti v Pomezí jdou.',
   },
-  /** Q-ship: direktoriátní pomocný křižník maskovaný jako obchodník — mise 3 (zvrat) */
+  /** Q-ship: imperiální pomocný křižník maskovaný jako obchodník — mise 3 (zvrat) */
   'merch-qship': {
     id: 'merch-qship', name: 'pomocný křižník (Q-ship)', hullCode: 'MERCH', tonnage: 3_000_000,
     maxAccelG: 310, sidewallStrength: 15, hullPoints: 220,
@@ -78,7 +78,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 140, magazineCMs: 120,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.35, decoyCount: 6,
     missileQuality: 1.0,
-    lore: 'Pomocný křižník: trup nákladní lodi, uvnitř vojenská paluba. Direktoriát '
+    lore: 'Pomocný křižník: trup nákladní lodi, uvnitř vojenská paluba. Impérium '
       + 'je nasazuje jako pasti na eskorty — kontejnery skrývají raketová lůžka '
       + 'a energetické baterie, které se odhalí až zblízka. Proti nic netušící lodi '
       + 'je Q-ship smrtící; jakmile je odhalen, zrazuje ho civilní kompenzátor '
@@ -106,13 +106,13 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 400, magazineCMs: 500,
     wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5, decoyCount: 10,
     missileQuality: 1.08,
-    lore: 'Bitevní křižník — pod praporcem (odtud jméno) se v albionské doktríně '
+    lore: 'Bitevní křižník — pod praporcem (odtud jméno) se v avalonské doktríně '
       + 'vede útok: deset šachet na bok, špičkové ECM a rychlost, jaká větším lodím '
       + 'chybí. Praporec je stavěný na nájezdy hluboko do nepřátelského prostoru: '
       + 'udeřit, rozbít, zmizet. Neumí jediné — stát v linii proti skutečným '
       + 'bitevním lodím; jeho pancíř je na to o třídu tenčí.',
   },
-  /** dreadnought Albionu — vlajková loď stěny, finále kampaně (mise 9–10) */
+  /** dreadnought Avalonu — vlajková loď stěny, finále kampaně (mise 9–10) */
   'dn-vladar': {
     id: 'dn-vladar', name: 'třída Vladař', hullCode: 'DN', tonnage: 6_000_000,
     maxAccelG: 435, sidewallStrength: 34, hullPoints: 900,
@@ -122,28 +122,29 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     wedgeDetectionRange: 170_000_000, activeSensorRange: 10_000_000, ecm: 0.55, decoyCount: 14,
     missileQuality: 1.08,
     lore: 'Dreadnought — stěna bitvy vtělená do šesti milionů tun. Vladař je '
-      + 'odpověď Albionu na tonáž Direktoriátu: místo počtu trupů technologická '
-      + 'převaha — nejlepší senzory, ECM a raketová elektronika, jaké loděnice '
+      + 'odpověď Avalonu na tonáž Impéria: místo počtu trupů avalonská kvalita '
+      + '— nejlepší senzory, ECM a raketová elektronika, jaké loděnice '
       + 'Království umí postavit. Čtrnáct šachet na bok, bočníky, které zblízka '
       + 'nepropustí ani graser, a vrstvená obrana hlubší než u kterékoli menší '
       + 'třídy. Daň je stará známá: 435 g a manévr spíš symbolický. Vladař '
       + 'neuhýbá — Vladař stojí a drží linii.',
   },
-  /** dreadnought Direktoriátu — kvantita a tonáž proti albionské kvalitě */
+  /** dreadnought Impéria — kvantita a tonáž proti avalonské kvalitě */
   'dn-ural': {
-    id: 'dn-ural', name: 'třída Ural', hullCode: 'DN', tonnage: 6_500_000,
+    id: 'dn-ural', name: 'třída Toledo', hullCode: 'DN', tonnage: 6_500_000,
     maxAccelG: 425, sidewallStrength: 30, hullPoints: 850,
     tubesPerBroadside: 16, cmLaunchers: 18, pdlcClusters: 18,
     energyMountsPerBroadside: 7, energyDamage: 50,
     magazineMissiles: 800, magazineCMs: 700,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.35, decoyCount: 8,
     missileQuality: 1.0,
-    lore: 'Direktoriátní dreadnought — hora oceli pojmenovaná po horách staré '
-      + 'vlasti. Doktrína Uralu je doktrínou celého Direktoriátu: tonáž, kvantita '
-      + 'a šestnáct šachet na bok vynahradí, co elektronika neumí. Jeho salvy jsou '
-      + 'širší než albionské a zásobníky hlubší; senzory a ECM ale zůstávají '
-      + 'o generaci pozadu. Ural nevyhrává elegancí — vyhrává tím, že stojí, '
-      + 'sype boční salvy a čeká, až protivníkovi dojdou rakety dřív než jemu trup.',
+    lore: 'Imperiální dreadnought — hora oceli pojmenovaná po staré císařské '
+      + 'metropoli. Doktrína Toleda je doktrínou celého caudillova námořnictva: '
+      + 'tonáž nadevše a šestnáct šachet na bok vynahradí, co elektronika neumí. '
+      + 'Jeho salvy jsou širší než avalonské a zásobníky hlubší; senzory a ECM '
+      + 'ale zůstávají o generaci pozadu. Toledo nevyhrává elegancí — vyhrává '
+      + 'tím, že stojí, sype boční salvy a čeká, až protivníkovi dojdou rakety '
+      + 'dřív než jemu trup.',
   },
   /** orbitální stanice — nehybný opěrný bod se štítovými generátory, mise 5 */
   'station-zeta': {

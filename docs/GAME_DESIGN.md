@@ -5,8 +5,8 @@
 > fyzikální model, ne na grafiku.
 
 > **Poznámka:** Hra samotná („Wall of Battle") běží z právních důvodů ve
-> vlastním původním světě — Hvězdné království Albion vs. Vegský direktoriát
-> (kompletní mapování jmen viz commit, který tento svět zavádí). Tento dokument
+> vlastním původním světě — Hvězdné království Avalon vs. Doradské impérium
+> (kanonický zdroj příběhu viz docs/LORE.md). Tento dokument
 > slouží jako rešerše předlohy a zdroj fyzikálního modelu; jména v něm zůstávají
 > původní, do hry se nepřenášejí.
 
