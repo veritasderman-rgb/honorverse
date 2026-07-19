@@ -45,6 +45,8 @@ export interface ShipClassDef {
   activeSensorRange: number
   /** síla ECM 0–1 (snižuje zámek útočných raket) */
   ecm: number
+  /** počet tažených návnad (decoyů) v zásobě — obranná spotřební munice */
+  decoyCount: number
   /** lore třídy: původ jména, v čem vyniká, slabiny (rozklikávací detail v UI) */
   lore?: string
 }
@@ -85,6 +87,8 @@ export interface FireControl {
   engaged: boolean
   /** autonomní salvy (fire-and-forget): nižší počáteční zámek, ale bez řídicího spoje */
   autonomous?: boolean
+  /** interní stav enginu: AUTO čeká kvůli odvalení (hrana pro hlášku, bez spamu) */
+  rolledWait?: boolean
 }
 
 /** Naplánovaná druhá vlna vrstvené salvy (HI follow-up časovaný na společný přílet). */
@@ -128,6 +132,12 @@ export interface MissileState {
   shooterId?: number
   /** autonomní raketa (fire-and-forget): neeroduje bez kontaktu, bez dosahu řízení */
   autonomous?: boolean
+  /** sim čas odpalu (AI podle něj pozná, jak dlouho salva letí — žádná vševědoucnost) */
+  launchedAt?: number
+  /** salvu doprovází eskortní rušička: PDLC cíle má proti raketě Pk ×0.75 */
+  jammerEscort?: boolean
+  /** raketa už prošla testem svedení návnadou (jeden test na aktivaci) */
+  decoyChecked?: boolean
 }
 
 /** Poškoditelné subsystémy — hodnoty 0–1 (1 = plně funkční). */
@@ -176,6 +186,10 @@ export interface ShipState {
   hull: number           // zbývající hullPoints
   missiles: number       // zásoba útočných raket
   cms: number            // zásoba protiraket
+  /** zásoba tažených návnad (decoyů) */
+  decoys: number
+  /** sim čas konce aktivity vypuštěné návnady (0 = žádná aktivní) */
+  decoyActiveUntil: number
   /** cooldowny odpalů (s do další salvy / energetické salvy) */
   tubeCooldown: number
   energyCooldown: number
@@ -234,7 +248,9 @@ export type Order =
   | { kind: 'setWedge'; shipId: number; on: boolean }
   | { kind: 'setActiveSensors'; shipId: number; on: boolean }
   | { kind: 'roll'; shipId: number; towards: number | null }
-  | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveMode; autonomous?: boolean }
+  | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveMode; autonomous?: boolean; escortJammer?: boolean }
+  /** vypuštění tažené návnady (aktivní DECOY_DURATION s, svádí útočné rakety) */
+  | { kind: 'deployDecoy'; shipId: number }
   /** vrstvená salva: hlavní vlna LO hned + follow-up HI časovaný na společný přílet */
   | { kind: 'launchLayered'; shipId: number; targetId: number; countLo: number; countHi: number }
   /** přesměrování letící salvy (boost/ballistic) na nový cíl — zámek ×0.75, jen v dosahu řízení */
@@ -278,6 +294,7 @@ export type LossCause =
   | 'pdlc'    // bodová obrana obránce
   | 'wedge'   // roztříštění o interponovaný klín
   | 'ecm'     // svedena ECM/decoyi obránce
+  | 'decoy'   // přeskočila na taženou návnadu obránce
   | 'link'    // ztráta zámku za letu (bez vedení / eroze)
   | 'dud'     // detonace bez jediného zásahu paprsku
   | 'lost'    // cíl zanikl dřív (zničen/kapituloval)

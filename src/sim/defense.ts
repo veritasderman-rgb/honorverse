@@ -7,13 +7,40 @@
  */
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
 import {
-  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, LOCK_LOST,
-  PDLC_PK, PDLC_SATURATION, SATURATION_WINDOW,
+  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
+  CONTROL_RANGE, DECOY_DURATION, DECOY_SEDUCE, LOCK_FLOOR, LOCK_FLOOR_GUIDED,
+  LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_PK, PDLC_ROLLED_FACTOR, PDLC_SATURATION,
+  SATURATION_WINDOW,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { angleDiff, angleOf, dist, len, sub } from './vec'
 import { rand } from './rng'
 import { applyBeamDamage, type Aspect } from './damage'
+
+/**
+ * Dno eroze zámku rakety („posádky se ECM propálí"):
+ *   LOCK_FLOOR_GUIDED (0.4) s aktivním řídicím spojem (řízená salva, střelec
+ *       žije, v CONTROL_RANGE, střelec svítí aktivními senzory),
+ *   LOCK_FLOOR (0.3) s funkčním vlastním seekerem (fáze boost/terminal),
+ *   0 = balistický dojezd bez spoje — eroduje dál (pomalu) až k LOCK_LOST.
+ * Dno erozi jen zastavuje — zámek už pod dnem se nikdy NEzvedá.
+ */
+export function lockFloor(state: SimState, m: MissileState): number {
+  if (m.shooterId !== undefined && m.autonomous !== true) {
+    const shooter = state.ships.find(s => s.id === m.shooterId && !s.destroyed)
+    if (shooter && shooter.activeSensors && dist(shooter.pos, m.pos) < CONTROL_RANGE) {
+      return LOCK_FLOOR_GUIDED
+    }
+  }
+  if (m.phase === 'boost' || m.phase === 'terminal') return LOCK_FLOOR
+  return 0
+}
+
+/** aplikuje erozi zámku se dnem: neklesne pod floor, ale ani se k němu nezvedá */
+export function erodeLock(state: SimState, m: MissileState, amount: number): void {
+  const floor = Math.min(m.lock, lockFloor(state, m))
+  m.lock = Math.max(m.lock - amount, floor)
+}
 
 /** Aspekt cíle při útoku z pozice fromPos (hrdlo ±0.5 rad, záď ±0.35 rad). */
 export function attackAspect(target: ShipState, fromPos: Vec2): Aspect {
@@ -21,6 +48,29 @@ export function attackAspect(target: ShipState, fromPos: Vec2): Aspect {
   if (Math.abs(rel) < 0.5) return 'throat'
   if (Math.abs(rel) > Math.PI - 0.35) return 'kilt'
   return rel > 0 ? 'port' : 'stbd' // y nahoru: kladný úhel od přídě = levobok
+}
+
+/** Vypuštění tažené návnady: aktivní DECOY_DURATION s, svádí útočné rakety. */
+export function deployDecoy(state: SimState, ship: ShipState): void {
+  if (ship.destroyed || ship.surrendered) return
+  const say = (text: string): void => {
+    if (ship.doctrine !== 'player') return
+    state.events.push({
+      t: state.t, kind: 'message', shipId: ship.id, side: ship.side,
+      speaker: 'tactical', text,
+    })
+  }
+  if (ship.decoys <= 0) {
+    say('Zásobník návnad prázdný!')
+    return
+  }
+  if (state.t < ship.decoyActiveUntil) {
+    say('Návnada už je za lodí — další až po dohoření téhle.')
+    return
+  }
+  ship.decoys--
+  ship.decoyActiveUntil = state.t + DECOY_DURATION
+  say(`Návnada vypuštěna — táhne se za lodí (${DECOY_DURATION} s, zbývá ${ship.decoys}).`)
 }
 
 /** Průběžné vrstvy obrany: ECM/decoye a odpaly protiraket. */
@@ -31,6 +81,25 @@ export function updateDefenses(state: SimState, dt: number): void {
     const target = state.ships.find(s => s.id === m.targetId)
     if (!target || target.destroyed) continue
     const tDef = SHIP_CLASSES[target.classId]
+
+    // tažená návnada: raketa v CM pásmu s aktivní návnadou cíle projde
+    // JEDNÍM testem svedení — P = DECOY_SEDUCE · (1 − lock/2); slabší zámek
+    // se svede snáz. Svedená raketa detonuje na návnadě (missileMiss 'decoy').
+    if (state.t < target.decoyActiveUntil && m.decoyChecked !== true
+      && dist(m.pos, target.pos) < CM_INTERCEPT_RANGE) {
+      m.decoyChecked = true
+      const p = DECOY_SEDUCE * (1 - Math.min(1, Math.max(0, m.lock)) / 2)
+      if (rand(state.rng) < p) {
+        m.phase = 'dead'
+        state.events.push({
+          t: state.t, kind: 'missileMiss', side: m.side, shipId: target.id,
+          cause: 'decoy', salvoId: m.salvoId,
+          text: `${target.name}: raketa přeskočila na taženou návnadu`,
+        })
+        continue
+      }
+    }
+
     if (dist(m.pos, target.pos) < tDef.activeSensorRange) {
       // aktivní vedení: střelec s aktivními senzory a cílem v jejich dosahu
       // drží track — ECM eroduje zámek řízené salvy pomaleji (×0.6)
@@ -43,7 +112,8 @@ export function updateDefenses(state: SimState, dt: number): void {
           ecmFactor = ACTIVE_GUIDANCE_ECM_FACTOR
         }
       }
-      m.lock -= tDef.ecm * target.subsystems.ecm * 0.01 * ecmFactor * dt
+      // eroze se dnem: řízené/naváděné rakety ECM nikdy nevymaže úplně
+      erodeLock(state, m, tDef.ecm * target.subsystems.ecm * 0.01 * ecmFactor * dt)
       if (m.lock < LOCK_LOST) {
         m.phase = 'dead'
         state.events.push({
@@ -119,11 +189,15 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   target.terminalTimes = target.terminalTimes.filter(t => t > state.t - SATURATION_WINDOW)
   target.terminalTimes.push(state.t)
   const nWindow = target.terminalTimes.length
-  const pdlcPk = PDLC_PK / (1 + PDLC_SATURATION * (nWindow - 1))
+  // eskortní rušička salvy oslepuje bodovou obranu: Pk ×0.75
+  const jammerFactor = missile.jammerEscort === true ? PDLC_JAMMER_FACTOR : 1
+  const pdlcPk = (PDLC_PK * jammerFactor) / (1 + PDLC_SATURATION * (nWindow - 1))
   const vClose = len(sub(missile.vel, target.vel))
   const cFrac = vClose / C
   const window = cFrac <= 0.1 ? 1 : cFrac >= 0.5 ? 1 / 3 : 1 - ((cFrac - 0.1) / 0.4) * (2 / 3)
-  const clusters = Math.floor(tDef.pdlcClusters * target.subsystems.pdlc * window)
+  // odvalená loď: klín cloní i části vlastních clusterů (×0.6)
+  const rolledFactor = target.rolledTo !== null ? PDLC_ROLLED_FACTOR : 1
+  const clusters = Math.floor(tDef.pdlcClusters * target.subsystems.pdlc * window * rolledFactor)
   for (let i = 0; i < clusters; i++) {
     if (rand(state.rng) < pdlcPk) {
       state.events.push({

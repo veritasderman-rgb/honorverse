@@ -47,6 +47,36 @@ export const TUBE_COOLDOWN = 25
 /** pod tuto hodnotu zámku raketa ztrácí cíl */
 export const LOCK_LOST = 0.2
 
+/** ---------- dno eroze zámku („posádky se ECM propálí") ---------- */
+/**
+ * Zámek rakety s AKTIVNÍM řídicím spojem (střelec žije, salva řízená,
+ * v CONTROL_RANGE, střelec svítí aktivními senzory) neklesá erozí pod 0.4 —
+ * posádky se ECM propálí. ECM tak salvu oslabí, ale nikdy nevymaže.
+ */
+export const LOCK_FLOOR_GUIDED = 0.4
+/**
+ * Dno eroze pro rakety s funkčním vlastním seekerem (fáze boost/terminal)
+ * bez plného vedení. Balistický dojezd bez spoje dno nemá — může erodovat
+ * pomalu až pod LOCK_LOST.
+ */
+export const LOCK_FLOOR = 0.3
+
+/** ---------- rolování a palba ---------- */
+/** PDLC odvalené lodi: klín cloní i části clusterů (násobič počtu clusterů) */
+export const PDLC_ROLLED_FACTOR = 0.6
+
+/** ---------- tažené návnady (decoye) ---------- */
+/** doba aktivity vypuštěné návnady (s) */
+export const DECOY_DURATION = 120
+/** základ šance svedení útočné rakety návnadou: P = DECOY_SEDUCE · (1 − lock/2) */
+export const DECOY_SEDUCE = 0.25
+
+/** ---------- ECM doprovod salvy (eskortní rušička) ---------- */
+/** rušička oslepuje bodovou obranu: Pk PDLC cíle ×0.75 proti doprovázené salvě */
+export const PDLC_JAMMER_FACTOR = 0.75
+/** minimální velikost salvy s rušičkou (1 raketa se obětuje jako jammer) */
+export const JAMMER_MIN_SALVO = 3
+
 /** ---------- senzorový duel / palebné řešení ---------- */
 /** základ palebného řešení jen z pasivních dat */
 export const SOLUTION_PASSIVE = 0.7

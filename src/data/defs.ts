@@ -8,7 +8,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 3, cmLaunchers: 4, pdlcClusters: 6,
     energyMountsPerBroadside: 2, energyDamage: 25,
     magazineMissiles: 90, magazineCMs: 260,
-    wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35,
+    wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35, decoyCount: 4,
     lore: 'Páteřní torpédoborec Královského námořnictva, pojmenovaný po náhlých '
       + 'horských vichrech albionské domoviny. Konstrukce upřednostňuje protiraketové '
       + 'zásobníky a kadenci obrany před vlastní údernou silou — Vichr je stavěný jako '
@@ -21,7 +21,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
     energyMountsPerBroadside: 3, energyDamage: 30,
     magazineMissiles: 150, magazineCMs: 340,
-    wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4,
+    wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4, decoyCount: 6,
     lore: 'Lehký křižník pro samostatné operace daleko od domovských přístavů — '
       + 'jméno nese po loveckém sokolovi albionských králů. Vyvážený poměr senzorů, '
       + 'ECM a výzbroje z něj dělá ideální průzkumník a lovce nájezdníků. Pět šachet '
@@ -34,7 +34,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 8, cmLaunchers: 10, pdlcClusters: 12,
     energyMountsPerBroadside: 4, energyDamage: 40,
     magazineMissiles: 280, magazineCMs: 420,
-    wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45,
+    wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45, decoyCount: 8,
     lore: 'Těžký křižník stavěný jako pohyblivá pevnost — odtud jméno. Osm šachet '
       + 'na bok, silné bočníky a vrstvená bodová obrana z Bastionu dělají loď, která '
       + 'dokáže držet linii i proti přesile. Daní je tonáž: pomalejší akcelerace '
@@ -46,7 +46,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 0, cmLaunchers: 0, pdlcClusters: 1,
     energyMountsPerBroadside: 0, energyDamage: 0,
     magazineMissiles: 0, magazineCMs: 10,
-    wedgeDetectionRange: 60_000_000, activeSensorRange: 2_000_000, ecm: 0.05,
+    wedgeDetectionRange: 60_000_000, activeSensorRange: 2_000_000, ecm: 0.05, decoyCount: 1,
     lore: 'Standardní čtyřmilionová nákladní loď — kontejnerová páteř mezihvězdného '
       + 'obchodu. Civilní kompenzátor jí dovolí sotva 200 g a výzbroj se omezuje na '
       + 'jediný obranný cluster. Bez eskorty je bezbranná; s nákladem v hodnotě '
@@ -59,7 +59,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
     energyMountsPerBroadside: 3, energyDamage: 30,
     magazineMissiles: 140, magazineCMs: 160,
-    wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.35,
+    wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.35, decoyCount: 6,
     lore: 'Pomocný křižník: trup nákladní lodi, uvnitř vojenská paluba. Direktoriát '
       + 'je nasazuje jako pasti na eskorty — kontejnery skrývají raketová lůžka '
       + 'a energetické baterie, které se odhalí až zblízka. Proti nic netušící lodi '
@@ -73,7 +73,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 0, cmLaunchers: 2, pdlcClusters: 2,
     energyMountsPerBroadside: 0, energyDamage: 0,
     magazineMissiles: 0, magazineCMs: 30,
-    wedgeDetectionRange: 80_000_000, activeSensorRange: 3_000_000, ecm: 0.25,
+    wedgeDetectionRange: 80_000_000, activeSensorRange: 3_000_000, ecm: 0.25, decoyCount: 2,
     lore: 'Kurýr je v podstatě impelerový prstenec s kabinou — nejrychlejší trup, '
       + 'jaký loděnice staví. Vozí depeše, šifry a pasažéry, na které nesmí nikdo '
       + 'čekat. Beze zbraní a bez pancíře: jeho jedinou obranou je akcelerace '
@@ -86,7 +86,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 10, cmLaunchers: 14, pdlcClusters: 14,
     energyMountsPerBroadside: 5, energyDamage: 45,
     magazineMissiles: 400, magazineCMs: 500,
-    wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5,
+    wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5, decoyCount: 10,
     lore: 'Bitevní křižník — pod praporcem (odtud jméno) se v albionské doktríně '
       + 'vede útok: deset šachet na bok, špičkové ECM a rychlost, jaká větším lodím '
       + 'chybí. Praporec je stavěný na nájezdy hluboko do nepřátelského prostoru: '
@@ -100,7 +100,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 6, cmLaunchers: 20, pdlcClusters: 20,
     energyMountsPerBroadside: 6, energyDamage: 40,
     magazineMissiles: 300, magazineCMs: 600,
-    wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.3,
+    wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.3, decoyCount: 12,
     lore: 'Orbitální překladiště a pevnost v jednom. Bez klínu se nikam nehne, '
       + 'zato štítové generátory nahrazují bočníky po celém obvodu a zásobníky '
       + 'protiraket vydrží hodiny nepřetržité palby. Kdo chce stanici dobýt, musí '
@@ -113,7 +113,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 4, cmLaunchers: 4, pdlcClusters: 5,
     energyMountsPerBroadside: 2, energyDamage: 25,
     magazineMissiles: 60, magazineCMs: 80,
-    wedgeDetectionRange: 90_000_000, activeSensorRange: 4_000_000, ecm: 0.2,
+    wedgeDetectionRange: 90_000_000, activeSensorRange: 4_000_000, ecm: 0.2, decoyCount: 2,
     lore: 'Kořistní křižník z rozpadlé pomezní flotily, látaný vraky a černým '
       + 'trhem. Korzáři na něm létají, dokud drží pohromadě: senzory za zenitem, '
       + 'ECM z minulé generace a zásobníky, které nikdo nedoplňuje. Pořád ale nese '
@@ -126,7 +126,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 2, cmLaunchers: 3, pdlcClusters: 4,
     energyMountsPerBroadside: 1, energyDamage: 20,
     magazineMissiles: 40, magazineCMs: 60,
-    wedgeDetectionRange: 80_000_000, activeSensorRange: 3_500_000, ecm: 0.15,
+    wedgeDetectionRange: 80_000_000, activeSensorRange: 3_500_000, ecm: 0.15, decoyCount: 2,
     lore: 'Lehký nájezdník pirátských flotil — rychlý, laciný a postradatelný. '
       + 'Šalupa loví ve smečkách: jedna váže eskortu, ostatní trhají konvoj. '
       + 'Dvě šachty a papírové bočníky znamenají, že proti soustředěné palbě '
@@ -139,7 +139,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     tubesPerBroadside: 2, cmLaunchers: 2, pdlcClusters: 3,
     energyMountsPerBroadside: 1, energyDamage: 20,
     magazineMissiles: 30, magazineCMs: 40,
-    wedgeDetectionRange: 80_000_000, activeSensorRange: 4_000_000, ecm: 0.3,
+    wedgeDetectionRange: 80_000_000, activeSensorRange: 4_000_000, ecm: 0.3, decoyCount: 1,
     lore: 'Na papíře obyčejný dvoumilionový obchodník. Pod nákladovými palubami '
       + 'ale nese vojenský kompenzátor a pár skrytých šachet — přestavba, jakou si '
       + 'platí pašeráci a zpravodajské služby. Pozná se až ve chvíli, kdy „pomalý '

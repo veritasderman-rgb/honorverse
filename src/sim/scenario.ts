@@ -50,6 +50,8 @@ export function spawnShip(state: SimState, spec: ShipSpec): ShipState {
     hull: spec.hull ?? def.hullPoints,
     missiles: spec.missiles ?? def.magazineMissiles,
     cms: spec.cms ?? def.magazineCMs,
+    decoys: spec.decoys ?? def.decoyCount,
+    decoyActiveUntil: spec.decoyActiveUntil ?? 0,
     tubeCooldown: spec.tubeCooldown ?? 0,
     energyCooldown: spec.energyCooldown ?? 0,
     destroyed: spec.destroyed ?? false,

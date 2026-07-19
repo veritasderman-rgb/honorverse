@@ -4,7 +4,7 @@
  * NEaplikuje je — to dělá engine přes applyOrder.
  */
 import type { Contact, DriveMode, Order, ShipState, SimState, Side } from './types'
-import { AI_ACTIVE_SENSORS_RANGE } from './constants'
+import { AI_ACTIVE_SENSORS_RANGE, CM_INTERCEPT_RANGE, SENSOR_UPDATE_INTERVAL } from './constants'
 import { add, angleDiff, angleOf, dist, norm, scale, sub, vec } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
 
@@ -62,23 +62,67 @@ function fireOrders(ship: ShipState, near: Near, salvoRange: number, mode: Drive
   }
 }
 
-/** rolování: příchozí salva blíž než ROLL_RANGE → klín k hrozbě; jinak zpět */
+/** hystereze od-rolování: klín zpět, až je nejbližší salva dál než 1.5×ROLL_RANGE */
+const UNROLL_RANGE = ROLL_RANGE * 1.5
+
+/**
+ * Rolování: AI nereaguje na pravdu, ale jen na salvy, které její strana stihla
+ * ZAHLÉDNOUT — salva musí letět aspoň SENSOR_UPDATE_INTERVAL sekund (žádná
+ * okamžitá vševědoucnost při odpalu). Odvalená loď nemůže pálit, proto se
+ * s hysterezí vrací: když je nejbližší příchozí salva dál než ROLL_RANGE×1.5
+ * (nebo žádná neletí), roll zpět a palba se obnoví — vznikají okna pro
+ * vrstvené salvy útočníka.
+ */
 function rollOrders(state: SimState, ship: ShipState, orders: Order[]): void {
   let bestD = Infinity
   let threat: { x: number; y: number } | null = null
   for (const m of state.missiles) {
     if (m.phase === 'dead' || m.side === ship.side || m.targetId !== ship.id) continue
+    // salva letí méně než senzorový interval — strana ji ještě „nevidí"
+    if (m.launchedAt !== undefined && state.t - m.launchedAt < SENSOR_UPDATE_INTERVAL) continue
     const d = dist(m.pos, ship.pos)
-    if (d < ROLL_RANGE && d < bestD) { bestD = d; threat = m.pos }
+    if (d < bestD) { bestD = d; threat = m.pos }
   }
-  if (threat) {
-    const ang = angleOf(sub(threat, ship.pos))
-    if (ship.rolledTo === null || Math.abs(angleDiff(ang, ship.rolledTo)) > 0.2) {
+
+  if (ship.rolledTo === null) {
+    if (threat && bestD < ROLL_RANGE) {
+      orders.push({ kind: 'roll', shipId: ship.id, towards: angleOf(sub(threat, ship.pos)) })
+    }
+  } else if (!threat || bestD > UNROLL_RANGE) {
+    // odvalená loď nestřílí — vrať se a obnov palbu
+    orders.push({ kind: 'roll', shipId: ship.id, towards: null })
+  } else if (bestD < ROLL_RANGE) {
+    const ang = angleOf(sub(threat!, ship.pos))
+    if (Math.abs(angleDiff(ang, ship.rolledTo)) > 0.2) {
       orders.push({ kind: 'roll', shipId: ship.id, towards: ang })
     }
-  } else if (ship.rolledTo !== null) {
-    orders.push({ kind: 'roll', shipId: ship.id, towards: null })
   }
+}
+
+/** práh nasazení tažené návnady AI: příchozí salva aspoň N raket */
+const AI_DECOY_SALVO = 6
+
+/** návnada: salva ≥ 6 raket na tuto loď v CM pásmu, máme náboj a žádná neběží */
+function decoyOrders(state: SimState, ship: ShipState, orders: Order[]): void {
+  if (ship.decoys <= 0 || state.t < ship.decoyActiveUntil) return
+  let incoming = 0
+  let nearest = Infinity
+  for (const m of state.missiles) {
+    if (m.phase === 'dead' || m.side === ship.side || m.targetId !== ship.id) continue
+    if (m.launchedAt !== undefined && state.t - m.launchedAt < SENSOR_UPDATE_INTERVAL) continue
+    incoming++
+    nearest = Math.min(nearest, dist(m.pos, ship.pos))
+  }
+  if (incoming >= AI_DECOY_SALVO && nearest < CM_INTERCEPT_RANGE) {
+    orders.push({ kind: 'deployDecoy', shipId: ship.id })
+  }
+}
+
+
+/** obranné rozkazy společné všem bojovým doktrínám: rolování + návnady */
+function defenseOrders(state: SimState, ship: ShipState, orders: Order[]): void {
+  rollOrders(state, ship, orders)
+  decoyOrders(state, ship, orders)
 }
 
 /** runner (zvrat mise 1): po vyhlášení útěku plný výkon k hyperlimitě + obranné salvy */
@@ -109,7 +153,7 @@ function runnerOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
       count: Math.min(2, ship.missiles), mode: 1,
     })
   }
-  rollOrders(state, ship, orders)
+  defenseOrders(state, ship, orders)
 }
 
 /** pirát: intercept nejbližšího obchodníka; při hull < 50 % útěk */
@@ -133,7 +177,7 @@ function pirateOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
       }
       if (ship.throttle < 1) orders.push({ kind: 'setThrottle', shipId: ship.id, throttle: 1 })
     }
-    rollOrders(state, ship, orders)
+    defenseOrders(state, ship, orders)
     return
   }
 
@@ -146,7 +190,7 @@ function pirateOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     }
     fireOrders(ship, near, SALVO_RANGE_LO, 0, orders)
   }
-  rollOrders(state, ship, orders)
+  defenseOrders(state, ship, orders)
 }
 
 /** hystereze držení cíle huntera: nepustí pronásledovaný cíl, dokud není 3× dál než nejbližší */
@@ -171,7 +215,7 @@ function hunterOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     }
     fireOrders(ship, near, SALVO_RANGE_LO, 0, orders)
   }
-  rollOrders(state, ship, orders)
+  defenseOrders(state, ship, orders)
 }
 
 /** eskorta: intercept nejbližší nepřátelské válečné lodi, palba dle dosahu */
@@ -185,7 +229,7 @@ function escortOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     }
     fireOrders(ship, near, ESCORT_SALVO_RANGE, 0, orders)
   }
-  rollOrders(state, ship, orders)
+  defenseOrders(state, ship, orders)
 }
 
 /** Vygeneruje rozkazy všech AI lodí (doctrine != 'player'). Nic neaplikuje. */

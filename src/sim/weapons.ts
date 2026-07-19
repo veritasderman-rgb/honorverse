@@ -7,13 +7,14 @@
 import type { DriveMode, MissileState, ShipState, SimState, Vec2 } from './types'
 import {
   AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
-  ENERGY_MAX_RANGE, G, LINK_LOCK_DECAY, LOCK_LOST, RETARGET_LOCK_PENALTY,
+  ENERGY_MAX_RANGE, G, JAMMER_MIN_SALVO, LINK_LOCK_DECAY, LOCK_LOST,
+  RETARGET_LOCK_PENALTY,
   SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { add, clampLen, dist, dot, len, norm, scale, sub } from './vec'
 import { applyBeamDamage, effectiveTubes } from './damage'
-import { attackAspect, resolveTerminal } from './defense'
+import { attackAspect, erodeLock, resolveTerminal } from './defense'
 
 const DEFAULT_MISSILE = 'std-shipkiller'
 
@@ -74,10 +75,18 @@ interface LaunchOpts {
   autonomous?: boolean
   /**
    * odpal z raketových podů (zvrat mise 7): obchází kapacitu šachet
-   * i zásobníky lodi (munice se NEodečítá) a nenabíjí cooldown šachet
+   * i zásobníky lodi (munice se NEodečítá) a nenabíjí cooldown šachet;
+   * pody visí mimo trup — odpal funguje i z odvalené lodi
    */
   podLaunch?: boolean
+  /**
+   * ECM doprovod salvy: 1 raketa se obětuje jako eskortní rušička (útočí
+   * count−1), zbytek salvy má proti PDLC cíle Pk ×PDLC_JAMMER_FACTOR.
+   * Vyžaduje salvu aspoň JAMMER_MIN_SALVO raket.
+   */
+  escortJammer?: boolean
 }
+
 
 /**
  * Kvalita palebného řešení střelec→cíl = počáteční zámek odpalovaných raket:
@@ -117,6 +126,12 @@ export function launchSalvo(
   opts: LaunchOpts = {},
 ): void {
   if (ship.destroyed) return
+  // odvalená loď nemůže pálit boky — klín kryje, ale i maskuje vlastní zbraně
+  // (pody visí mimo trup, těch se roll netýká)
+  if (ship.rolledTo !== null && !opts.podLaunch) {
+    crewSay(state, ship, 'Jsme odvalení — boky kryje klín, palba nemožná.')
+    return
+  }
   if (ship.tubeCooldown > 0 && !opts.ignoreCooldown) {
     crewSay(state, ship, `Šachty přebíjejí — další salva za ${Math.ceil(ship.tubeCooldown)} s.`)
     return
@@ -127,6 +142,13 @@ export function launchSalvo(
     crewSay(state, ship, ship.missiles <= 0
       ? 'Prázdné zásobníky raket!'
       : 'Všechny raketové šachty vyřazeny!')
+    return
+  }
+  // ECM doprovod: 1 raketa se obětuje jako rušička — jen u salvy ≥ 3 raket
+  const jammer = opts.escortJammer === true
+  if (jammer && n < JAMMER_MIN_SALVO) {
+    crewSay(state, ship,
+      `Eskortní rušička potřebuje salvu aspoň ${JAMMER_MIN_SALVO} raket — odpal zrušen.`)
     return
   }
 
@@ -149,7 +171,10 @@ export function launchSalvo(
   const solution = target ? fireSolution(state, ship, target) : 1.0
   const lock0 = solution * (autonomous ? AUTONOMOUS_LOCK_FACTOR : 1) + lockBonus
   const salvoId = state.nextId++
-  for (let i = 0; i < n; i++) {
+  // s rušičkou útočí n−1 raket (jedna letí jako jammer — nesimuluje se zvlášť,
+  // útočné rakety nesou příznak jammerEscort pro PDLC vrstvu)
+  const nAttack = jammer ? n - 1 : n
+  for (let i = 0; i < nAttack; i++) {
     const m: MissileState = {
       id: state.nextId++,
       side: ship.side,
@@ -164,7 +189,9 @@ export function launchSalvo(
       salvoId,
       shooterId: ship.id,
       autonomous,
+      launchedAt: state.t,
     }
+    if (jammer) m.jammerEscort = true
     state.missiles.push(m)
   }
   if (!opts.podLaunch) {
@@ -179,9 +206,11 @@ export function launchSalvo(
       slowdown: true, text: `${ship.name}: raketové pody! Salva ${n} raket`,
     }
     : {
-      t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, salvoId,
-      text: `${ship.name}: odpálena salva ${n} raket`
-        + `${opts.ignoreCooldown ? ' (druhá vlna)' : ''}${autonomous ? ' (autonomní)' : ''}`,
+      // count = útočné rakety (jammer se nesimuluje — salvo tally sedí)
+      t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: nAttack, salvoId,
+      text: `${ship.name}: odpálena salva ${nAttack} raket`
+        + `${opts.ignoreCooldown ? ' (druhá vlna)' : ''}${autonomous ? ' (autonomní)' : ''}`
+        + `${jammer ? ' (+rušička)' : ''}`,
     })
 }
 
@@ -260,7 +289,7 @@ export function updateMissiles(state: SimState, dt: number): void {
         m.phase = 'ballistic' // pohon vyhořel — letí setrvačností
       }
     } else {
-      m.lock -= BALLISTIC_LOCK_DECAY * dt // bez pohonu zámek pomalu eroduje
+      erodeLock(state, m, BALLISTIC_LOCK_DECAY * dt) // bez pohonu zámek pomalu eroduje
     }
 
     // řídicí spoj řízené salvy: střelec žije, salva v dosahu řízení a jeho
@@ -271,7 +300,7 @@ export function updateMissiles(state: SimState, dt: number): void {
       const linked = !!shooter
         && dist(shooter.pos, m.pos) < CONTROL_RANGE
         && state.contacts[m.side].some(c => c.shipId === m.targetId)
-      if (!linked) m.lock -= LINK_LOCK_DECAY * dt
+      if (!linked) erodeLock(state, m, LINK_LOCK_DECAY * dt)
     }
 
     m.vel = clampLen(m.vel, def.maxSpeed)
@@ -303,6 +332,11 @@ export function updateMissiles(state: SimState, dt: number): void {
 /** Energetická palba (laser/graser) — drtivá zblízka, slabá na max. dosah; no-op hlásí důvod. */
 export function fireEnergy(state: SimState, shooter: ShipState, target: ShipState): void {
   if (shooter.destroyed || target.destroyed) return
+  // odvalená loď nemůže pálit boky — klín maskuje i energetické baterie
+  if (shooter.rolledTo !== null) {
+    crewSay(state, shooter, 'Jsme odvalení — boky kryje klín, palba nemožná.')
+    return
+  }
   if (shooter.energyCooldown > 0) {
     crewSay(state, shooter, `Energetické baterie nabíjejí — připraveny za ${Math.ceil(shooter.energyCooldown)} s.`)
     return

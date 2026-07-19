@@ -26,7 +26,8 @@ export function updateFireControl(state: SimState): void {
     if (ship.destroyed) continue
 
     // --- druhá vlna vrstvené salvy ---
-    if (ship.pendingWave && state.t >= ship.pendingWave.launchAt) {
+    // (odvalená loď nemůže pálit — vlna se NEspotřebuje, čeká na návrat)
+    if (ship.pendingWave && state.t >= ship.pendingWave.launchAt && ship.rolledTo === null) {
       const w = ship.pendingWave
       ship.pendingWave = null
       const target = state.ships.find(s => s.id === w.targetId && !s.destroyed && !s.surrendered)
@@ -61,6 +62,19 @@ export function updateFireControl(state: SimState): void {
       fc.mode = 'hold'
       fc.engaged = false
       continue
+    }
+
+    // odvalená loď nestřílí — AUTO čeká (hláška jen na hraně, žádný spam)
+    if (ship.rolledTo !== null) {
+      if (fc.rolledWait !== true) {
+        fc.rolledWait = true
+        say(state, ship, 'Jsme odvalení — AUTO palba čeká na návrat do normální polohy.')
+      }
+      continue
+    }
+    if (fc.rolledWait === true) {
+      fc.rolledWait = false
+      say(state, ship, 'Zpět v normální poloze — AUTO palba pokračuje.')
     }
 
     const d = dist(ship.pos, target.pos)

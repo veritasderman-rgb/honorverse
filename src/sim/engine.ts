@@ -6,7 +6,7 @@
 import type { Order, Scenario, ShipState, SimApi, SimState } from './types'
 import { updateShipPhysics } from './physics'
 import { fireEnergy, launchSalvo, missileFlightTime, retargetSalvo, updateMissiles } from './weapons'
-import { updateDefenses } from './defense'
+import { deployDecoy, updateDefenses } from './defense'
 import { updateSensors } from './sensors'
 import { updateFireControl } from './firecontrol'
 import { updateCrew } from './crew'
@@ -76,8 +76,11 @@ function applyOrder(state: SimState, order: Order): void {
     case 'launchSalvo':
       if (liveTarget(state, order.targetId)) {
         launchSalvo(state, ship, order.targetId, order.count, order.mode,
-          { autonomous: order.autonomous === true })
+          { autonomous: order.autonomous === true, escortJammer: order.escortJammer === true })
       }
+      break
+    case 'deployDecoy':
+      deployDecoy(state, ship)
       break
     case 'retargetSalvo':
       retargetSalvo(state, ship, order.salvoId, order.newTargetId)
