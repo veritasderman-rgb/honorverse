@@ -1,25 +1,29 @@
 /**
  * Mise 10 — „Kastor" (FINÁLE, dva konce).
  * Kruh se uzavírá: s daty z mise 4 a časem vykoupeným misí 7 vede Rowan
- * útok na nedostavěnou kastorskou základnu. Fáze: průlom hlídkou → pole
- * raketových podů na předvídané ose útoku (zvrat A) → politický rozkaz
- * přerušit útok (zvrat B). Dva plnohodnotné konce: doslovné splnění
+ * útok na nedostavěnou kastorskou základnu. Fáze: průlom zástěnou →
+ * pole raketových podů na předvídané ose útoku (zvrat A) → politický
+ * rozkaz přerušit útok (zvrat B). Dva plnohodnotné konce: doslovné splnění
  * rozkazu (ústup), nebo jeho duch (dorazit základnu). Padne-li základna
  * dřív, než rozkaz dorazí, je to čisté vítězství a rozkaz už nepřijde.
  * Viz docs/GAME_DESIGN.md kap. 7 a docs/LORE.md M10.
  *
  * Id lodí (pořadí pole ships, od 1):
- *   1 = ANS Praporec (vlajková, hráč), 2 = ANS Vanguard (CA),
- *   3 = ANS Aurora (CL — táž loď, která Kastor zmapovala v misi 4),
- *   4 = základna Kastor, 5–6 = hlídkové CA, 7 = hlídkový CL,
- *   8 = ústupová bóje na hyperlimitu.
+ *   1 = ANS Vladař (DN, vlajková, hráč), 2 = ANS Praporec (BC),
+ *   3 = ANS Vanguard (CA), 4 = ANS Aurora (CL — táž loď, která Kastor
+ *   zmapovala v misi 4), 5 = základna Kastor, 6–7 = hlídkové CA,
+ *   8–9 = hlídkové CL, 10 = DN Ural (strážce základny),
+ *   11 = ústupová bóje na hyperlimitu.
  */
 import type { Scenario, Subsystems } from '../../sim/types'
 
 const FLAGSHIP = 1
-const BASE = 4
-const PATROL = [5, 6, 7]
-const BUOY = 8
+const BASE = 5
+/** zástěna základny: 2× CA + 2× CL předsunuté na ose útoku */
+const PATROL = [6, 7, 8, 9]
+/** dreadnought Ural — poslední strážce základny, drží se u ní */
+const GUARDIAN = 10
+const BUOY = 11
 
 /** nedostavěná základna: půlka šachet, díry v protiraketové obraně */
 const unfinishedBase = (): Subsystems => ({
@@ -36,10 +40,12 @@ export const mission10: Scenario = {
   briefing:
     'Finále: útok na soustavu Kastor. Mapy z průzkumu Aurory znáš nazpaměť '
     + 'a díky rozbité logistice je základna pořád jen napůl dostavěná — '
-    + 'teď, nebo nikdy. Vedeš úderný svaz: vlajkový bitevní křižník ANS '
-    + 'Praporec, těžký křižník ANS Vanguard a lehký křižník ANS Aurora. '
-    + 'Od hyperlimitu k základně je hluboko — nejdřív prorazíš hlídku, pak '
-    + 'přijde všechno, co si obránce na předvídané ose útoku připravil. '
+    + 'teď, nebo nikdy. Vedeš úderný svaz: vlajkový dreadnought ANS Vladař, '
+    + 'bitevní křižník ANS Praporec, těžký křižník ANS Vanguard a lehký '
+    + 'křižník ANS Aurora. Od hyperlimitu k základně je hluboko — nejdřív '
+    + 'prorazíš zástěnu dvou těžkých a dvou lehkých křižníků, pak přijde '
+    + 'všechno, co si obránce na předvídané ose útoku připravil — a u '
+    + 'základny čeká dreadnought Ural, poslední, který Direktoriátu zbývá. '
     + 'Rozkaz Admirality zní: základna nesmí být nikdy dokončena.',
   seed: 20051123, // pevný seed — determinismus
 
@@ -48,9 +54,13 @@ export const mission10: Scenario = {
 
   ships: [
     {
-      // vlajková loď — příchod z +x s náběhovou rychlostí dovnitř
-      classId: 'bc-praporec', side: 'player', name: 'ANS Praporec',
+      // vlajkový dreadnought — příchod z +x s náběhovou rychlostí dovnitř
+      classId: 'dn-vladar', side: 'player', name: 'ANS Vladař',
       pos: { x: 140_000_000, y: 0 }, vel: { x: -3_000, y: 0 }, doctrine: 'player',
+    },
+    {
+      classId: 'bc-praporec', side: 'player', name: 'ANS Praporec',
+      pos: { x: 141_000_000, y: 2_000_000 }, vel: { x: -3_000, y: 0 }, doctrine: 'player',
     },
     {
       classId: 'ca-bastion', side: 'player', name: 'ANS Vanguard',
@@ -66,10 +76,10 @@ export const mission10: Scenario = {
       classId: 'station-zeta', side: 'enemy', name: 'Základna Kastor',
       pos: { x: -120_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0, nav: null,
-      hull: 300, subsystems: unfinishedBase(), activeSensors: true,
+      hull: 600, subsystems: unfinishedBase(), activeSensors: true,
       fireControl: { mode: 'auto', targetId: FLAGSHIP, salvoSize: 6, driveMode: 0, engaged: false },
     },
-    // hlídka základny: předsunutá zástěna na ose útoku, tichý drift;
+    // zástěna základny: předsunutá clona na ose útoku, tichý drift;
     // na detekci svazu (< 40 mil. km) přejde do lovu — FÁZE 1 (průlom)
     // leží záměrně DALEKO před polem podů (< 60 mil. km od základny)
     {
@@ -86,6 +96,19 @@ export const mission10: Scenario = {
       classId: 'cl-sokol', side: 'enemy', name: 'VDS Altair',
       pos: { x: -66_000_000, y: 0 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
+    },
+    {
+      classId: 'cl-sokol', side: 'enemy', name: 'VDS Sirius',
+      pos: { x: -68_000_000, y: 2_500_000 }, vel: { x: 250, y: 0 },
+      doctrine: 'freighter',
+    },
+    {
+      // DN Ural — poslední dreadnought Direktoriátu drží stráž u základny;
+      // budí se spolu se zástěnou (setDoctrine v trg-patrol-wakes)
+      classId: 'dn-ural', side: 'enemy', name: 'VDS Ural',
+      pos: { x: -115_000_000, y: 3_000_000 }, vel: { x: 0, y: 0 },
+      doctrine: 'freighter', activeSensors: true,
+      missiles: 400, cms: 350, // podříznutá logistika — mise 7
     },
     {
       // ústupová bóje na hyperlimitu (konec A: doslovné splnění rozkazu)
@@ -107,12 +130,12 @@ export const mission10: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'xo',
-          text: 'První důstojník: „Rozestavění hlídek sedí na Auroryny mapy do posledního kilometru, pane. A konvoj, co jsme potopili u Keravu, tady pořád chybí — základna má poloviční šachty. Tohle okno jsme si vykoupili sami."',
+          text: 'První důstojník: „Rozestavění hlídek sedí na Auroryny mapy do posledního kilometru, pane. A konvoj, co jsme potopili u Keravu, tady pořád chybí — základna má poloviční šachty. Jen ten dreadnought u ní je nový. Tohle okno jsme si vykoupili sami."',
         },
       ],
     },
 
-    // FÁZE 1 — průlom hlídkou: detekce svazu pod 40 mil. km budí hlídku
+    // FÁZE 1 — průlom zástěnou: detekce svazu pod 40 mil. km budí hlídku
     ...PATROL.map((id): Scenario['triggers'][0] => ({
       id: `trg-patrol-contact-${id}`, once: true,
       conditions: [{ kind: 'distanceBelow', shipA: FLAGSHIP, shipB: id, distance: 40_000_000 }],
@@ -122,10 +145,12 @@ export const mission10: Scenario = {
       id: 'trg-patrol-wakes', once: true,
       conditions: [{ kind: 'flag', flag: 'patrol-alert' }],
       actions: [
-        { kind: 'message', text: 'Hlídka základny mění vektor — jdou po nás. Průlom začíná.' },
+        { kind: 'message', text: 'Zástěna základny mění vektor — jdou po nás. Průlom začíná.' },
         { kind: 'setDoctrine', shipId: PATROL[0], doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: PATROL[1], doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: PATROL[2], doctrine: 'hunter' },
+        { kind: 'setDoctrine', shipId: PATROL[3], doctrine: 'hunter' },
+        { kind: 'setDoctrine', shipId: GUARDIAN, doctrine: 'hunter' },
         {
           kind: 'comm', speaker: 'enemy-captain',
           text: 'VDS Zarja: „Albionský svaze, tady hlídka soustavy Kastor. Věděli jsme, že přijdete — historická nutnost má i vaše souřadnice. Palba bez další výzvy."',
@@ -149,7 +174,7 @@ export const mission10: Scenario = {
     },
 
     // ZVRAT B — politický rozkaz: základna poškozená pod 60 % NEBO oba
-    // hlídkové CA zničeny ⇒ Admiralita nařizuje přerušit útok
+    // hlídkové CA zástěny zničeny ⇒ Admiralita nařizuje přerušit útok
     {
       id: 'trg-order-cause-hull', once: true,
       conditions: [{ kind: 'hullBelow', shipId: BASE, fraction: 0.6 }],
@@ -242,7 +267,7 @@ export const mission10: Scenario = {
       // prohra: zničení vlajkové lodi
       id: 'trg-flagship-destroyed', once: true,
       conditions: [{ kind: 'shipDestroyed', shipId: FLAGSHIP }],
-      actions: [{ kind: 'loseMission', text: 'ANS Praporec zůstal v Kastoru navždy. Válka skončí bez tebe.' }],
+      actions: [{ kind: 'loseMission', text: 'ANS Vladař zůstal v Kastoru navždy. Válka skončí bez tebe.' }],
     },
   ],
 }

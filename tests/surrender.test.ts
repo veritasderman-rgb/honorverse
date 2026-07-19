@@ -37,7 +37,7 @@ const demandScenario = (over: Partial<Scenario['ships'][0]> = {}): Scenario => m
     {
       classId: 'merch-runner', side: 'enemy', name: 'Kořist',
       pos: { x: 8_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
-      hull: 7, // 90 % poškození (hullPoints 70)
+      hull: 7, // 95 % poškození (hullPoints 140)
       ...over,
     },
   ],
@@ -80,7 +80,7 @@ describe('vzorec šance na kapitulaci', () => {
     target.missiles = 0
     expect(weaponsOut(target)).toBe(true)
     // loď bez šachet (freighter) bonus nedostává, i když nemá rakety
-    const state2 = sim.create(demandScenario({ classId: 'merch-freighter', hull: 8 }))
+    const state2 = sim.create(demandScenario({ classId: 'merch-freighter', hull: 16 }))
     expect(weaponsOut(state2.ships[1])).toBe(false)
   })
 })
@@ -119,7 +119,7 @@ describe('výzva ke kapitulaci — doručení po 2× světelném zpoždění', (
   })
 
   it('odmítnutí: nepoškozený cíl (p = 0) odpoví vzdorovitě', () => {
-    const state = sim.create(demandScenario({ hull: 70 })) // bez poškození
+    const state = sim.create(demandScenario({ hull: 140 })) // bez poškození
     sim.applyOrder(state, { kind: 'demandSurrender', shipId: 1, targetId: 2 })
     for (let i = 0; i < 120; i++) sim.tick(state, SIM_DT) // 60 s > lag
     expect(state.ships[1].surrendered).toBe(false)
@@ -127,7 +127,7 @@ describe('výzva ke kapitulaci — doručení po 2× světelném zpoždění', (
   })
 
   it('cooldown 180 s: opakovaná výzva na týž cíl je odmítnuta hláškou', () => {
-    const state = sim.create(demandScenario({ hull: 70 }))
+    const state = sim.create(demandScenario({ hull: 140 }))
     sim.applyOrder(state, { kind: 'demandSurrender', shipId: 1, targetId: 2 })
     expect(state.pendingComms).toHaveLength(1)
     sim.applyOrder(state, { kind: 'demandSurrender', shipId: 1, targetId: 2 })
@@ -194,7 +194,7 @@ describe('kapitulace v misích', () => {
     // Dauntless 8 mil. km od Cygnusu (idQuality 1, ale nad prahem zvratu 5 mil. km)
     state.ships[0].pos = { x: 32_000_000, y: 0 }
     state.ships[1].vel = { x: 0, y: 0 } // stojí — vzdálenost se nemění
-    state.ships[1].hull = 7             // 90 % poškození, doktrína freighter ⇒ p = 1
+    state.ships[1].hull = 7             // 95 % poškození, doktrína freighter ⇒ p = 1
     for (let i = 0; i < 11; i++) sim.tick(state, SIM_DT) // celý senzorový interval
     sim.applyOrder(state, { kind: 'demandSurrender', shipId: 1, targetId: 2 })
     expect(state.pendingComms).toHaveLength(1)
@@ -275,7 +275,7 @@ describe('AI a kapitulovaná loď', () => {
   })
 
   it('AUTO palba se na kapitulovaný cíl zastaví', () => {
-    const state = sim.create(demandScenario({ pos: { x: 3_000_000, y: 0 }, hull: 70 }))
+    const state = sim.create(demandScenario({ pos: { x: 3_000_000, y: 0 }, hull: 140 }))
     sim.applyOrder(state, {
       kind: 'setFireControl', shipId: 1,
       fc: { mode: 'auto', targetId: 2, salvoSize: 2, driveMode: 0 },
@@ -289,7 +289,7 @@ describe('AI a kapitulovaná loď', () => {
 
 describe('statistické eventy (side = strana rakety, launch.count)', () => {
   it('launch nese strukturovaný počet raket a stranu střelce', () => {
-    const state = sim.create(demandScenario({ pos: { x: 2_000_000, y: 0 }, hull: 70 }))
+    const state = sim.create(demandScenario({ pos: { x: 2_000_000, y: 0 }, hull: 140 }))
     launchSalvo(state, state.ships[0], 2, 3, 0)
     const ev = state.events.find(e => e.kind === 'launch')
     expect(ev?.count).toBe(3)
@@ -297,7 +297,7 @@ describe('statistické eventy (side = strana rakety, launch.count)', () => {
   })
 
   it('missileHit nese stranu RAKETY a shipId zasažené lodi', () => {
-    const state = sim.create(demandScenario({ hull: 70 }))
+    const state = sim.create(demandScenario({ hull: 140 }))
     const target = state.ships[0] // hráčův DD zasažen nepřátelskou raketou
     target.subsystems.pdlc = 0
     const missile: MissileState = {

@@ -1,23 +1,27 @@
 /**
- * Mise 9 — „Obrana Albionu" (velká obrana, eskadra).
+ * Mise 9 — „Obrana Albionu" (velká obrana, eskadra s dreadnoughtem).
  * Direktoriát vsadí vše na přímý úder na Albionskou křižovatku. Hráč velí
- * eskadře čtyř lodí u stanice Křižovatka; invaze „přistává" na hyperlimitu
- * a valí se dovnitř. Zvrat: druhý sled vystoupí z hyperu na OPAČNÉ straně
- * soustavy — rozdělit stěnu, nebo obětovat vedlejší cíl?
+ * eskadře pěti lodí u stanice Křižovatka — vlajkou je dreadnought ANS
+ * Vladař, technologická odpověď Albionu na direktoriátní tonáž; invaze
+ * „přistává" na hyperlimitu a valí se dovnitř v čele s DN Ural. Zvrat:
+ * druhý sled vystoupí z hyperu na OPAČNÉ straně soustavy — rozdělit stěnu,
+ * nebo obětovat vedlejší cíl?
  * Viz docs/GAME_DESIGN.md kap. 7 a docs/LORE.md M9.
  *
  * Id lodí (pořadí pole ships, od 1):
- *   1 = ANS Praporec (vlajková, hráč), 2 = ANS Hradba (CA),
- *   3 = ANS Vichr (DD), 4 = ANS Bouře (DD), 5 = stanice Křižovatka.
+ *   1 = ANS Vladař (DN, vlajková, hráč), 2 = ANS Praporec (BC),
+ *   3 = ANS Hradba (CA), 4 = ANS Vichr (DD), 5 = ANS Bouře (DD),
+ *   6 = stanice Křižovatka.
  * Lodě spawnuté triggery mají PEVNÁ id (nextId za běhu roste o id raket):
- *   sled 1: 9101–9103 (2× CA + CL), sled 2: 9201–9203 (CA + 2× CL).
+ *   sled 1: 9101–9104 (DN Ural + 2× CA + CL),
+ *   sled 2: 9201–9204 (2× CA + 2× CL, oslabená druhá linie).
  */
 import type { Scenario, Subsystems } from '../../sim/types'
 
 const FLAGSHIP = 1
-const STATION = 5
-const WAVE1 = [9101, 9102, 9103]
-const WAVE2 = [9201, 9202, 9203]
+const STATION = 6
+const WAVE1 = [9101, 9102, 9103, 9104]
+const WAVE2 = [9201, 9202, 9203, 9204]
 const ATTACKERS = [...WAVE1, ...WAVE2]
 
 /** flag „útočník id vyřazen" — zničen NEBO kapituloval */
@@ -41,7 +45,7 @@ const attackerNeutralized = (id: number): Scenario['triggers'] => [
 ]
 
 /** druhá linie Direktoriátu: starší senzory, ECM i obranné baterie —
- * invazi po nájezdech na logistiku (mise 7) nesou i rezervy */
+ * kvantita místo kvality; první sbor dostal, co logistika ještě unesla */
 const secondLine = (): Subsystems => ({
   impellerFwd: 1, impellerAft: 1,
   sidewallPort: 1, sidewallStbd: 1,
@@ -50,14 +54,22 @@ const secondLine = (): Subsystems => ({
   pdlc: 0.7, cm: 0.7, sensors: 0.8, ecm: 0.8,
 })
 
+/** zásobníky útočníka: mise 7 podřízla logistiku — sled 1 nese část,
+ * sled 2 (rezervy) jen polovinu papírového stavu */
+const MAGAZINES: Record<string, { m1: number; c1: number; m2: number; c2: number }> = {
+  'dn-ural': { m1: 300, c1: 300, m2: 400, c2: 350 },
+  'ca-bastion': { m1: 100, c1: 80, m2: 140, c2: 210 },
+  'cl-sokol': { m1: 60, c1: 50, m2: 75, c2: 170 },
+}
+
 /** útočník sledu: „přistál" na hyperlimitu, kurz na stanici (brzdí k cíli).
  * Než hlídkové senzory zachytí klíny obránců, drží naplánovaný nájezd;
- * pak doktrína hunter převezme intercept. Zásobníky jen napůl plné —
- * přesně o tohle šlo v misi 7 (podříznutá logistika). */
+ * pak doktrína hunter převezme intercept. Sled 2 je oslabená druhá linie. */
 const invader = (
-  id: number, classId: string, name: string, x: number, y: number,
+  id: number, classId: string, name: string, x: number, y: number, wave: 1 | 2,
 ): Scenario['triggers'][0]['actions'][0] => {
   const d = Math.hypot(x, y)
+  const mag = MAGAZINES[classId]
   return {
     kind: 'spawnShip',
     ship: {
@@ -65,9 +77,9 @@ const invader = (
       pos: { x, y }, vel: { x: -2_000 * (x / d), y: -2_000 * (y / d) },
       doctrine: 'hunter', activeSensors: true,
       nav: { kind: 'course', dest: { x: 0, y: 0 }, arriveAtRest: true },
-      subsystems: secondLine(),
-      missiles: classId === 'ca-bastion' ? 100 : 60,
-      cms: classId === 'ca-bastion' ? 80 : 50,
+      subsystems: wave === 2 ? secondLine() : undefined,
+      missiles: wave === 1 ? mag.m1 : mag.m2,
+      cms: wave === 1 ? mag.c1 : mag.c2,
     },
   }
 }
@@ -77,14 +89,18 @@ export const mission09: Scenario = {
   title: 'Obrana Albionu',
   briefing:
     'Direktoriát vsadil všechno: invazní svaz míří přímo na Albionskou '
-    + 'křižovatku. Velíš eskadře čtyř lodí — vlajkový bitevní křižník ANS '
-    + 'Praporec, těžký křižník ANS Hradba a torpédoborce ANS Vichr a ANS '
-    + 'Bouře — a za zády máš stanici Křižovatka u domovské planety. Útočník '
-    + 'musí „přistát" na hyperlimitu a hodiny se dopravovat dovnitř: postav '
-    + 'interceptní geometrii, drž eskadru ve formaci (stěna kryje, šíp míří) '
-    + 'a rozmysli si předem, KDY eskadru rozdělit — kdo brání všechno, '
-    + 'nebrání nic. Stanice má vlastní obranné pody, ale klíny mezi invazí '
-    + 'a Křižovatkou jsou jen ty tvoje.',
+    + 'křižovatku a v jeho čele poprvé pluje dreadnought třídy Ural. '
+    + 'Admiralita odpovídá tím nejcennějším, co má — velíš eskadře pěti '
+    + 'lodí s vlajkovým dreadnoughtem ANS Vladař: technologická převaha '
+    + 'albionské elektroniky proti direktoriátní tonáži. Bitevní křižník '
+    + 'ANS Praporec, těžký křižník ANS Hradba a torpédoborce ANS Vichr '
+    + 'a ANS Bouře doplňují stěnu — a za zády máš stanici Křižovatka '
+    + 'u domovské planety. Útočník musí „přistát" na hyperlimitu a hodiny '
+    + 'se dopravovat dovnitř: postav interceptní geometrii, drž eskadru '
+    + 've formaci (stěna kryje, šíp míří) a rozmysli si předem, KDY '
+    + 'eskadru rozdělit — kdo brání všechno, nebrání nic. Stanice má '
+    + 'vlastní obranné pody, ale klíny mezi invazí a Křižovatkou jsou '
+    + 'jen ty tvoje.',
   seed: 20040814, // pevný seed — determinismus
 
   // hyperlimit domovské soustavy — kružnice kolem hvězdy [0,0]
@@ -92,21 +108,25 @@ export const mission09: Scenario = {
 
   ships: [
     {
-      // vlajková loď eskadry
-      classId: 'bc-praporec', side: 'player', name: 'ANS Praporec',
+      // vlajkový dreadnought eskadry — první loď stěny Albionu
+      classId: 'dn-vladar', side: 'player', name: 'ANS Vladař',
       pos: { x: 2_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'player',
     },
     {
-      classId: 'ca-bastion', side: 'player', name: 'ANS Hradba',
+      classId: 'bc-praporec', side: 'player', name: 'ANS Praporec',
       pos: { x: 2_000_000, y: 800_000 }, vel: { x: 0, y: 0 }, doctrine: 'player',
     },
     {
-      classId: 'dd-vichr', side: 'player', name: 'ANS Vichr',
+      classId: 'ca-bastion', side: 'player', name: 'ANS Hradba',
       pos: { x: 2_000_000, y: -800_000 }, vel: { x: 0, y: 0 }, doctrine: 'player',
     },
     {
-      classId: 'dd-vichr', side: 'player', name: 'ANS Bouře',
+      classId: 'dd-vichr', side: 'player', name: 'ANS Vichr',
       pos: { x: 2_000_000, y: 1_600_000 }, vel: { x: 0, y: 0 }, doctrine: 'player',
+    },
+    {
+      classId: 'dd-vichr', side: 'player', name: 'ANS Bouře',
+      pos: { x: 2_000_000, y: -1_600_000 }, vel: { x: 0, y: 0 }, doctrine: 'player',
     },
     {
       // stanice Křižovatka u domovské planety — nehybný opěrný bod
@@ -129,19 +149,20 @@ export const mission09: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'governor',
-          text: 'Guvernér: „Kapitáne Rowane, hyperprostorové senzory hlásí translační stopy na limitu. Za vámi jsou tři obydlené světy a Křižovatka, ze které se platí všechno ostatní. Admiralita očekává, že invaze skončí tady. Nic víc k tomu není."',
+          text: 'Guvernér: „Kapitáne Rowane, hyperprostorové senzory hlásí translační stopy na limitu. Za vámi jsou tři obydlené světy a Křižovatka, ze které se platí všechno ostatní. Admiralita vám svěřila Vladaře. Očekává, že invaze skončí tady. Nic víc k tomu není."',
         },
       ],
     },
     {
-      // SLED 1: dva těžké křižníky + lehký křižník přistály na hyperlimitu
+      // SLED 1: dreadnought Ural + dva těžké křižníky + lehký křižník
       id: 'trg-wave1', once: true,
       conditions: [{ kind: 'time', t: 300 }],
       actions: [
-        { kind: 'message', text: 'Translace potvrzena — první sled invaze přistál na hyperlimitu a najíždí na Křižovatku!' },
-        invader(9101, 'ca-bastion', 'VDS Bellatrix', 200_000_000, 40_000_000),
-        invader(9102, 'ca-bastion', 'VDS Antares', 200_000_000, 44_000_000),
-        invader(9103, 'cl-sokol', 'VDS Rigel', 203_000_000, 38_000_000),
+        { kind: 'message', text: 'Translace potvrzena — první sled invaze přistál na hyperlimitu a najíždí na Křižovatku! V čele dreadnought!' },
+        invader(9101, 'dn-ural', 'VDS Ural', 200_000_000, 42_000_000, 1),
+        invader(9102, 'ca-bastion', 'VDS Bellatrix', 200_000_000, 40_000_000, 1),
+        invader(9103, 'ca-bastion', 'VDS Antares', 200_000_000, 44_000_000, 1),
+        invader(9104, 'cl-sokol', 'VDS Rigel', 203_000_000, 38_000_000, 1),
       ],
     },
     {
@@ -151,7 +172,7 @@ export const mission09: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'enemy-captain',
-          text: 'VDS Bellatrix: „Hvězdné království Albion, historická nutnost dorazila na váš práh. Vydejte Křižovatku a vaše světy zůstanou obyvatelné. Toto je jediná a poslední nabídka Direktoriátu."',
+          text: 'VDS Ural: „Hvězdné království Albion, historická nutnost dorazila na váš práh — a váží šest a půl milionu tun. Vydejte Křižovatku a vaše světy zůstanou obyvatelné. Toto je jediná a poslední nabídka Direktoriátu."',
         },
       ],
     },
@@ -163,7 +184,7 @@ export const mission09: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'xo',
-          text: 'První důstojník: „První sled je pryč, pane. Ale podívejte na geometrii — jsme daleko od stanice a všechna naše rychlost míří VEN. Jestli mají druhý sbor, přistane tam, kde nejsme."',
+          text: 'První důstojník: „První sled je pryč, pane. I ten jejich dreadnought. Ale podívejte na geometrii — jsme daleko od stanice a všechna naše rychlost míří VEN. Jestli mají druhý sbor, přistane tam, kde nejsme."',
         },
       ],
     },
@@ -176,11 +197,12 @@ export const mission09: Scenario = {
         { kind: 'message', text: 'Druhý sbor vystupuje z hyperu na opačné straně soustavy!' },
         {
           kind: 'comm', speaker: 'station',
-          text: 'Kontrola Křižovatka: „Nové translační stopy — mínus sto devadesát na mínus šedesát! Jsou za vámi, opakuji, druhý sled je MEZI vámi a stanicí! Praporče, tady jsou tři tisíce lidí!"',
+          text: 'Kontrola Křižovatka: „Nové translační stopy — mínus sto devadesát na mínus šedesát! Jsou za vámi, opakuji, druhý sled je MEZI vámi a stanicí! Vladaři, tady jsou tři tisíce lidí!"',
         },
-        invader(9201, 'ca-bastion', 'VDS Deneb', -190_000_000, -60_000_000),
-        invader(9202, 'cl-sokol', 'VDS Mizar', -190_000_000, -56_000_000),
-        invader(9203, 'cl-sokol', 'VDS Alkor', -193_000_000, -62_000_000),
+        invader(9201, 'ca-bastion', 'VDS Deneb', -190_000_000, -60_000_000, 2),
+        invader(9202, 'ca-bastion', 'VDS Dubhe', -193_000_000, -58_000_000, 2),
+        invader(9203, 'cl-sokol', 'VDS Mizar', -190_000_000, -56_000_000, 2),
+        invader(9204, 'cl-sokol', 'VDS Alkor', -193_000_000, -62_000_000, 2),
       ],
     },
 
@@ -202,7 +224,7 @@ export const mission09: Scenario = {
     // vyřazení útočníků: zničení NEBO kapitulace ⇒ flagy
     ...ATTACKERS.flatMap(attackerNeutralized),
     {
-      // VÝHRA: všech šest útočníků obou sledů vyřazeno (AND)
+      // VÝHRA: všech osm útočníků obou sledů vyřazeno (AND)
       id: 'trg-win', once: true,
       conditions: ATTACKERS.map(id => ({ kind: 'flag' as const, flag: neutralized(id) })),
       actions: [
@@ -221,7 +243,7 @@ export const mission09: Scenario = {
       // prohra: zničení vlajkové lodi
       id: 'trg-flagship-destroyed', once: true,
       conditions: [{ kind: 'shipDestroyed', shipId: FLAGSHIP }],
-      actions: [{ kind: 'loseMission', text: 'Vlajková loď ANS Praporec zničena — eskadra bez velení se rozpadá.' }],
+      actions: [{ kind: 'loseMission', text: 'Vlajkový dreadnought ANS Vladař zničen — eskadra bez velení se rozpadá.' }],
     },
     {
       // prohra: ztráta tří vlastních lodí — obrana se zhroutila

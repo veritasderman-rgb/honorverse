@@ -201,7 +201,7 @@ describe('mise 6 — Ústup od Tharsis', () => {
   it('hráč startuje poškozený a pomalejší než pronásledovatelé', () => {
     const state = sim.create(mission06)
     const p = state.ships[0]
-    expect(p.hull).toBe(90)
+    expect(p.hull).toBe(180) // z 300 — šrámy z prohraného střetnutí
     expect(p.subsystems.impellerAft).toBe(0.35)
     expect(p.subsystems.tubesPort).toBe(0.5)
     expect(p.subsystems.sidewallStbd).toBe(0.6)

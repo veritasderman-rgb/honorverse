@@ -1,14 +1,27 @@
 import type { ShipClassDef, MissileDef } from '../sim/types'
 
-/** Třídy lodí — éra knih 1–6, hodnoty viz docs/GAME_DESIGN.md kap. 2. */
+/**
+ * Třídy lodí — éra knih 1–6, hodnoty viz docs/GAME_DESIGN.md kap. 2.
+ *
+ * Trupy (hullPoints) kalibrovány na „lodě umírají po částech": DD přežije
+ * jeden plný zásah salvy (těžce poškozen), CA ~3–4, BC ~5, DN je pohyblivá
+ * pevnost. Vyšší trup = víc mezizásahů = víc subsystémového umírání.
+ *
+ * Asymetrie stran (missileQuality): Hvězdné království Albion sází na
+ * technologickou převahu — méně větších lodí s lepší raketovou elektronikou
+ * (1.08). Vegský direktoriát sází na tonáž a kvantitu — víc trupů, víc
+ * šachet, průměrná elektronika (1.0). Pirátské kořistní lodě létají
+ * s elektronikou minulé generace (0.9).
+ */
 export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   'dd-vichr': {
     id: 'dd-vichr', name: 'třída Vichr', hullCode: 'DD', tonnage: 75_000,
-    maxAccelG: 520, sidewallStrength: 12, hullPoints: 60,
+    maxAccelG: 520, sidewallStrength: 12, hullPoints: 120,
     tubesPerBroadside: 3, cmLaunchers: 4, pdlcClusters: 6,
     energyMountsPerBroadside: 2, energyDamage: 25,
     magazineMissiles: 90, magazineCMs: 260,
     wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35, decoyCount: 4,
+    missileQuality: 1.08,
     lore: 'Páteřní torpédoborec Královského námořnictva, pojmenovaný po náhlých '
       + 'horských vichrech albionské domoviny. Konstrukce upřednostňuje protiraketové '
       + 'zásobníky a kadenci obrany před vlastní údernou silou — Vichr je stavěný jako '
@@ -17,11 +30,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   },
   'cl-sokol': {
     id: 'cl-sokol', name: 'třída Sokol', hullCode: 'CL', tonnage: 130_000,
-    maxAccelG: 505, sidewallStrength: 16, hullPoints: 90,
+    maxAccelG: 505, sidewallStrength: 16, hullPoints: 180,
     tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
     energyMountsPerBroadside: 3, energyDamage: 30,
     magazineMissiles: 150, magazineCMs: 340,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4, decoyCount: 6,
+    missileQuality: 1.08,
     lore: 'Lehký křižník pro samostatné operace daleko od domovských přístavů — '
       + 'jméno nese po loveckém sokolovi albionských králů. Vyvážený poměr senzorů, '
       + 'ECM a výzbroje z něj dělá ideální průzkumník a lovce nájezdníků. Pět šachet '
@@ -30,11 +44,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   },
   'ca-bastion': {
     id: 'ca-bastion', name: 'třída Bastion', hullCode: 'CA', tonnage: 300_000,
-    maxAccelG: 490, sidewallStrength: 22, hullPoints: 150,
+    maxAccelG: 490, sidewallStrength: 22, hullPoints: 300,
     tubesPerBroadside: 8, cmLaunchers: 10, pdlcClusters: 12,
     energyMountsPerBroadside: 4, energyDamage: 40,
     magazineMissiles: 280, magazineCMs: 420,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45, decoyCount: 8,
+    missileQuality: 1.08,
     lore: 'Těžký křižník stavěný jako pohyblivá pevnost — odtud jméno. Osm šachet '
       + 'na bok, silné bočníky a vrstvená bodová obrana z Bastionu dělají loď, která '
       + 'dokáže držet linii i proti přesile. Daní je tonáž: pomalejší akcelerace '
@@ -42,7 +57,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   },
   'merch-freighter': {
     id: 'merch-freighter', name: 'nákladní loď', hullCode: 'MERCH', tonnage: 4_000_000,
-    maxAccelG: 200, sidewallStrength: 4, hullPoints: 80,
+    maxAccelG: 200, sidewallStrength: 4, hullPoints: 160,
     tubesPerBroadside: 0, cmLaunchers: 0, pdlcClusters: 1,
     energyMountsPerBroadside: 0, energyDamage: 0,
     magazineMissiles: 0, magazineCMs: 10,
@@ -55,11 +70,14 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   /** Q-ship: direktoriátní pomocný křižník maskovaný jako obchodník — mise 3 (zvrat) */
   'merch-qship': {
     id: 'merch-qship', name: 'pomocný křižník (Q-ship)', hullCode: 'MERCH', tonnage: 3_000_000,
-    maxAccelG: 310, sidewallStrength: 15, hullPoints: 110,
-    tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
+    maxAccelG: 310, sidewallStrength: 15, hullPoints: 220,
+    // obranné baterie jen improvizované (kontejnerová přestavba nemá
+    // vojenskou hustotu obrany) — útočná past, ne linková loď
+    tubesPerBroadside: 5, cmLaunchers: 4, pdlcClusters: 5,
     energyMountsPerBroadside: 3, energyDamage: 30,
-    magazineMissiles: 140, magazineCMs: 160,
+    magazineMissiles: 140, magazineCMs: 120,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.35, decoyCount: 6,
+    missileQuality: 1.0,
     lore: 'Pomocný křižník: trup nákladní lodi, uvnitř vojenská paluba. Direktoriát '
       + 'je nasazuje jako pasti na eskorty — kontejnery skrývají raketová lůžka '
       + 'a energetické baterie, které se odhalí až zblízka. Proti nic netušící lodi '
@@ -69,7 +87,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   /** kurýrní loď: rychlá, beze zbraní — mise 4 (zvrat) */
   'disp-courier': {
     id: 'disp-courier', name: 'kurýrní loď', hullCode: 'DB', tonnage: 20_000,
-    maxAccelG: 560, sidewallStrength: 6, hullPoints: 25,
+    maxAccelG: 560, sidewallStrength: 6, hullPoints: 50,
     tubesPerBroadside: 0, cmLaunchers: 2, pdlcClusters: 2,
     energyMountsPerBroadside: 0, energyDamage: 0,
     magazineMissiles: 0, magazineCMs: 30,
@@ -82,21 +100,55 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   /** bitevní křižník — údernou silou převyšuje CA, mise 7 (hráč útočí) */
   'bc-praporec': {
     id: 'bc-praporec', name: 'třída Praporec', hullCode: 'BC', tonnage: 900_000,
-    maxAccelG: 475, sidewallStrength: 26, hullPoints: 220,
+    maxAccelG: 475, sidewallStrength: 26, hullPoints: 440,
     tubesPerBroadside: 10, cmLaunchers: 14, pdlcClusters: 14,
     energyMountsPerBroadside: 5, energyDamage: 45,
     magazineMissiles: 400, magazineCMs: 500,
     wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5, decoyCount: 10,
+    missileQuality: 1.08,
     lore: 'Bitevní křižník — pod praporcem (odtud jméno) se v albionské doktríně '
       + 'vede útok: deset šachet na bok, špičkové ECM a rychlost, jaká větším lodím '
       + 'chybí. Praporec je stavěný na nájezdy hluboko do nepřátelského prostoru: '
       + 'udeřit, rozbít, zmizet. Neumí jediné — stát v linii proti skutečným '
       + 'bitevním lodím; jeho pancíř je na to o třídu tenčí.',
   },
+  /** dreadnought Albionu — vlajková loď stěny, finále kampaně (mise 9–10) */
+  'dn-vladar': {
+    id: 'dn-vladar', name: 'třída Vladař', hullCode: 'DN', tonnage: 6_000_000,
+    maxAccelG: 435, sidewallStrength: 34, hullPoints: 900,
+    tubesPerBroadside: 14, cmLaunchers: 22, pdlcClusters: 22,
+    energyMountsPerBroadside: 7, energyDamage: 55,
+    magazineMissiles: 700, magazineCMs: 900,
+    wedgeDetectionRange: 170_000_000, activeSensorRange: 10_000_000, ecm: 0.55, decoyCount: 14,
+    missileQuality: 1.08,
+    lore: 'Dreadnought — stěna bitvy vtělená do šesti milionů tun. Vladař je '
+      + 'odpověď Albionu na tonáž Direktoriátu: místo počtu trupů technologická '
+      + 'převaha — nejlepší senzory, ECM a raketová elektronika, jaké loděnice '
+      + 'Království umí postavit. Čtrnáct šachet na bok, bočníky, které zblízka '
+      + 'nepropustí ani graser, a vrstvená obrana hlubší než u kterékoli menší '
+      + 'třídy. Daň je stará známá: 435 g a manévr spíš symbolický. Vladař '
+      + 'neuhýbá — Vladař stojí a drží linii.',
+  },
+  /** dreadnought Direktoriátu — kvantita a tonáž proti albionské kvalitě */
+  'dn-ural': {
+    id: 'dn-ural', name: 'třída Ural', hullCode: 'DN', tonnage: 6_500_000,
+    maxAccelG: 425, sidewallStrength: 30, hullPoints: 850,
+    tubesPerBroadside: 16, cmLaunchers: 18, pdlcClusters: 18,
+    energyMountsPerBroadside: 7, energyDamage: 50,
+    magazineMissiles: 800, magazineCMs: 700,
+    wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.35, decoyCount: 8,
+    missileQuality: 1.0,
+    lore: 'Direktoriátní dreadnought — hora oceli pojmenovaná po horách staré '
+      + 'vlasti. Doktrína Uralu je doktrínou celého Direktoriátu: tonáž, kvantita '
+      + 'a šestnáct šachet na bok vynahradí, co elektronika neumí. Jeho salvy jsou '
+      + 'širší než albionské a zásobníky hlubší; senzory a ECM ale zůstávají '
+      + 'o generaci pozadu. Ural nevyhrává elegancí — vyhrává tím, že stojí, '
+      + 'sype boční salvy a čeká, až protivníkovi dojdou rakety dřív než jemu trup.',
+  },
   /** orbitální stanice — nehybný opěrný bod se štítovými generátory, mise 5 */
   'station-zeta': {
     id: 'station-zeta', name: 'orbitální stanice', hullCode: 'STN', tonnage: 8_000_000,
-    maxAccelG: 0, sidewallStrength: 30, hullPoints: 400,
+    maxAccelG: 0, sidewallStrength: 30, hullPoints: 800,
     tubesPerBroadside: 6, cmLaunchers: 20, pdlcClusters: 20,
     energyMountsPerBroadside: 6, energyDamage: 40,
     magazineMissiles: 300, magazineCMs: 600,
@@ -109,11 +161,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   /** pirátský křižník — opotřebovaná kořistní loď, ne první linie (Pomezí) */
   'cl-korzar': {
     id: 'cl-korzar', name: 'třída Korzár', hullCode: 'CL', tonnage: 110_000,
-    maxAccelG: 480, sidewallStrength: 10, hullPoints: 70,
+    maxAccelG: 480, sidewallStrength: 10, hullPoints: 140,
     tubesPerBroadside: 4, cmLaunchers: 4, pdlcClusters: 5,
     energyMountsPerBroadside: 2, energyDamage: 25,
     magazineMissiles: 60, magazineCMs: 80,
     wedgeDetectionRange: 90_000_000, activeSensorRange: 4_000_000, ecm: 0.2, decoyCount: 2,
+    missileQuality: 0.9,
     lore: 'Kořistní křižník z rozpadlé pomezní flotily, látaný vraky a černým '
       + 'trhem. Korzáři na něm létají, dokud drží pohromadě: senzory za zenitem, '
       + 'ECM z minulé generace a zásobníky, které nikdo nedoplňuje. Pořád ale nese '
@@ -122,11 +175,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   /** pirátská šalupa — lehký nájezdník (Pomezí) */
   'dd-korzar': {
     id: 'dd-korzar', name: 'pirátská šalupa', hullCode: 'DD', tonnage: 55_000,
-    maxAccelG: 500, sidewallStrength: 8, hullPoints: 45,
+    maxAccelG: 500, sidewallStrength: 8, hullPoints: 90,
     tubesPerBroadside: 2, cmLaunchers: 3, pdlcClusters: 4,
     energyMountsPerBroadside: 1, energyDamage: 20,
     magazineMissiles: 40, magazineCMs: 60,
     wedgeDetectionRange: 80_000_000, activeSensorRange: 3_500_000, ecm: 0.15, decoyCount: 2,
+    missileQuality: 0.9,
     lore: 'Lehký nájezdník pirátských flotil — rychlý, laciný a postradatelný. '
       + 'Šalupa loví ve smečkách: jedna váže eskortu, ostatní trhají konvoj. '
       + 'Dvě šachty a papírové bočníky znamenají, že proti soustředěné palbě '
@@ -135,7 +189,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   /** „obchodník" s vojenským kompenzátorem — mise 1 (zvrat) */
   'merch-runner': {
     id: 'merch-runner', name: 'nákladní loď (?)', hullCode: 'MERCH', tonnage: 2_000_000,
-    maxAccelG: 420, sidewallStrength: 8, hullPoints: 70,
+    maxAccelG: 420, sidewallStrength: 8, hullPoints: 140,
     tubesPerBroadside: 2, cmLaunchers: 2, pdlcClusters: 3,
     energyMountsPerBroadside: 1, energyDamage: 20,
     magazineMissiles: 30, magazineCMs: 40,

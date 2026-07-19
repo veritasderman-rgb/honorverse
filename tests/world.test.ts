@@ -36,7 +36,7 @@ describe('spawnShip', () => {
     const state = build(scenario)
     expect(state.ships.map(s => s.id)).toEqual([1, 2])
     const dd = state.ships[0]
-    expect(dd.hull).toBe(60)                     // hullPoints dd-vichr
+    expect(dd.hull).toBe(120)                    // hullPoints dd-vichr (zdvojeno — lodě umírají po částech)
     expect(dd.missiles).toBe(90)                 // magazineMissiles
     expect(dd.throttle).toBe(STANDARD_THROTTLE)
     expect(dd.wedgeOn).toBe(true)
@@ -260,7 +260,7 @@ describe('AI doktríny', () => {
     expect(icept?.targetId).toBe(1)
 
     // poškození pod 50 % → útěk (course pryč od hrozby, tj. na +x)
-    state.ships[1].hull = 40 // CL má 90
+    state.ships[1].hull = 60 // CL Korzár má 140 — pod 50 %
     orders = collectAIOrders(state)
     expect(orders.some(o => o.kind === 'intercept')).toBe(false)
     const flee = orders.find((o): o is Order & { kind: 'setCourse' } => o.kind === 'setCourse')

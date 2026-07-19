@@ -76,7 +76,10 @@ const SHIP_IMAGES: Record<string, string> = {
   'dd-vichr': 'ship-dd', 'cl-sokol': 'ship-cl', 'ca-bastion': 'ship-ca',
   'merch-freighter': 'ship-merch', 'merch-runner': 'ship-merch',
   'merch-qship': 'ship-qship', 'disp-courier': 'ship-courier',
-  DD: 'ship-dd', CL: 'ship-cl', CA: 'ship-ca', MERCH: 'ship-merch', DB: 'ship-courier',
+  // dreadnoughty zatím bez vlastní ilustrace — fallback na siluetu CA
+  'dn-vladar': 'ship-ca', 'dn-ural': 'ship-ca',
+  DD: 'ship-dd', CL: 'ship-cl', CA: 'ship-ca', DN: 'ship-ca',
+  MERCH: 'ship-merch', DB: 'ship-courier',
 }
 
 const SPEAKERS: Record<string, { name: string; initials: string }> = {
@@ -547,6 +550,15 @@ export class Panels {
       + `<span class="bar"><i style="width:${Math.round(ready * 100)}%"></i></span>`
       + `<span class="pc">${own.tubeCooldown > 0 ? Math.ceil(own.tubeCooldown) + ' s' : 'OK'}</span></div>`
 
+    // nabíjení energetických baterií — stejný bar jako šachty (jen u lodí,
+    // které energetické zbraně nesou)
+    const energyReady = 1 - Math.min(1, own.energyCooldown / ENERGY_COOLDOWN)
+    const energyRow = (def?.energyMountsPerBroadside ?? 0) > 0
+      ? `<div class="subsys ${energyReady >= 1 ? 'ok' : 'amber'}"><span class="nm">energetika nabití</span>`
+        + `<span class="bar"><i style="width:${Math.round(energyReady * 100)}%"></i></span>`
+        + `<span class="pc">${own.energyCooldown > 0 ? Math.ceil(own.energyCooldown) + ' s' : 'OK'}</span></div>`
+      : ''
+
     // stav AUTO palby
     const fc = own.fireControl
     let fireRow = ''
@@ -576,6 +588,7 @@ export class Panels {
       + tubesRow
       + status
       + cdRow
+      + energyRow
       + fireRow
       + waveRow
       + `<div class="subsys-grid">${rows}</div>`)

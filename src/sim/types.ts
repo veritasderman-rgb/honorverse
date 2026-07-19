@@ -47,6 +47,13 @@ export interface ShipClassDef {
   ecm: number
   /** počet tažených návnad (decoyů) v zásobě — obranná spotřební munice */
   decoyCount: number
+  /**
+   * Kvalita raketové elektroniky třídy — násobič počátečního zámku salvy
+   * (technologická asymetrie stran): albionské válečné třídy 1.08 (zámek
+   * smí přetéct až na 1.05 — rezerva proti erozi), direktoriátní 1.0,
+   * pirátské kořistní lodě 0.9. Chybí-li, platí 1.0.
+   */
+  missileQuality?: number
   /** lore třídy: původ jména, v čem vyniká, slabiny (rozklikávací detail v UI) */
   lore?: string
 }
@@ -155,6 +162,13 @@ export interface MissileState {
   decoyChecked?: boolean
   /** počet pokusů protiraket na tuto raketu (strop CM_SHOTS_PER_MISSILE) */
   cmShots?: number
+  /**
+   * Povolený počet pokusů protiraket na tuto raketu — přidělen JEDNOU při
+   * prvním vstupu do interceptní obálky podle zbývajícího času do dopadu
+   * (floor(čas / CM_REACTION_TIME), strop CM_SHOTS_PER_MISSILE). Salva
+   * odpálená zblízka nechá obraně méně času na reakci ⇒ méně pokusů.
+   */
+  cmBudget?: number
 }
 
 /** Poškoditelné subsystémy — hodnoty 0–1 (1 = plně funkční). */

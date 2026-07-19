@@ -123,7 +123,7 @@ describe('fireSolution — kvalita palebného řešení', () => {
     expect(fireSolution(state, shooter, target)).toBeCloseTo(0.7 * 0.7, 5)
   })
 
-  it('launchSalvo používá fireSolution jako počáteční zámek + lockBonus buff', () => {
+  it('launchSalvo používá fireSolution × missileQuality jako počáteční zámek + lockBonus buff', () => {
     const state = makeState(7)
     const shooter = makeShip(1, 'ca-bastion', {
       buffs: { lockBonus: 0.2, lockUntil: 100, repairBonus: 1, repairUntil: 0 },
@@ -133,7 +133,8 @@ describe('fireSolution — kvalita palebného řešení', () => {
     launchSalvo(state, shooter, 2, 2, 0)
     expect(state.missiles.length).toBe(2)
     for (const m of state.missiles) {
-      expect(m.lock).toBeCloseTo(0.7 + 0.2, 5)
+      // albionský CA: řešení 0.7 × kvalita raket 1.08 + buff 0.2
+      expect(m.lock).toBeCloseTo(0.7 * 1.08 + 0.2, 5)
       expect(m.shooterId).toBe(1)
       expect(m.autonomous).toBe(false)
     }
@@ -146,7 +147,8 @@ describe('fireSolution — kvalita palebného řešení', () => {
     state.ships.push(shooter, target)
     launchSalvo(state, shooter, 2, 2, 0, { autonomous: true })
     for (const m of state.missiles) {
-      expect(m.lock).toBeCloseTo(0.7 * AUTONOMOUS_LOCK_FACTOR, 5)
+      // kvalita raket třídy (1.08) násobí zámek i u autonomní salvy
+      expect(m.lock).toBeCloseTo(0.7 * 1.08 * AUTONOMOUS_LOCK_FACTOR, 5)
       expect(m.autonomous).toBe(true)
     }
   })
@@ -193,7 +195,7 @@ describe('AI — senzorový duel (doktríny)', () => {
         {
           classId: 'dd-vichr', side: 'enemy', name: 'DD',
           pos: { x: 5_000_000, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'pirate',
-          activeSensors: true, hull: 20, // < 50 % z 60
+          activeSensors: true, hull: 20, // < 50 % ze 120
         },
       ],
     })
@@ -292,7 +294,7 @@ describe('řídicí spoj — řízené vs. autonomní salvy', () => {
     const state = linkState(23, false)
     launchSalvo(state, state.ships[0], 2, 2, 1, { autonomous: true })
     const lock0 = state.missiles[0].lock
-    expect(lock0).toBeCloseTo(0.7 * AUTONOMOUS_LOCK_FACTOR, 5)
+    expect(lock0).toBeCloseTo(0.7 * 1.08 * AUTONOMOUS_LOCK_FACTOR, 5) // × kvalita raket CL
     for (let i = 0; i < 20; i++) updateMissiles(state, 0.5)
     expect(state.missiles[0].lock).toBeCloseTo(lock0, 5)
   })

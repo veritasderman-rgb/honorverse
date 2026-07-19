@@ -568,7 +568,9 @@ export class UIController {
       <h4>Mechaniky</h4>
       <div class="help-grid">
         <b>Poháněná obálka</b><span>dostřel raket = pohon + vektor lodi při odpalu; odpal „po směru" dostřel natahuje</span>
-        <b>Vrstvená obrana</b><span>ECM → protirakety → PDLC → klín; z velké salvy projde jen zlomek</span>
+        <b>Vrstvená obrana</b><span>ECM → protirakety → PDLC → klín; z velké salvy projde jen zlomek — ale projde: úspěšná salva poškozuje, opotřebovávací boj</span>
+        <b>Reakční čas obrany</b><span>protirakety stihnou max. 2 pokusy na raketu — a jen když mají čas: rychlá HI salva zblízka (pod ~1 M km) nechá obraně čas na JEDEN pokus, pod ~300 tis. km na žádný. Zblízka se zabíjí</span>
+        <b>Asymetrie stran</b><span>Albion sází na technologickou převahu (lepší raketová elektronika — zámek salv ×1,08), Direktoriát na tonáž a kvantitu (víc trupů a šachet, horší senzory); pirátská elektronika je o generaci pozadu (×0,9)</span>
         <b>Saturace</b><span>víc raket ve stejném okně = PDLC nestíhá (vrstvená salva!)</span>
         <b>Poškození</b><span>subsystémy po částech; posádka provizorně opravuje do 70 %</span>
         <b>Trysky</b><span>s vypnutým klínem má loď ~5 g na korekce driftu — neviditelné, ale plánuj hodiny dopředu</span>
@@ -586,6 +588,7 @@ export class UIController {
       <div class="help-grid">
         <b>Panel nad logem</b><span>NAŠE PALBA: odpáleno / sestřeleno / zásahy / úspěšnost; PŘÍCHOZÍ: odpáleno na nás / pobráno obranou / zásahy do nás</span>
         <b>Šachty</b><span>panel vlastní lodi ukazuje „šachty N/M funkční" — poškozené šachty zmenšují salvu</span>
+        <b>Nabíjení</b><span>bary „šachty nabití" a „energetika nabití" v panelu vlastní lodi — plný bar = zbraň připravena</span>
       </div>
       <div style="margin-top:12px"><button id="btn-help-close">ZAVŘÍT (Esc)</button></div>
     </div>`

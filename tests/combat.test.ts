@@ -146,7 +146,9 @@ describe('launchSalvo', () => {
       expect(m.pos).toEqual({ x: 100, y: 200 })
       expect(m.vel).toEqual({ x: 5000, y: -1000 })
       expect(m.phase).toBe('boost')
-      expect(m.lock).toBe(1)
+      // albionská kvalita raket (missileQuality 1.08, cap 1.05): zámek nad 1.0
+      // funguje jako rezerva proti ECM erozi za letu
+      expect(m.lock).toBe(1.05)
       expect(m.driveRemaining).toBe(180) // LO režim
       expect(m.salvoId).toBe(state.missiles[0].salvoId)
     }
@@ -163,13 +165,21 @@ describe('launchSalvo', () => {
 // ---------- statistika pipeline ----------
 
 describe('vrstvená obrana — statistika (200 seedů)', () => {
-  it('zdravá obrana CA propustí v průměru 4–15 % z 50 raket', () => {
+  /**
+   * REFERENČNÍ PÁSMO po rekalibraci se stropem protiraket („dva výstřely
+   * na cíl" + interceptní budget dle reakčního času, CM_PK 0.42):
+   * měřený průměr ~3.9/50 ≈ 8 % — přesně knižní „z velké salvy se probije
+   * jednotka kusů". Zdravé pásmo volíme 5–16 % (2.5–8 raket z 50):
+   * pod 5 % by obrana byla zase sterilní, nad 16 % by CA nepřežil ani
+   * dvě salvy a boj by přestal být opotřebovávací.
+   */
+  it('zdravá obrana CA propustí v průměru 5–16 % z 50 raket', () => {
     const SEEDS = 200
     let total = 0
     for (let seed = 1; seed <= SEEDS; seed++) total += runSalvoVsCA(seed, true).hits
     const avg = total / SEEDS
-    expect(avg).toBeGreaterThanOrEqual(2)    // ≥ 4 %
-    expect(avg).toBeLessThanOrEqual(7.5)     // ≤ 15 %
+    expect(avg).toBeGreaterThanOrEqual(2.5)  // ≥ 5 %
+    expect(avg).toBeLessThanOrEqual(8)       // ≤ 16 %
   })
 
   it('bez obrany projde > 80 % salvy', () => {
@@ -187,6 +197,47 @@ describe('vrstvená obrana — statistika (200 seedů)', () => {
   })
 })
 
+// ---------- gradient vzdálenosti ----------
+
+describe('gradient vzdálenosti — zblízka obrana slábne (statistika nad seedy)', () => {
+  /**
+   * Stejná salva 8 raket (HI, zděděný vektor 20 000 km/s) proti zdravému CA
+   * z 1 / 2,5 / 5 mil. km. Interceptní budget protiraket (reakční čas od
+   * odpalu) dává salvě zblízka méně pokusů CM a pomalejší přílet zdálky
+   * nechá zámek erodovat — průnik (způsobené poškození) klesá s dálkou.
+   */
+  function runAtDistance(seed: number, d: number): number {
+    const state = makeState(seed)
+    const ca = makeShip(1, 'ca-bastion', { hull: 1e9 })
+    state.ships.push(ca)
+    for (let i = 0; i < 8; i++) {
+      state.missiles.push(makeMissile(100 + i, 1, { pos: vec(d, 0), vel: vec(-20_000, 0) }))
+    }
+    for (let step = 0; step < 1200 && state.missiles.length > 0; step++) {
+      updateMissiles(state, 0.5)
+      updateDefenses(state, 0.5)
+      state.t += 0.5
+      state.events.length = 0
+    }
+    return 1e9 - ca.hull
+  }
+
+  it('průnik klesá s dálkou; z 1 mil. km aspoň 2× vyšší než z 5 mil. km', () => {
+    const SEEDS = 300
+    let near = 0, mid = 0, far = 0
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      near += runAtDistance(seed, 1_000_000)
+      mid += runAtDistance(seed, 2_500_000)
+      far += runAtDistance(seed, 5_000_000)
+    }
+    // monotonie: čím dál, tím míň projde (naměřeno ~23 / ~10 / ~7 dmg na běh)
+    expect(near).toBeGreaterThan(mid)
+    expect(mid).toBeGreaterThan(far)
+    // zblízka (< 2,5M km) útočnost výrazně roste: aspoň 2× proti 5M km
+    expect(near).toBeGreaterThanOrEqual(2 * far)
+  })
+})
+
 // ---------- bočníky a aspekty ----------
 
 describe('bočníky a aspekty', () => {
@@ -196,10 +247,10 @@ describe('bočníky a aspekty', () => {
     state.ships.push(ca)
 
     applyBeamDamage(state, ca, 14, 'stbd') // 14 < 22 → pohlceno
-    expect(ca.hull).toBe(150)
+    expect(ca.hull).toBe(300)
 
     applyBeamDamage(state, ca, 14, 'throat')
-    expect(ca.hull).toBeCloseTo(150 - 14 * 1.25)
+    expect(ca.hull).toBeCloseTo(300 - 14 * 1.25)
   })
 
   it('oslabený bočník už paprsek propustí', () => {
@@ -208,7 +259,7 @@ describe('bočníky a aspekty', () => {
     ca.subsystems.sidewallStbd = 0.3 // práh 6.6
     state.ships.push(ca)
     applyBeamDamage(state, ca, 14, 'stbd')
-    expect(ca.hull).toBeCloseTo(150 - (14 - 22 * 0.3))
+    expect(ca.hull).toBeCloseTo(300 - (14 - 22 * 0.3))
   })
 
   it('attackAspect rozliší hrdlo, záď a boky', () => {
@@ -227,7 +278,7 @@ describe('bočníky a aspekty', () => {
     fireEnergy(state, dd, ca)
     // 25 · ~0.26 ≈ 6.5 na paprsek < práh 22 → žádné poškození, ale výstřel proběhl
     expect(state.events.some(e => e.kind === 'energyHit')).toBe(true)
-    expect(ca.hull).toBe(150)
+    expect(ca.hull).toBe(300)
     expect(dd.energyCooldown).toBeGreaterThan(0)
   })
 })

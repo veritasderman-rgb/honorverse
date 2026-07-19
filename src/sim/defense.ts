@@ -7,14 +7,15 @@
  */
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
 import {
-  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, CM_SHOTS_PER_MISSILE,
-  CONTROL_RANGE, DECOY_SEDUCE_BASE, DISPERSED_ECM_BONUS,
+  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
+  CM_REACTION_TIME, CM_SHOTS_PER_MISSILE,
+  CONTROL_RANGE, DECOY_SEDUCE_BASE, DISPERSED_ECM_BONUS, G,
   LOCK_FLOOR, LOCK_FLOOR_GUIDED,
   LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_PK, PDLC_ROLLED_FACTOR, PDLC_SATURATION,
   SATURATION_WINDOW, WALL_CM_PK_FACTOR, WALL_TERMINAL_LOCK_MALUS,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
-import { angleDiff, angleOf, dist, len, sub } from './vec'
+import { angleDiff, angleOf, dist, dot, len, norm, sub } from './vec'
 import { rand } from './rng'
 import { applyBeamDamage, type Aspect } from './damage'
 import { inDispersedFormation, wallDiscipline } from './formation'
@@ -43,6 +44,29 @@ export function lockFloor(state: SimState, m: MissileState): number {
 export function erodeLock(state: SimState, m: MissileState, amount: number): void {
   const floor = Math.min(m.lock, lockFloor(state, m))
   m.lock = Math.max(m.lock - amount, floor)
+}
+
+/**
+ * Odhad času do dopadu rakety na cíl: poháněná fáze se ZBÝVAJÍCÍM časem
+ * pohonu, pak balistický dojezd. Infinity = balisticky nedoletí.
+ * (Lokální kopie fyziky z weapons.missileFlightTime — přímý import by
+ * vytvořil kruhovou závislost weapons ↔ defense.)
+ */
+export function missileTimeToImpact(m: MissileState, targetPos: Vec2, targetVel: Vec2): number {
+  const def = MISSILES[m.def]
+  const d = dist(m.pos, targetPos)
+  if (d <= 0) return 0
+  const dir = norm(sub(targetPos, m.pos))
+  const closing = dot(sub(m.vel, targetVel), dir)
+  const a = def.accelG[m.mode] * G
+  const T = m.phase === 'boost' ? m.driveRemaining : 0
+  const disc = closing * closing + 2 * a * d
+  const tPow = a > 0 ? (-closing + Math.sqrt(disc)) / a : Infinity
+  if (tPow <= T) return tPow
+  const dBurn = closing * T + 0.5 * a * T * T
+  const vBurn = closing + a * T
+  if (vBurn <= 0) return Infinity
+  return T + (d - dBurn) / vBurn
 }
 
 /** Aspekt cíle při útoku z pozice fromPos (hrdlo ±0.5 rad, záď ±0.35 rad). */
@@ -146,6 +170,23 @@ export function updateDefenses(state: SimState, dt: number): void {
   // OBLASTNÍ OBRANA: loď zachytává i rakety mířící na SPŘÁTELENÉ lodě, pokud
   // raketa proletí její interceptní obálkou — eskorta tak kryje konvoj
   // „protiraketovým deštníkem" (vlastní obrana má vždy přednost).
+  //
+  // INTERCEPTNÍ BUDGET (reakční čas obrany): impelerový pohon rakety je
+  // vidět gravitačně OKAMŽITĚ (FTL detekce klínů) — reakční hodiny obrany
+  // běží od odpalu. Při prvním spatření salvy se JEDNOU spočte, kolik
+  // interceptních pokusů obrana stihne: floor(čas do dopadu /
+  // CM_REACTION_TIME), strop CM_SHOTS_PER_MISSILE. Salva odpálená zblízka
+  // (< ~2,5 mil. km) nechá obraně čas jen na jeden pokus, extrémně zblízka
+  // na žádný — boj zblízka bolí přirozeně, ne skriptem.
+  for (const m of state.missiles) {
+    if (m.phase === 'dead' || m.cmBudget !== undefined) continue
+    const target = state.ships.find(s => s.id === m.targetId && !s.destroyed)
+    if (!target) continue
+    const tti = missileTimeToImpact(m, target.pos, target.vel)
+    m.cmBudget = Number.isFinite(tti)
+      ? Math.max(0, Math.min(CM_SHOTS_PER_MISSILE, Math.floor(tti / CM_REACTION_TIME)))
+      : CM_SHOTS_PER_MISSILE
+  }
   const sideOf = new Map(state.ships.map(s => [s.id, s.side]))
   for (const ship of state.ships) {
     if (ship.destroyed || ship.surrendered || ship.cms <= 0) continue
@@ -155,11 +196,12 @@ export function updateDefenses(state: SimState, dt: number): void {
 
     // příchozí hrozby v interceptní obálce: nejdřív vlastní, pak chráněnci;
     // uvnitř skupiny nejbližší první (determinismus: tiebreak id).
-    // „Dva výstřely na cíl": raketa s vyčerpanými pokusy se už neostřeluje —
-    // musí ji řešit PDLC/klín (bez stropu byla obrana matematicky neprůstřelná).
+    // Interceptní budget: raketa s vyčerpanými pokusy (cmBudget dle reakčního
+    // času, strop „dva výstřely na cíl") se už neostřeluje — musí ji řešit
+    // PDLC/klín (bez stropu byla obrana matematicky neprůstřelná).
     const incoming = state.missiles
       .filter(m => m.phase !== 'dead' && m.side !== ship.side
-        && (m.cmShots ?? 0) < CM_SHOTS_PER_MISSILE
+        && (m.cmShots ?? 0) < Math.min(m.cmBudget ?? CM_SHOTS_PER_MISSILE, CM_SHOTS_PER_MISSILE)
         && (m.targetId === ship.id || sideOf.get(m.targetId) === ship.side)
         && dist(m.pos, ship.pos) < CM_INTERCEPT_RANGE)
       .map(m => ({ m, d: dist(m.pos, ship.pos), self: m.targetId === ship.id ? 0 : 1 }))

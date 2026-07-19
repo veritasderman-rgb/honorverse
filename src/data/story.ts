@@ -193,8 +193,11 @@ export const MISSION_STORY: Record<string, MissionStory> = {
       'Nájezdy podřezávají direktoriátní logistiku a Direktoriát to ví — '
       + 'proto vsadil všechno na jednu kartu: přímý úder na Albionskou '
       + 'křižovatku, dřív než mu dojde dech. Bitva, na kterou se obě strany '
-      + 'celou válku chystaly, přijde k tobě domů. Tvoje eskadra — vlajkový '
-      + 'Praporec, Hradba, Vichr a Bouře — je to jediné, co stojí mezi '
+      + 'celou válku chystaly, přijde k tobě domů. Admiralita ti svěřila, '
+      + 'co má nejcennějšího: dreadnought Vladař, první loď stěny, jakou kdy '
+      + 'Albion postavil — technologickou odpověď na direktoriátní tonáž. '
+      + 'Tvoje eskadra — vlajkový Vladař, Praporec, Hradba, Vichr a Bouře — '
+      + 'je to jediné, co stojí mezi '
       + 'invazním svazem a třemi tisíci lidí na stanici Křižovatka. Útočník '
       + 'musí přistát na hyperlimitu a hodiny se dopravovat dovnitř. Ty ty '
       + 'hodiny musíš proměnit v hřbitov.',
@@ -218,7 +221,8 @@ export const MISSION_STORY: Record<string, MissionStory> = {
       'Kruh se uzavírá. Před čtyřmi lety jsi Kastorem proklouzl balisticky '
       + 'a tvoje Aurora přivezla mapy rozestavěné základny; loni jsi '
       + 'u Keravu potopil konvoj, který ji měl dostavět. Teď vedeš úderný '
-      + 'svaz — Praporec, Vanguard a tu samou Auroru — proti základně, '
+      + 'svaz — dreadnought Vladař, Praporec, Vanguard a tu samou Auroru — '
+      + 'proti základně, '
       + 'která je díky tobě pořád jen napůl hotová. Rozkaz Admirality zní '
       + 'jasně: Kastor nesmí být nikdy dokončen. Mezi hyperlimitem '
       + 'a základnou leží hlídka, hluboká soustava — a všechno, co si '
@@ -252,7 +256,7 @@ export const MISSION_STORY: Record<string, MissionStory> = {
         + 'jako prohra a nosí se stejně těžko.',
     },
     epilogLose:
-      'Praporec zůstal v Kastoru a úderný svaz se domů vrací bez vlajkové '
+      'Vladař zůstal v Kastoru a úderný svaz se domů vrací bez vlajkové '
       + 'lodi. Základna se dostaví, příměří se podepíše podle direktoriátních '
       + 'podmínek — a mapy, které kdysi přivezla Aurora, zestárnou v trezoru '
       + 'na papír. Válka nekončí porážkou. Jen se odkládá.',

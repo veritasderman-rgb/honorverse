@@ -70,7 +70,7 @@ describe('E2E mise 1 — Hlídka u Strážné brány', () => {
     expect(state.ships[1].vel.x).toBeGreaterThan(vx0)
 
     // (c) hráč se drží na dostřel a pálí salvy — boj reálně probíhá
-    const cygnusFullHull = 70 // merch-runner hullPoints
+    const cygnusFullHull = 140 // merch-runner hullPoints (zdvojeno)
     while (state.outcome === 'running' && state.t < 6 * 3600) {
       sim.tick(state, SIM_DT)
       fightStep(state)

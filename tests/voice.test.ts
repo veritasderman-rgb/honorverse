@@ -254,7 +254,7 @@ describe('voice — pozorovaný zásah nepřítele', () => {
 describe('voice — stavové hlásky (trup/munice/CM)', () => {
   it('trup pod 50 % ohlásí XO jednou', () => {
     const state = makeState(21)
-    const dd = makeShip(1, 'dd-vichr', { hull: 20 }) // z 60
+    const dd = makeShip(1, 'dd-vichr', { hull: 20 }) // ze 120 — hluboko pod 50 %
     state.ships.push(dd)
     updateCrew(state, SIM_DT)
     expect(messagesBy(state, 'xo')).toHaveLength(1)

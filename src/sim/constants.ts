@@ -51,8 +51,13 @@ export const SIM_DT = 0.5
 export const CM_ACCEL_G = 130_000
 export const CM_DRIVE_TIME = 75
 export const CM_INTERCEPT_RANGE = 2_500_000
-/** základní P(kill) jedné CM na jednu útočnou raketu */
-export const CM_PK = 0.35
+/**
+ * Základní P(kill) jedné CM na jednu útočnou raketu.
+ * Rekalibrace se stropem „dva výstřely na cíl": strop drží průchodnost
+ * salvy shora, takže jednotlivý pokus smí být přesnější (0.35 → 0.42),
+ * aniž by se obrana vrátila do sterilního „všechno sestřelím" režimu.
+ */
+export const CM_PK = 0.42
 /**
  * „Dva výstřely na cíl": interceptní geometrie dovolí na jednu útočnou
  * raketu максимум 2 pokusy protiraket CELKEM. Bez stropu obrana s velkým
@@ -60,6 +65,17 @@ export const CM_PK = 0.35
  * (souboj malých lodí byl sterilní — 90 raket, 85 sestřelů, 0 zásahů).
  */
 export const CM_SHOTS_PER_MISSILE = 2
+/**
+ * Reakční čas jednoho interceptního pokusu (s): vyhodnocení hrozby, odpal
+ * CM a její dolet. Počet povolených pokusů na raketu = floor(čas do dopadu
+ * od odpalu / CM_REACTION_TIME), strop CM_SHOTS_PER_MISSILE.
+ * PŘESNĚ tohle dělá boj zblízka smrtícím: HI salva odpálená pod ~1 mil. km
+ * (let < 50 s) nechá obraně čas jen na JEDEN pokus, pod ~300 tis. km na
+ * žádný. Obrana slábne s klesající vzdáleností přirozeně, ne skriptem —
+ * a pomalé LO salvy dávají obraně plné dva pokusy i zblízka (volba režimu
+ * pohonu je reálné taktické rozhodnutí).
+ */
+export const CM_REACTION_TIME = 25
 /** cooldown odpalu CM na jeden odpalovač (s) — vysoká kadence, zásobníky rychle tečou */
 export const CM_COOLDOWN = 5
 
@@ -130,6 +146,13 @@ export const CONTROL_RANGE = 10_000_000
 export const RETARGET_LOCK_PENALTY = 0.75
 /** autonomní salva (fire-and-forget): násobič počátečního zámku */
 export const AUTONOMOUS_LOCK_FACTOR = 0.85
+/**
+ * Strop počátečního zámku KVALITNÍCH raket (missileQuality > 1): albionská
+ * elektronika smí zámek přetáhnout nad 1.0 — přebytek funguje jako rezerva
+ * proti ECM erozi za letu. Pro missileQuality ≤ 1 se cap neuplatní
+ * (součin řešení × kvalita je pod 1.0 sám od sebe).
+ */
+export const MISSILE_QUALITY_LOCK_CAP = 1.05
 /** eroze zámku řízené rakety bez řídicího spoje (podíl/s) */
 export const LINK_LOCK_DECAY = 0.01
 /** aktivní senzory střelce drží track: násobič rychlosti eroze zámku ECM */

@@ -8,7 +8,7 @@ import type { DriveMode, MissileState, ShipState, SimState, Vec2 } from './types
 import {
   AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
   ENERGY_MAX_RANGE, G, JAMMER_MIN_SALVO, LINK_LOCK_DECAY, LOCK_LOST,
-  RETARGET_LOCK_PENALTY, ROLL_TIME,
+  MISSILE_QUALITY_LOCK_CAP, RETARGET_LOCK_PENALTY, ROLL_TIME,
   SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
   VEE_SOLUTION_BONUS,
 } from './constants'
@@ -186,9 +186,15 @@ export function launchSalvo(
   // buff taktického důstojníka: lepší palebné řešení = vyšší počáteční zámek
   const lockBonus = state.t < ship.buffs.lockUntil ? ship.buffs.lockBonus : 0
   // senzorový duel: počáteční zámek = kvalita palebného řešení (0.7–1.0)
+  // × kvalita raketové elektroniky třídy (asymetrie stran: Albion 1.08,
+  // Direktoriát 1.0, piráti 0.9); kvalitní elektronika smí zámek přetáhnout
+  // až na MISSILE_QUALITY_LOCK_CAP — rezerva proti ECM erozi za letu
   const autonomous = opts.autonomous === true
+  const shipDef = SHIP_CLASSES[ship.classId]
+  const quality = shipDef?.missileQuality ?? 1
   const solution = target ? fireSolution(state, ship, target) : 1.0
-  const lock0 = solution * (autonomous ? AUTONOMOUS_LOCK_FACTOR : 1) + lockBonus
+  const lock0 = Math.min(solution * quality, MISSILE_QUALITY_LOCK_CAP)
+    * (autonomous ? AUTONOMOUS_LOCK_FACTOR : 1) + lockBonus
   const salvoId = state.nextId++
   // s rušičkou útočí n−1 raket (jedna letí jako jammer — nesimuluje se zvlášť,
   // útočné rakety nesou příznak jammerEscort pro PDLC vrstvu)

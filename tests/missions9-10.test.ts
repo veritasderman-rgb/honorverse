@@ -1,9 +1,11 @@
 /**
  * Testy misí 9–10 (finále kampaně) a nových podmínek triggerů
- * (flagNot, hullBelow). Mise 9: dva sledy invaze, obranné pody stanice,
- * win AND přes všech šest útočníků. Mise 10: pole podů, politický rozkaz
- * a TŘI konce (rozkaz / duch rozkazu / čisté vítězství). E2E běh mise 9
- * s pevným seedem — deterministický; hráč orchestrován přes applyOrder.
+ * (flagNot, hullBelow). Mise 9: dva sledy invaze s dreadnoughtem Ural
+ * v čele, obranné pody stanice, win AND přes všech osm útočníků; hráč velí
+ * eskadře pěti lodí s vlajkovým dreadnoughtem ANS Vladař. Mise 10: zástěna
+ * čtyř křižníků + strážný DN Ural, pole podů, politický rozkaz a TŘI konce
+ * (rozkaz / duch rozkazu / čisté vítězství). E2E běh mise 9 s pevným
+ * seedem — deterministický; hráč orchestrován přes applyOrder.
  */
 import { describe, expect, it } from 'vitest'
 import type { Order, SimState } from '../src/sim/types'
@@ -22,9 +24,15 @@ const objState = (state: SimState, id: string) => state.objectives.find(o => o.i
 
 const shipById = (state: SimState, id: number) => state.ships.find(s => s.id === id)
 
-const WAVE1 = [9101, 9102, 9103]
-const WAVE2 = [9201, 9202, 9203]
+const M9_STATION = 6
+const WAVE1 = [9101, 9102, 9103, 9104]
+const WAVE2 = [9201, 9202, 9203, 9204]
 const ATTACKERS = [...WAVE1, ...WAVE2]
+
+const M10_BASE = 5
+const M10_PATROL = [6, 7, 8, 9]
+const M10_GUARDIAN = 10
+const M10_BUOY = 11
 
 /** obranné rolování lodi: klín proti nejbližší příchozí raketě */
 function rollDefense(state: SimState, shipId: number, range = 700_000): void {
@@ -51,70 +59,81 @@ describe('registrace misí 9–10', () => {
     expect(Object.keys(SCENARIOS)).toHaveLength(10)
     expect(SCENARIOS['mission09']).toBe(mission09)
     expect(SCENARIOS['mission10']).toBe(mission10)
-    // M9: eskadra 4 lodí + stanice; hyperlimit KRUŽNICE kolem hvězdy
-    expect(mission09.ships).toHaveLength(5)
+    // M9: eskadra 5 lodí (s dreadnoughtem) + stanice; hyperlimit KRUŽNICE
+    expect(mission09.ships).toHaveLength(6)
     expect(mission09.hyperlimit).toEqual({
       kind: 'circle', center: { x: 0, y: 0 }, radius: 220_000_000,
     })
-    // M10: úderný svaz 3 lodí + základna + 3 hlídkové lodě + ústupová bóje
-    expect(mission10.ships).toHaveLength(8)
+    // M10: úderný svaz 4 lodí + základna + zástěna 4 lodí + strážný DN
+    // + ústupová bóje
+    expect(mission10.ships).toHaveLength(11)
     expect(mission10.hyperlimit).toEqual({ kind: 'lineX', x: 150_000_000 })
   })
 
-  it('M9: všechny 4 lodě eskadry jsou ovladatelné, stanice ne', () => {
+  it('M9: všech 5 lodí eskadry je ovladatelných, vlajkou dreadnought; stanice ne', () => {
     const state = sim.create(mission09)
     const ctrl = controllableShips(state)
-    expect(ctrl.map(s => s.id)).toEqual([1, 2, 3, 4])
-    expect(ctrl[0].classId).toBe('bc-praporec')  // vlajková loď
-    expect(ctrl[0].name).toBe('ANS Praporec')
-    const station = shipById(state, 5)!
+    expect(ctrl.map(s => s.id)).toEqual([1, 2, 3, 4, 5])
+    expect(ctrl[0].classId).toBe('dn-vladar')   // vlajkový dreadnought
+    expect(ctrl[0].name).toBe('ANS Vladař')
+    expect(ctrl[1].classId).toBe('bc-praporec') // Praporec druhá
+    const station = shipById(state, M9_STATION)!
     expect(station.classId).toBe('station-zeta')
     expect(station.doctrine).toBe('buoy')
     expect(station.wedgeOn).toBe(false)
     expect(station.pos).toEqual({ x: 0, y: 0 })
   })
 
-  it('M10: vlajkový Praporec + Vanguard + Aurora; nedostavěná základna se sníženými subsystémy', () => {
+  it('M10: vlajkový Vladař + Praporec + Vanguard + Aurora; nedostavěná základna; strážný Ural', () => {
     const state = sim.create(mission10)
     const ctrl = controllableShips(state)
-    expect(ctrl.map(s => s.name)).toEqual(['ANS Praporec', 'ANS Vanguard', 'ANS Aurora'])
+    expect(ctrl.map(s => s.name)).toEqual(['ANS Vladař', 'ANS Praporec', 'ANS Vanguard', 'ANS Aurora'])
+    expect(ctrl[0].classId).toBe('dn-vladar')
     expect(ctrl[0].vel.x).toBe(-3_000) // příchod z +x dovnitř soustavy
-    const base = shipById(state, 4)!
+    const base = shipById(state, M10_BASE)!
     expect(base.classId).toBe('station-zeta')
     expect(base.side).toBe('enemy')
-    expect(base.hull).toBe(300)
+    expect(base.hull).toBe(600) // nedostavěná — 600 z 800
     expect(base.subsystems.tubesPort).toBe(0.5)
     expect(base.subsystems.tubesStbd).toBe(0.5)
     expect(base.subsystems.cm).toBe(0.6)
     expect(base.pos).toEqual({ x: -120_000_000, y: 0 })
-    // hlídka startuje jako tichý drift
-    for (const id of [5, 6, 7]) expect(shipById(state, id)?.doctrine).toBe('freighter')
+    // zástěna (2× CA + 2× CL) startuje jako tichý drift
+    expect(M10_PATROL.map(id => shipById(state, id)?.classId))
+      .toEqual(['ca-bastion', 'ca-bastion', 'cl-sokol', 'cl-sokol'])
+    for (const id of M10_PATROL) expect(shipById(state, id)?.doctrine).toBe('freighter')
+    // strážný dreadnought u základny s podříznutými zásobníky
+    const guardian = shipById(state, M10_GUARDIAN)!
+    expect(guardian.classId).toBe('dn-ural')
+    expect(guardian.missiles).toBe(400)
     // ústupová bóje za hyperlimitem
-    expect(shipById(state, 8)?.pos.x).toBe(155_000_000)
+    expect(shipById(state, M10_BUOY)?.pos.x).toBe(155_000_000)
   })
 })
 
 describe('mise 9 — Obrana Albionu', () => {
-  it('sled 1 přistává v t=300 na [200M, 40M] jako druhá linie (sensors/ecm 0.8)', () => {
+  it('sled 1 přistává v t=300 s dreadnoughtem Ural v čele (plná kvalita, oslabené zásobníky)', () => {
     const scenario = structuredClone(mission09)
     const state = sim.create(scenario)
     expect(shipById(state, 9101)).toBeUndefined()
     state.t = 300
     updateTriggers(state, scenario)
     const lead = shipById(state, 9101)!
-    expect(lead.classId).toBe('ca-bastion')
+    expect(lead.classId).toBe('dn-ural')
     expect(lead.side).toBe('enemy')
     expect(lead.doctrine).toBe('hunter')
-    expect(lead.pos).toEqual({ x: 200_000_000, y: 40_000_000 })
+    expect(lead.pos).toEqual({ x: 200_000_000, y: 42_000_000 })
     expect(lead.vel.x).toBeLessThan(0) // valí se dovnitř
-    expect(lead.subsystems.sensors).toBe(0.8)
-    expect(lead.subsystems.ecm).toBe(0.8)
+    // sled 1 = první linie: subsystémy plné, ale zásobníky podříznuté (mise 7)
+    expect(lead.subsystems.sensors).toBe(1)
+    expect(lead.missiles).toBe(300)
     expect(shipById(state, 9102)?.classId).toBe('ca-bastion')
-    expect(shipById(state, 9103)?.classId).toBe('cl-sokol')
+    expect(shipById(state, 9103)?.classId).toBe('ca-bastion')
+    expect(shipById(state, 9104)?.classId).toBe('cl-sokol')
     expect(shipById(state, 9201)).toBeUndefined() // sled 2 ještě ne
   })
 
-  it('ZVRAT: sled 2 vystupuje v t=5400 na OPAČNÉ straně soustavy + panika Kontroly', () => {
+  it('ZVRAT: sled 2 vystupuje v t=5400 na OPAČNÉ straně jako oslabená druhá linie', () => {
     const scenario = structuredClone(mission09)
     const state = sim.create(scenario)
     state.t = 5_400
@@ -124,8 +143,15 @@ describe('mise 9 — Obrana Albionu', () => {
     expect(lead.pos).toEqual({ x: -190_000_000, y: -60_000_000 })
     // opačná strana: sled 1 na +x, sled 2 na −x
     expect(Math.sign(lead.pos.x)).toBe(-Math.sign(shipById(state, 9101)!.pos.x))
-    expect(shipById(state, 9202)?.classId).toBe('cl-sokol')
+    // druhá linie: starší senzory/ECM, děravá obrana, poloviční zásobníky
+    expect(lead.subsystems.sensors).toBe(0.8)
+    expect(lead.subsystems.ecm).toBe(0.8)
+    expect(lead.subsystems.pdlc).toBe(0.7)
+    expect(lead.subsystems.cm).toBe(0.7)
+    expect(lead.missiles).toBe(140)
+    expect(shipById(state, 9202)?.classId).toBe('ca-bastion')
     expect(shipById(state, 9203)?.classId).toBe('cl-sokol')
+    expect(shipById(state, 9204)?.classId).toBe('cl-sokol')
     expect(state.events.some(e => e.kind === 'message'
       && e.text.includes('Druhý sbor vystupuje z hyperu na opačné straně soustavy'))).toBe(true)
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'station'
@@ -151,7 +177,7 @@ describe('mise 9 — Obrana Albionu', () => {
     // první útočník proklouzne ke stanici
     shipById(state, 9101)!.pos = { x: 9_000_000, y: 0 }
     updateTriggers(state, scenario)
-    const pods = state.missiles.filter(m => m.shooterId === 5)
+    const pods = state.missiles.filter(m => m.shooterId === M9_STATION)
     expect(pods).toHaveLength(16)
     expect(pods.every(m => m.side === 'player' && m.targetId === 9101)).toBe(true)
     expect(state.flags['pods-away']).toBe(true)
@@ -161,10 +187,10 @@ describe('mise 9 — Obrana Albionu', () => {
     // druhý útočník u stanice už NIC nespustí (flagNot pods-away)
     shipById(state, 9102)!.pos = { x: 8_000_000, y: 0 }
     updateTriggers(state, scenario)
-    expect(state.missiles.filter(m => m.shooterId === 5)).toHaveLength(16)
+    expect(state.missiles.filter(m => m.shooterId === M9_STATION)).toHaveLength(16)
   })
 
-  it('VÝHRA je AND všech šesti útočníků (zničení i kapitulace)', () => {
+  it('VÝHRA je AND všech osmi útočníků (zničení i kapitulace)', () => {
     const scenario = structuredClone(mission09)
     const state = sim.create(scenario)
     state.t = 5_400
@@ -173,16 +199,18 @@ describe('mise 9 — Obrana Albionu', () => {
     shipById(state, 9101)!.destroyed = true
     shipById(state, 9102)!.destroyed = true
     shipById(state, 9103)!.surrendered = true
+    shipById(state, 9104)!.surrendered = true
     shipById(state, 9201)!.surrendered = true
     shipById(state, 9202)!.destroyed = true
+    shipById(state, 9203)!.destroyed = true
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
-    expect(state.outcome).toBe('running') // pět z šesti nestačí
+    expect(state.outcome).toBe('running') // sedm z osmi nestačí
     // hláška XO o geometrii po vyřazení sledu 1
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'xo'
       && e.text.includes('geometri'))).toBe(true)
 
-    shipById(state, 9203)!.destroyed = true
+    shipById(state, 9204)!.destroyed = true
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
     expect(state.outcome).toBe('win')
@@ -192,11 +220,12 @@ describe('mise 9 — Obrana Albionu', () => {
 
   it('prohra: zničení stanice NEBO vlajkové lodi NEBO 3 vlastních lodí', () => {
     // stanice
-    const s1 = sim.create(structuredClone(mission09))
-    shipById(s1, 5)!.destroyed = true
-    updateTriggers(s1, structuredClone(mission09))
+    const sc1 = structuredClone(mission09)
+    const s1 = sim.create(sc1)
+    shipById(s1, M9_STATION)!.destroyed = true
+    updateTriggers(s1, sc1)
     expect(s1.outcome).toBe('lose')
-    // vlajková loď
+    // vlajkový dreadnought
     const sc2 = structuredClone(mission09)
     const s2 = sim.create(sc2)
     shipById(s2, 1)!.destroyed = true
@@ -211,23 +240,25 @@ describe('mise 9 — Obrana Albionu', () => {
   })
 
   /**
-   * DŮKAZ HRATELNOSTI: pevnostní obrana u Křižovatky. Eskadra ve stěně drží
-   * pozici v protiraketovém deštníku stanice (oblastní obrana), soustředěnou
-   * AUTO palbou s palebnou kázní (na odvalený cíl nestřílet) rozbíjí oba
-   * sledy; když dochází munice, torpédoborce se odpoutají hluboko do deštníku
-   * stanice a zbytek dorazí poslední útočníky energetickou palbou zblízka
-   * a výzvami ke kapitulaci. Deterministický win s pevným seedem.
+   * DŮKAZ HRATELNOSTI: pevnostní obrana u Křižovatky. Eskadra ve stěně
+   * (vlajkový dreadnought Vladař uprostřed) drží pozici v protiraketovém
+   * deštníku stanice (oblastní obrana), soustředěnou AUTO palbou s palebnou
+   * kázní (na odvalený cíl nestřílet) rozbíjí oba sledy včetně dreadnoughtu
+   * Ural; torpédoborce s vystřílenými zásobníky se odpoutají hluboko do
+   * deštníku stanice a zbytek dorazí poslední útočníky energetickou palbou
+   * zblízka a výzvami ke kapitulaci. Deterministický win s pevným seedem.
    */
   it('mise 9 je hratelná: pevnostní obrana u stanice rozbije oba sledy (E2E)', () => {
     const state = sim.create(mission09)
     const order = (o: Order): void => sim.applyOrder(state, o)
-    const SQUADRON = [1, 2, 3, 4]
+    const SQUADRON = [1, 2, 3, 4, 5]
 
-    // stěna: Hradba, Vichr a Bouře drží sloty na vlajkovém Praporci;
-    // celá eskadra stojí 1,5 mil. km od stanice — uvnitř jejího CM deštníku
+    // stěna: Praporec, Hradba, Vichr a Bouře drží sloty na vlajkovém
+    // Vladaři; celá eskadra stojí 1,5 mil. km od stanice — v CM deštníku
     order({ kind: 'setFormation', shipId: 2, leaderId: 1, slot: 1, formation: 'wall' })
     order({ kind: 'setFormation', shipId: 3, leaderId: 1, slot: 2, formation: 'wall' })
     order({ kind: 'setFormation', shipId: 4, leaderId: 1, slot: 3, formation: 'wall' })
+    order({ kind: 'setFormation', shipId: 5, leaderId: 1, slot: 4, formation: 'wall' })
     order({ kind: 'setThrottle', shipId: 1, throttle: 1 })
     for (const sid of SQUADRON) order({ kind: 'setActiveSensors', shipId: sid, on: true })
     order({ kind: 'setCourse', shipId: 1, dest: { x: 1_500_000, y: 0 }, arriveAtRest: true })
@@ -251,7 +282,7 @@ describe('mise 9 — Obrana Albionu', () => {
 
     let focus = -1
     let ddsDetached = false
-    while (state.outcome === 'running' && state.t < 40_000) {
+    while (state.outcome === 'running' && state.t < 60_000) {
       sim.tick(state, SIM_DT)
       const flag = shipById(state, 1)!
       if (flag.destroyed) break
@@ -289,12 +320,12 @@ describe('mise 9 — Obrana Albionu', () => {
 
       // ZVRAT vyžaduje rozdělení sil: torpédoborce s prázdnými zásobníky
       // opouštějí stěnu a kryjí stanici zevnitř jejího deštníku
-      if (!ddsDetached && squadronMissiles < 40) {
+      if (!ddsDetached && (shipById(state, 4)!.missiles + shipById(state, 5)!.missiles) < 20) {
         ddsDetached = true
-        order({ kind: 'clearFormation', shipId: 3 })
         order({ kind: 'clearFormation', shipId: 4 })
-        order({ kind: 'setCourse', shipId: 3, dest: { x: 300_000, y: 900_000 }, arriveAtRest: true })
-        order({ kind: 'setCourse', shipId: 4, dest: { x: 300_000, y: -900_000 }, arriveAtRest: true })
+        order({ kind: 'clearFormation', shipId: 5 })
+        order({ kind: 'setCourse', shipId: 4, dest: { x: 300_000, y: 900_000 }, arriveAtRest: true })
+        order({ kind: 'setCourse', shipId: 5, dest: { x: 300_000, y: -900_000 }, arriveAtRest: true })
       }
 
       // energetická poprava: bez raket (naše či jejich) se boj dorazí zblízka
@@ -306,7 +337,7 @@ describe('mise 9 — Obrana Albionu', () => {
         if (!(flag.nav?.kind === 'intercept' && flag.nav.targetId === focus)) {
           order({ kind: 'intercept', shipId: 1, targetId: focus })
         }
-        for (const sid of [1, 2]) {
+        for (const sid of [1, 2, 3]) {
           const s = shipById(state, sid)
           if (!s || s.destroyed) continue
           if (s.energyCooldown <= 0 && dist(s.pos, f.pos) < 380_000) {
@@ -331,24 +362,26 @@ describe('mise 9 — Obrana Albionu', () => {
     }
 
     expect(state.outcome).toBe('win')
-    expect(shipById(state, 1)!.destroyed).toBe(false) // vlajková loď žije
-    expect(shipById(state, 5)!.destroyed).toBe(false) // Křižovatka stojí
+    expect(shipById(state, 1)!.destroyed).toBe(false)          // vlajkový Vladař žije
+    expect(shipById(state, M9_STATION)!.destroyed).toBe(false) // Křižovatka stojí
     expect(objState(state, 'obj-invasion')).toBe('done')
     expect(objState(state, 'obj-station')).toBe('done')
     // zvrat opravdu proběhl: druhý sled se objevil a byl vyřazen
     expect(WAVE2.every(id => state.flags[`neutralized-${id}`])).toBe(true)
-  }, 120_000)
+  }, 240_000)
 })
 
 describe('mise 10 — Kastor (finále, dva konce)', () => {
-  it('fáze 1: hlídka se budí detekcí svazu pod 40 mil. km (drift → hunter, comm)', () => {
+  it('fáze 1: zástěna (a strážný DN) se budí detekcí svazu pod 40 mil. km', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
     // 38 mil. km od hlídkového CL (VDS Altair, [−66M, 0]), 92M od základny
     shipById(state, 1)!.pos = { x: -28_000_000, y: 0 }
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
-    for (const id of [5, 6, 7]) expect(shipById(state, id)?.doctrine).toBe('hunter')
+    for (const id of [...M10_PATROL, M10_GUARDIAN]) {
+      expect(shipById(state, id)?.doctrine).toBe('hunter')
+    }
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'enemy-captain'
       && e.text.includes('hlídka soustavy Kastor'))).toBe(true)
     // pole podů se v této vzdálenosti ještě NEspustilo
@@ -360,19 +393,19 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
     const state = sim.create(scenario)
     shipById(state, 1)!.pos = { x: -62_000_000, y: 0 } // 58M od základny
     updateTriggers(state, scenario)
-    const pods = state.missiles.filter(m => m.shooterId === 4)
+    const pods = state.missiles.filter(m => m.shooterId === M10_BASE)
     expect(pods).toHaveLength(32)
     expect(pods.every(m => m.side === 'enemy' && m.targetId === 1)).toBe(true)
     expect(state.events.some(e => e.kind === 'message'
       && e.text === 'Pole podů! Salva 32 raket!')).toBe(true)
     // pody neodečítají munici základny
-    expect(shipById(state, 4)!.missiles).toBe(300)
+    expect(shipById(state, M10_BASE)!.missiles).toBe(300)
   })
 
   it('ZVRAT B: rozkaz přijde při poškození základny pod 60 %', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    shipById(state, 4)!.hull = 200 // < 0.6 × 400
+    shipById(state, M10_BASE)!.hull = 400 // < 0.6 × 800
     updateTriggers(state, scenario)
     expect(state.flags['order-given']).toBe(true)
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'governor'
@@ -381,11 +414,11 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
     expect(state.outcome).toBe('running') // rozkaz sám o sobě nic nekončí
   })
 
-  it('ZVRAT B: rozkaz přijde i po zničení obou hlídkových CA', () => {
+  it('ZVRAT B: rozkaz přijde i po zničení obou hlídkových CA zástěny', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    shipById(state, 5)!.destroyed = true
-    shipById(state, 6)!.destroyed = true
+    shipById(state, M10_PATROL[0])!.destroyed = true
+    shipById(state, M10_PATROL[1])!.destroyed = true
     updateTriggers(state, scenario)
     expect(state.flags['order-given']).toBe(true)
   })
@@ -393,7 +426,7 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
   it('KONEC A „Rozkaz je rozkaz": ústup vlajkové lodi k bóji bez zničení základny', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    shipById(state, 4)!.hull = 200
+    shipById(state, M10_BASE)!.hull = 400
     updateTriggers(state, scenario) // rozkaz
     shipById(state, 1)!.pos = { x: 150_000_000, y: 0 } // 5M od ústupové bóje
     updateTriggers(state, scenario)
@@ -402,16 +435,16 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
     expect(state.flags['ending-spirit']).toBeUndefined()
     expect(state.flags['ending-clean']).toBeUndefined()
     expect(objState(state, 'obj-retreat')).toBe('done')
-    expect(shipById(state, 4)!.destroyed).toBe(false) // základna stojí
+    expect(shipById(state, M10_BASE)!.destroyed).toBe(false) // základna stojí
   })
 
   it('KONEC B „Duch rozkazu": zničení základny PO rozkazu', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    shipById(state, 4)!.hull = 200
+    shipById(state, M10_BASE)!.hull = 400
     updateTriggers(state, scenario) // rozkaz
     expect(state.flags['order-given']).toBe(true)
-    shipById(state, 4)!.destroyed = true
+    shipById(state, M10_BASE)!.destroyed = true
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
     expect(state.outcome).toBe('win')
@@ -425,7 +458,7 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
   it('ČISTÉ VÍTĚZSTVÍ: základna padne PŘED rozkazem — rozkaz už nepřijde', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    shipById(state, 4)!.destroyed = true
+    shipById(state, M10_BASE)!.destroyed = true
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
     expect(state.outcome).toBe('win')
@@ -437,8 +470,8 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
   it('rozkaz nepřijde ani při souběhu „poškozená pod 60 % + zničená" v témže ticku', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    const base = shipById(state, 4)!
-    base.hull = 100
+    const base = shipById(state, M10_BASE)!
+    base.hull = 200
     base.destroyed = true // salva prorazila 60 % i trup naráz
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
@@ -450,7 +483,7 @@ describe('mise 10 — Kastor (finále, dva konce)', () => {
   it('kapitulace základny se počítá jako její pád (base-down)', () => {
     const scenario = structuredClone(mission10)
     const state = sim.create(scenario)
-    shipById(state, 4)!.surrendered = true
+    shipById(state, M10_BASE)!.surrendered = true
     updateTriggers(state, scenario)
     updateTriggers(state, scenario)
     expect(state.outcome).toBe('win')
@@ -485,24 +518,27 @@ describe('příběh misí 9–10 (story.ts)', () => {
     }
   })
 
-  it('kruh se uzavírá: M10 odkazuje na data z mise 4 a čas z mise 7', () => {
+  it('kruh se uzavírá: M10 odkazuje na data z mise 4 a čas z mise 7; vlajkou je Vladař', () => {
     expect(/Auror/.test(MISSION_STORY.mission10.prolog)).toBe(true)   // mapy z mise 4
     expect(/Kerav/.test(MISSION_STORY.mission10.prolog)).toBe(true)   // konvoj z mise 7
+    expect(/Vladař/.test(MISSION_STORY.mission10.prolog)).toBe(true)  // dreadnought ve finále
     expect(MISSION_STORY.mission09.epilog).toContain('Kastor')        // M9 → M10
   })
 })
 
 describe('výkon finále', () => {
-  it('mise 10 v plné bitvě (pody 32 raket + hlídka + AUTO palba): 10 000 ticků < 5 s', () => {
+  it('mise 10 v plné bitvě (pody 32 raket + zástěna + DN + AUTO palba): 10 000 ticků < 5 s', () => {
     const state = sim.create(mission10)
-    // svaz uprostřed průlomu: pole podů (32) letí, hlídka loví, AUTO palba běží
+    // svaz uprostřed průlomu: pole podů (32) letí, zástěna i strážný DN
+    // loví, AUTO palba všech čtyř lodí svazu běží
     shipById(state, 1)!.pos = { x: -66_000_000, y: 0 }
-    shipById(state, 2)!.pos = { x: -65_000_000, y: 1_000_000 }
-    shipById(state, 3)!.pos = { x: -65_000_000, y: -1_000_000 }
-    for (const [i, sid] of [1, 2, 3].entries()) {
+    shipById(state, 2)!.pos = { x: -65_000_000, y: 2_000_000 }
+    shipById(state, 3)!.pos = { x: -65_000_000, y: 1_000_000 }
+    shipById(state, 4)!.pos = { x: -65_000_000, y: -1_000_000 }
+    for (const [i, sid] of [1, 2, 3, 4].entries()) {
       sim.applyOrder(state, {
         kind: 'setFireControl', shipId: sid,
-        fc: { mode: 'auto', targetId: 5 + i, driveMode: 0 },
+        fc: { mode: 'auto', targetId: M10_PATROL[i], driveMode: 0 },
       })
     }
     const t0 = performance.now()

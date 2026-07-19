@@ -39,7 +39,7 @@ export const mission06: Scenario = {
       // hráčův poškozený těžký křižník v plném úprku (8000 km/s po +x)
       classId: 'ca-bastion', side: 'player', name: 'ANS Resolute',
       pos: { x: 0, y: 0 }, vel: { x: 8_000, y: 0 }, doctrine: 'player',
-      hull: 90, // z 150 — šrámy z prohraného střetnutí
+      hull: 180, // z 300 — šrámy z prohraného střetnutí
       subsystems: {
         impellerFwd: 1, impellerAft: 0.35,
         sidewallPort: 1, sidewallStbd: 0.6,

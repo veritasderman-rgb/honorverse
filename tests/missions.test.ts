@@ -173,7 +173,12 @@ describe('mise 2 — Konvoj Pomezím (E2E)', () => {
   })
 
   it('oblastní obrana: eskorta u konvoje sundává salvy mířící na obchodníky', () => {
-    // dva běhy se stejným seedem: bez eskorty poblíž vs. s eskortou poblíž
+    // dva běhy se stejným seedem: bez eskorty poblíž vs. s eskortou poblíž.
+    // (Rekalibrace se stropem CM „dva výstřely na cíl": eskorta salvu už
+    // NEvynuluje, jen ji výrazně ztenčí — jednotlivý obchodník proto může
+    // padnout v obou bězích a bodové srovnání by zaniklo v overkillu.
+    // Měříme tedy součet škod na CELÉM konvoji za pevné okno — logika testu,
+    // krytý vs. nekrytý konvoj, beze změny.)
     const run = (escortNear: boolean): number => {
       const state = sim.create(mission02)
       const merchant = state.ships[1]
@@ -186,20 +191,18 @@ describe('mise 2 — Konvoj Pomezím (E2E)', () => {
         ? { x: merchant.pos.x + 500_000, y: merchant.pos.y }
         : { x: merchant.pos.x - 80_000_000, y: 0 }
       escort.vel = { ...merchant.vel }
-      // salva na obchodníka; pak nech obranu pracovat
-      const before = merchant.hull
-      for (let i = 0; i < 3; i++) {
-        pirate.tubeCooldown = 0
-        sim.applyOrder(state, { kind: 'launchSalvo', shipId: 7, targetId: 2, count: 4, mode: 1 })
-        for (let t = 0; t < 400; t++) sim.tick(state, SIM_DT)
-      }
-      return before - merchant.hull
+      // pirát nese jen dvě salvy (víc by po pádu konvoje srovnání utopilo
+      // v overkillu); jeho AI je odpálí sama — zná manifest
+      pirate.missiles = 8
+      const before = state.ships.slice(1, 5).reduce((s, m) => s + m.hull, 0)
+      for (let t = 0; t < 700; t++) sim.tick(state, SIM_DT)
+      return before - state.ships.slice(1, 5).reduce((s, m) => s + Math.max(0, m.hull), 0)
     }
     const dmgUncovered = run(false)
     const dmgCovered = run(true)
-    // deštník eskorty musí škody na obchodníkovi výrazně srazit
+    // deštník eskorty musí škody na konvoji výrazně srazit
     expect(dmgCovered).toBeLessThan(dmgUncovered)
-    expect(dmgUncovered).toBeGreaterThan(0) // bez krytí obchodník dostává zásahy
+    expect(dmgUncovered).toBeGreaterThan(0) // bez krytí konvoj dostává zásahy
   })
 })
 
@@ -285,9 +288,11 @@ describe('mise 3 — Q-ship (E2E)', () => {
       if (!sawEnemyMissile && state.missiles.some(m => m.side === 'enemy')) sawEnemyMissile = true
     }
 
-    // Q-ship skutečně útočil (rakety letěly, hráč utržil poškození)
+    // Q-ship skutečně útočil (salvy letěly a ubylo mu raket) — po rekalibraci
+    // obrany (strop CM + zdvojené trupy) může dobře vedený boj s rolováním
+    // skončit i bez vlastního poškození, důkazem boje je palba obou stran
     expect(sawEnemyMissile).toBe(true)
-    expect(state.ships[0].hull).toBeLessThan(60)
+    expect(state.ships[1].missiles).toBeLessThan(140) // Q-ship pálil ze zásobníku 140
 
     // (d) deterministický výsledek: Q-ship zničen ⇒ vítězství
     expect(state.outcome).toBe('win')

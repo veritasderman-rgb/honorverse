@@ -8,8 +8,10 @@
  */
 import type { DriveMode, ShipState, SimState } from './types'
 import {
-  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, CM_SHOTS_PER_MISSILE,
-  CONTROL_RANGE, G, LOCK_FLOOR, LOCK_FLOOR_GUIDED, LOCK_LOST, PDLC_PK,
+  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
+  CM_REACTION_TIME, CM_SHOTS_PER_MISSILE,
+  CONTROL_RANGE, G, LOCK_FLOOR, LOCK_FLOOR_GUIDED, LOCK_LOST,
+  MISSILE_QUALITY_LOCK_CAP, PDLC_PK,
   PDLC_ROLLED_FACTOR, PDLC_SATURATION,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
@@ -55,9 +57,11 @@ export function estimatePenetration(
   const tailTime = (range: number): number =>
     d <= range ? tFlight : tFlight - missileFlightTime(d - range, closing, mode)
 
-  // --- zámek: palebné řešení − ECM eroze (se dnem) − balistický dojezd ---
+  // --- zámek: palebné řešení × kvalita raket třídy − ECM eroze − balistika ---
   const lockBonus = state.t < shooter.buffs.lockUntil ? shooter.buffs.lockBonus : 0
-  const lock0 = Math.min(1, fireSolution(state, shooter, target) + lockBonus)
+  const quality = sDef?.missileQuality ?? 1
+  const lock0 = Math.min(fireSolution(state, shooter, target) * quality,
+    MISSILE_QUALITY_LOCK_CAP) + lockBonus
   const activeGuidance = shooter.activeSensors && !!sDef && d < sDef.activeSensorRange
   const ecmFactor = activeGuidance ? ACTIVE_GUIDANCE_ECM_FACTOR : 1
   const tEcm = tailTime(tDef.activeSensorRange)
@@ -69,12 +73,18 @@ export function estimatePenetration(
   const lockEnd = Math.max(lock0 - erosion, Math.min(lock0, floor))
 
   // --- vrstva CM: kadence × čas v obálce × Pk; odpaly omezuje munice
-  // a „dva výstřely na cíl" (CM_SHOTS_PER_MISSILE pokusů na raketu) ---
+  // a interceptní budget — floor(celkový čas letu / CM_REACTION_TIME)
+  // pokusů na raketu (odpal je vidět FTL — reakce běží od odpalu), strop
+  // „dva výstřely na cíl" (CM_SHOTS_PER_MISSILE). Salva zblízka nechá
+  // obraně čas na jediný pokus, extrémně zblízka na žádný ---
   const cmRate = (tDef.cmLaunchers * target.subsystems.cm) / CM_COOLDOWN
+  const tCm = tailTime(CM_INTERCEPT_RANGE)
+  const shotsCap = Math.max(0,
+    Math.min(CM_SHOTS_PER_MISSILE, Math.floor(tFlight / CM_REACTION_TIME)))
   const cmLaunches = Math.min(
-    cmRate * tailTime(CM_INTERCEPT_RANGE),
+    cmRate * tCm,
     target.cms,
-    count * CM_SHOTS_PER_MISSILE,
+    count * shotsCap,
   )
   // očekávané zásahy při rovnoměrném rozdělení pokusů: 1−(1−Pk)^(pokusy/raketa)
   const shotsPer = count > 0 ? cmLaunches / count : 0
