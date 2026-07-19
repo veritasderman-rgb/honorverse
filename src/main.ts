@@ -27,6 +27,44 @@ const controller = new UIController(bridge, plot, panels)
 // hook pro smoke testy (Playwright) — čtení stavu plotu zvenku
 Object.assign(window, { __wob: { plot } })
 
+// ---------- odolnost na iOS Safari ----------
+
+// viditelný banner chyb: pád za běhu jinak na mobilu vypadá jako „nic se
+// neděje" — takhle jde nahlásit screenshotem
+function showError(msg: string): void {
+  const bar = document.getElementById('errbar')
+  if (!bar) return
+  bar.textContent = `CHYBA: ${msg}`
+  bar.style.display = 'block'
+}
+window.addEventListener('error', e => showError(e.message))
+window.addEventListener('unhandledrejection', e =>
+  showError(e.reason instanceof Error ? e.reason.message : String(e.reason)))
+
+// iOS Safari ignoruje user-scalable=no — nativní pinch-zoom stránky rozbíjí
+// hit-testing fixed overlayů (tapy padají mimo tlačítka). Gesta zoomu UI
+// blokujeme; pinch-zoom PLOTU řeší vlastní pointer handlery canvasu.
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(ev, e => e.preventDefault())
+}
+
+/**
+ * Robustní tap: iOS při zoomu/scrollu občas nedoručí 'click' — poslouchej
+ * i 'pointerup' s debounce, ať se akce nespustí dvakrát.
+ */
+function onTap(el: Element | null, fn: () => void): void {
+  if (!el) return
+  let last = 0
+  const h = (): void => {
+    const now = Date.now()
+    if (now - last < 400) return
+    last = now
+    fn()
+  }
+  el.addEventListener('pointerup', h)
+  el.addEventListener('click', h)
+}
+
 // ---------- mobil / tablet ----------
 
 // výsuvné šuplíky HUD sloupců (telefonní breakpoint — záložky ◧/◨)
@@ -102,7 +140,7 @@ function showCampaignIntro(onDone: () => void): void {
     + `<div class="brief story">${esc(CAMPAIGN_INTRO)}</div>`
     + `<button id="btn-intro-continue">POKRAČOVAT</button>`,
   )
-  el.querySelector('#btn-intro-continue')?.addEventListener('click', () => {
+  onTap(el.querySelector('#btn-intro-continue'), () => {
     markIntroSeen()
     el.remove()
     onDone()
@@ -126,13 +164,13 @@ function showMissionSelect(): void {
   const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${rows}`)
   const toggle = el.querySelector<HTMLButtonElement>('#btn-story-toggle')
   const body = el.querySelector<HTMLElement>('#story-body')
-  toggle?.addEventListener('click', () => {
+  onTap(toggle, () => {
     const open = body!.style.display !== 'none'
     body!.style.display = open ? 'none' : 'block'
-    toggle.textContent = `${open ? '▸' : '▾'} PŘÍBĚH KAMPANĚ`
+    toggle!.textContent = `${open ? '▸' : '▾'} PŘÍBĚH KAMPANĚ`
   })
   el.querySelectorAll<HTMLButtonElement>('button[data-mission]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    onTap(btn, () => {
       el.remove()
       bridge.start(btn.dataset.mission!)
     })
@@ -163,7 +201,7 @@ function showBriefing(sc: Scenario): void {
     + `<div class="brief">${esc(sc.briefing)}</div>`
     + `<button id="btn-start">START</button>`,
   )
-  el.querySelector('#btn-start')?.addEventListener('click', () => {
+  onTap(el.querySelector('#btn-start'), () => {
     el.remove()
     audio.setMenuMode(false) // konec menu/briefingu → adaptivní hudba dle boje
     controller.setCompression(1)
@@ -195,10 +233,10 @@ function showOutcome(state: SimState): void {
     + `</div>`,
   )
   // ZNOVU = reload se stejnou misí; VÝBĚR MISE = reload bez parametru → menu
-  el.querySelector('#btn-again')?.addEventListener('click', () => {
+  onTap(el.querySelector('#btn-again'), () => {
     location.href = `${location.pathname}?mission=${encodeURIComponent(currentMissionId)}`
   })
-  el.querySelector('#btn-menu')?.addEventListener('click', () => {
+  onTap(el.querySelector('#btn-menu'), () => {
     location.href = location.pathname
   })
 }

@@ -9,7 +9,10 @@
   <link rel="apple-touch-icon" href="/img/icon-192.png" />
   <title>Wall of Battle</title>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; background: #05080a; color: #9fd8a0; font-family: "Consolas", "Menlo", monospace; overflow: hidden; }
+    /* touch-action: manipulation — žádný double-tap zoom ani 350ms zpoždění
+       kliku (iOS tap-offset bugy při zoomu stránky rozbíjely tlačítka);
+       text-size-adjust proti automatickému nafukování textu v Safari */
+    html, body { margin: 0; padding: 0; height: 100%; background: #05080a; color: #9fd8a0; font-family: "Consolas", "Menlo", monospace; overflow: hidden; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     #app { position: relative; height: 100vh; }
     #plot-container { position: absolute; inset: 0; }
     #plot { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
@@ -89,7 +92,14 @@
     #log { max-height: 110px; overflow-y: auto; font-size: 10px; line-height: 1.4; color: #6fae74; }
     #log .ev-warn { color: #d8b34f; }
     .overlay { position: fixed; inset: 0; background: #05080aee; display: flex; align-items: center; justify-content: center; z-index: 30; font-size: 13px; }
-    .overlay .box { border: 1px solid #2a5a2e; background: #081008; padding: 20px 26px; max-width: 620px; max-height: 92vh; overflow-y: auto; box-shadow: 0 0 40px #0f5a1430; }
+    .overlay .box { border: 1px solid #2a5a2e; background: #081008; padding: 20px 26px; max-width: min(620px, 94vw); max-height: 92vh; overflow-y: auto; box-shadow: 0 0 40px #0f5a1430; }
+    /* dotyk: čitelnější overlaye bez nutnosti zoomovat stránku */
+    @media (pointer: coarse) {
+      .overlay { font-size: 15px; }
+      .overlay .brief, .overlay .story { line-height: 1.5; }
+    }
+    /* banner chyby za běhu — ať je pád vidět a dá se nahlásit screenshotem */
+    #errbar { position: fixed; left: 0; right: 0; top: 0; z-index: 99; background: #7a2a1f; color: #ffd9d0; font-size: 12px; padding: 6px 10px; display: none; white-space: pre-wrap; }
     .overlay h2 { color: #d8b34f; margin: 0 0 10px 0; letter-spacing: 2px; }
     .overlay h2.win { color: #58e06a; } .overlay h2.lose { color: #e06c5a; }
     .overlay .brief { white-space: pre-wrap; margin-bottom: 14px; color: #9fd8a0; }
@@ -205,6 +215,7 @@
     </div>
   </div>
   <div id="rotate-hint">OTOČTE ZAŘÍZENÍ NA ŠÍŘKU<br>taktický displej potřebuje širokou obrazovku</div>
+  <div id="errbar"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
