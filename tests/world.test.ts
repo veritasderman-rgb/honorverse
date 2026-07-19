@@ -78,19 +78,35 @@ describe('senzory', () => {
     expect(ev?.slowdown).toBe(true)
   })
 
-  it('age odpovídá vzdálenosti/C a pozice je zpožděný obraz', () => {
-    const state = build(makeScenario({
+  it('klín = gravitická FTL detekce (age 0, real-time); bez klínu EM zpoždění d/C', () => {
+    // zapnutý klín: obraz v reálném čase
+    const wedge = build(makeScenario({
       ships: [
         { classId: 'dd-vichr', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
         { classId: 'merch-freighter', side: 'enemy', name: 'M', pos: { x: 10_000_000, y: 0 }, vel: { x: 500, y: 0 } },
       ],
     }))
-    runSensors(state)
-    const c = contactsFor(state, 'player')[0]
-    const expectedAge = 10_000_000 / C
-    expect(c.age).toBeCloseTo(expectedAge, 6)
-    expect(c.pos.x).toBeCloseTo(10_000_000 - 500 * expectedAge, 3)
-    expect(c.vel.x).toBe(500)
+    runSensors(wedge)
+    const cw = contactsFor(wedge, 'player')[0]
+    expect(cw.age).toBe(0)
+    expect(cw.pos.x).toBeCloseTo(10_000_000, 3)
+    expect(cw.vel.x).toBe(500)
+
+    // vypnutý klín (jen EM zblízka): obraz starý d/C, pozice zpožděná
+    const em = build(makeScenario({
+      ships: [
+        { classId: 'dd-vichr', side: 'player', name: 'DD', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
+        {
+          classId: 'merch-freighter', side: 'enemy', name: 'M',
+          pos: { x: 4_000_000, y: 0 }, vel: { x: 500, y: 0 }, wedgeOn: false,
+        },
+      ],
+    }))
+    runSensors(em)
+    const ce = contactsFor(em, 'player')[0]
+    const expectedAge = 4_000_000 / C
+    expect(ce.age).toBeCloseTo(expectedAge, 6)
+    expect(ce.pos.x).toBeCloseTo(4_000_000 - 500 * expectedAge, 3)
   })
 
   it('loď bez klínu uvnitř activeSensorRange vidět je; s aktivními senzory idQuality 2', () => {

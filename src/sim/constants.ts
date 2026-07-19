@@ -148,11 +148,12 @@ export const LOCK_FLOOR = 0.3
 export const LOCK_FLOOR_BALLISTIC = 0.25
 /**
  * Maximální doba letu rakety od odpalu (s): pak sebedestrukce (cause
- * 'expired'). LO: 180 s pohon + 420 s dojezd ≈ 10+ mil. km celkové dráhy.
- * Nutné od zavedení balistického dna zámku — jinak by rakety v marném
- * tail-chase letěly (a počítaly se) navěky.
+ * 'expired'). LO: 180 s pohon + 720 s dojezd — pokryje i dlouhé výměny
+ * bitevních stěn na 30+ mil. km (let ~500–700 s); kratší strop 600 s
+ * zabíjel salvy stěn v půli cesty. Nutné od zavedení balistického dna
+ * zámku — jinak by rakety v marném tail-chase letěly navěky.
  */
-export const MISSILE_MAX_FLIGHT = 600
+export const MISSILE_MAX_FLIGHT = 900
 
 /** ---------- rolování a palba ---------- */
 /** PDLC odvalené lodi: klín cloní i části clusterů (násobič počtu clusterů) */

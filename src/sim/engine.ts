@@ -60,7 +60,13 @@ function applyOrder(state: SimState, order: Order): void {
 
   switch (order.kind) {
     case 'setCourse':
-      ship.nav = { kind: 'course', dest: { ...order.dest }, arriveAtRest: order.arriveAtRest }
+      // append: přidání waypointu na konec trasy (Shift-klik v režimu kurzu)
+      if (order.append === true && ship.nav?.kind === 'course') {
+        ship.nav.then = [...(ship.nav.then ?? []), { ...order.dest }]
+        ship.nav.arriveAtRest = order.arriveAtRest
+      } else {
+        ship.nav = { kind: 'course', dest: { ...order.dest }, arriveAtRest: order.arriveAtRest }
+      }
       break
     case 'intercept':
       ship.nav = { kind: 'intercept', targetId: order.targetId }

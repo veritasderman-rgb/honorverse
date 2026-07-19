@@ -189,7 +189,11 @@ export interface Subsystems {
 
 /** Navigační plán autopilota (nastavují rozkazy setCourse/intercept). */
 export type NavPlan =
-  | { kind: 'course'; dest: Vec2; arriveAtRest: boolean }
+  | {
+    kind: 'course'; dest: Vec2; arriveAtRest: boolean
+    /** fronta dalších waypointů trasy — po průletu dest se posune na další */
+    then?: Vec2[]
+  }
   | { kind: 'intercept'; targetId: number }
   | null
 
@@ -249,13 +253,25 @@ export interface Contact {
   /** poslední známá pozice/rychlost (extrapolovatelné) */
   pos: Vec2
   vel: Vec2
-  /** stáří dat v s (světelné zpoždění + interval aktualizace) */
+  /**
+   * Stáří dat v s. Gravitika (klín zapnutý v dosahu) je FTL — age 0,
+   * obraz real-time; EM detekce (bez klínu) nese světelné zpoždění d/c;
+   * paměťový pin (memory) stárne dál od okamžiku ztráty.
+   */
   age: number
   /** kvalita identifikace: 0=jen klín, 1=třída známa, 2=plná */
   idQuality: 0 | 1 | 2
   /** odhad třídy (může být špatně — základ zvratů!) */
   classGuess: string
   wedgeDetected: boolean
+  /**
+   * Paměťový pin: kontakt už NENÍ v dosahu senzorů — na mapě zůstává
+   * poslední známé zakreslení. Statické objekty (stanice, planety) trvale;
+   * lodě s rostoucí nejistotou (kružnice age·|vel| v plotu).
+   */
+  memory?: boolean
+  /** memory: statický objekt (maxAccelG 0) — poloha se nemění, kreslí se pevně */
+  staticObject?: boolean
 }
 
 /**
@@ -275,7 +291,11 @@ export interface PendingComm {
 // ---------- rozkazy (UI/AI -> engine) ----------
 
 export type Order =
-  | { kind: 'setCourse'; shipId: number; dest: Vec2; arriveAtRest: boolean }
+  | {
+    kind: 'setCourse'; shipId: number; dest: Vec2; arriveAtRest: boolean
+    /** true: přidá bod na konec trasy (Shift-klik) místo nahrazení kurzu */
+    append?: boolean
+  }
   | { kind: 'intercept'; shipId: number; targetId: number }
   | { kind: 'setThrottle'; shipId: number; throttle: number }
   | { kind: 'setWedge'; shipId: number; on: boolean }

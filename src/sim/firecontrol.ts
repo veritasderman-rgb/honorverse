@@ -7,9 +7,10 @@
  *     tak, aby dorazil ±10 s s hlavní LO vlnou.
  */
 import type { ShipState, SimState } from './types'
+import { ENERGY_MAX_RANGE } from './constants'
 import { dist } from './vec'
 import { effectiveTubes } from './damage'
-import { launchSalvo, poweredEnvelope } from './weapons'
+import { fireEnergy, launchSalvo, poweredEnvelope } from './weapons'
 
 /** hláška taktického důstojníka hráči */
 function say(state: SimState, ship: ShipState, text: string, slowdown = false): void {
@@ -96,6 +97,24 @@ export function updateFireControl(state: SimState): void {
     if (inRange && ship.tubeCooldown <= 0 && effectiveTubes(ship) > 0) {
       launchSalvo(state, ship, fc.targetId, fc.salvoSize, fc.driveMode,
         { autonomous: fc.autonomous === true })
+    }
+
+    // AUTO řídí i energetické baterie: nepřítel v dosahu = palba (stejně
+    // jako AI protivníka — bez toho hráčova stěna v energetické rvačce
+    // mlčí). Cíl: fc.target, jinak NEJBLIŽŠÍ nepřítel v dosahu.
+    if (ship.energyCooldown <= 0) {
+      let eTarget: ShipState | null =
+        dist(ship.pos, target.pos) < ENERGY_MAX_RANGE ? target : null
+      if (!eTarget) {
+        let bd = ENERGY_MAX_RANGE
+        for (const e of state.ships) {
+          if (e.destroyed || e.surrendered || e.side === ship.side || e.side === 'neutral') continue
+          if (!state.contacts[ship.side]?.some(c => c.shipId === e.id && c.memory !== true)) continue
+          const de = dist(ship.pos, e.pos)
+          if (de < bd) { bd = de; eTarget = e }
+        }
+      }
+      if (eTarget) fireEnergy(state, ship, eTarget)
     }
   }
 }

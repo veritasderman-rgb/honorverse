@@ -132,6 +132,9 @@ export function predictPath(
     ...ship,
     pos: { ...ship.pos }, vel: { ...ship.vel },
     subsystems: { ...ship.subsystems },
+    // hluboká kopie nav: trasa (then[]) se při predikci konzumuje — duch
+    // nesmí ukusovat waypointy skutečné lodi
+    nav: ship.nav ? (JSON.parse(JSON.stringify(ship.nav)) as ShipState['nav']) : null,
     formation: null, // predikce sleduje nav plán, ne station-keeping
   }
   const ghostState = {
@@ -164,6 +167,16 @@ export function updateShipPhysics(state: SimState, ship: ShipState, dt: number):
   if (ship.rolledTo !== null) {
     ship.pos = add(ship.pos, scale(ship.vel, dt))
     return
+  }
+
+  // (0) trasa: po průletu waypointu se kurz posune na další bod fronty;
+  // práh průletu roste s rychlostí (rychlá loď bod „mine" o celé ticky)
+  const nav = ship.nav
+  if (nav?.kind === 'course' && nav.then && nav.then.length > 0) {
+    const dArr = Math.max(ARRIVE_DIST, len(ship.vel) * dt * 3)
+    if (len(sub(nav.dest, ship.pos)) < dArr) {
+      nav.dest = nav.then.shift() as ShipState['pos']
+    }
   }
 
   // (1) autopilot — loď ve formaci s živým leaderem drží slot (ignoruje

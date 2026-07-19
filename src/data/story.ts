@@ -271,6 +271,31 @@ export const MISSION_STORY: Record<string, MissionStory> = {
       + 'podmínek — a mapy, které kdysi přivezla Aurora, zestárnou v trezoru '
       + 'na papír. Válka nekončí porážkou. Jen se odkládá.',
   },
+
+  mission11: {
+    prolog:
+      'Rok po příměří. V sále Královny Eleanor běží největší taktický '
+      + 'simulátor, jaký kdy admiralita postavila — a na jeho plástve dnes '
+      + 'nahráli otázku, která nedala spát nikomu z veteránů: co kdyby se '
+      + 'u Křižovatky střetly OBĚ stěny v plné síle? Dvacet trupů na dvacet. '
+      + 'Žádné zvraty, žádná diplomacie, žádná záchrana v hyperprostoru. '
+      + 'Jen doktrína proti doktríně: avalonská kvalita proti imperiální '
+      + 'tonáži. Admirál Rowan usedá do křesla vlajkové lodi — a všech dvacet '
+      + 'trupů čeká na tvoje rozkazy. „Tak dobře," říká tiše. „Ukažme jim, co jsme se naučili."',
+    epilog:
+      'Simulace končí a sál dlouho mlčí. Pak někdo začne tleskat. '
+      + 'Rozhodčí protokol je suchý: imperiální stěna zlomena, jádro '
+      + 'zničeno, avalonská linie držela. Do učebnic taktiky přibude nová '
+      + 'kapitola — a pod ní poznámka drobným písmem: stěna nevyhrává '
+      + 'tonáží ani elegancí. Vyhrává disciplínou: kdo drží formaci, šetří '
+      + 'zásobníky a ví, kdy zpomalit a nechat štíty pracovat.',
+    epilogLose:
+      'Rozhodčí protokol nezná soucit: avalonská stěna se zlomila. '
+      + 'V sále Královny Eleanor se rozsvítí světla a admirál Rowan si '
+      + 'dlouze prohlíží záznam. „Dobře," řekne nakonec. „Proto simulujeme. '
+      + 'Znovu — od začátku." Příště to vyjde: drž formaci, šetři rakety '
+      + 'na jádro a pamatuj, že tah nad šedesát procent platíš štíty.',
+  },
 }
 
 /** obecná porážková věta (mise bez vlastního epilogLose) */

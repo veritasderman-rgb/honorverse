@@ -1,7 +1,12 @@
 /**
  * Senzory: budování kontaktní picture pro každou stranu.
  * Detekce klínu (pasivní, obří dosah) vs. aktivní/pasivní senzory zblízka.
- * Kontakty nesou světelné zpoždění (age) — obraz je starý vzdálenost/C sekund.
+ *
+ * Gravitika je FTL: zapnutý klín v dosahu = obraz v REÁLNÉM čase (age 0).
+ * EM detekce (klín vypnut) nese světelné zpoždění d/c — obraz je starý.
+ * Ztracený kontakt NEmizí: zůstává jako PAMĚŤOVÝ PIN (memory) s poslední
+ * známou polohou — statické objekty (stanice, planety) trvale a přesně,
+ * lodě s rostoucí nejistotou (plot kreslí kružnici age·|vel|).
  */
 import type { Contact, SimState } from './types'
 import { C, SENSOR_UPDATE_INTERVAL } from './constants'
@@ -58,11 +63,31 @@ export function updateSensors(state: SimState, dt: number): void {
         else if (d < 2 * def.activeSensorRange) q = 1
         if (q > quality) quality = q
       }
-      if (!seen) continue
+      if (!seen) {
+        // ztráta kontaktu → paměťový pin: poslední známé zakreslení zůstává
+        const old = prev.find(c => c.shipId === target.id)
+        if (old) {
+          const def = SHIP_CLASSES[target.classId]
+          const isStatic = old.staticObject === true || (def ? def.maxAccelG <= 0 : false)
+          next.push({
+            ...old,
+            // pin dál stárne (nejistota roste); statický objekt drží polohu;
+            // plná identifikace (2) bez živého tracku degraduje na 1
+            age: old.age + SENSOR_UPDATE_INTERVAL,
+            vel: isStatic ? { x: 0, y: 0 } : old.vel,
+            idQuality: Math.min(old.idQuality, 1) as 0 | 1,
+            memory: true,
+            staticObject: isStatic,
+          })
+        }
+        continue
+      }
 
-      const age = bestDist / C // světelné zpoždění od nejbližšího pozorovatele
+      // gravitika (klín) je FTL → obraz real-time; EM jen rychlostí světla
+      const age = wedgeDetected ? 0 : bestDist / C
       const revealed = state.flags[`revealed:${target.id}`] === true
       const classGuess = quality === 2 || revealed ? target.classId : 'neznámá'
+      const def = SHIP_CLASSES[target.classId]
 
       next.push({
         shipId: target.id,
@@ -73,6 +98,7 @@ export function updateSensors(state: SimState, dt: number): void {
         idQuality: quality,
         classGuess,
         wedgeDetected,
+        staticObject: def ? def.maxAccelG <= 0 : false,
       })
 
       // nová stopa → událost (UI zpomalí čas)

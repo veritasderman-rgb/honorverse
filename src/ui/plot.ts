@@ -474,6 +474,8 @@ export class TacticalPlot {
     const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
     const d = this.worldToScreen(destWorld)
     const selected = ship.id === this.selectedId || ship.id === this.followId
+    // vícebodová trasa: waypointy za aktuálním cílem (course.then)
+    const rest = nav.kind === 'course' && nav.then ? nav.then.map(w => this.worldToScreen(w)) : []
     ctx.save()
     ctx.strokeStyle = selected ? CLR.navSel : CLR.nav
     ctx.fillStyle = selected ? CLR.navSel : CLR.nav
@@ -482,17 +484,24 @@ export class TacticalPlot {
     ctx.beginPath()
     ctx.moveTo(p.x, p.y)
     ctx.lineTo(d.x, d.y)
+    for (const w of rest) ctx.lineTo(w.x, w.y)
     ctx.stroke()
     // symbol waypointu: malý kosočtverec (course) / kroužek (intercept)
     ctx.setLineDash([])
-    ctx.beginPath()
-    if (nav.kind === 'course') {
-      ctx.moveTo(d.x, d.y - 4); ctx.lineTo(d.x + 4, d.y); ctx.lineTo(d.x, d.y + 4); ctx.lineTo(d.x - 4, d.y)
+    const diamond = (q: Vec2): void => {
+      ctx.beginPath()
+      ctx.moveTo(q.x, q.y - 4); ctx.lineTo(q.x + 4, q.y); ctx.lineTo(q.x, q.y + 4); ctx.lineTo(q.x - 4, q.y)
       ctx.closePath()
-    } else {
-      ctx.arc(d.x, d.y, 4, 0, Math.PI * 2)
+      ctx.stroke()
     }
-    ctx.stroke()
+    if (nav.kind === 'course') {
+      diamond(d)
+      for (const w of rest) diamond(w)
+    } else {
+      ctx.beginPath()
+      ctx.arc(d.x, d.y, 4, 0, Math.PI * 2)
+      ctx.stroke()
+    }
 
     // PREDIKOVANÁ TRAJEKTORIE (jen vybraná loď): skutečná křivka manévru
     // stejnou fyzikou jako sim — otáčení, akcelerace, setrvačnost. Vyšší
@@ -602,6 +611,22 @@ export class TacticalPlot {
   /** navigační bóje/maják: šedý kosočtverec s křížkem a popiskem — vždy viditelná */
   private drawBuoy(ctx: CanvasRenderingContext2D, ship: ShipState): void {
     const p = this.worldToScreen(ship.pos)
+    // planeta: velký vyplněný kotouč s obrysem — pevný bod mapy
+    if (ship.classId === 'planet') {
+      ctx.save()
+      ctx.fillStyle = '#123a2a'
+      ctx.strokeStyle = CLR.gridLabel
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 12, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+      ctx.fillStyle = CLR.label
+      ctx.fillText(ship.name, p.x + 16, p.y + 3)
+      ctx.restore()
+      this.pickables.push({ id: ship.id, x: p.x, y: p.y })
+      return
+    }
     const r = 5
     ctx.strokeStyle = CLR.surrendered
     ctx.lineWidth = 1
@@ -665,9 +690,15 @@ export class TacticalPlot {
   }
 
   private drawContact(ctx: CanvasRenderingContext2D, c: Contact): void {
+    // paměťový pin: kreslí se na POSLEDNÍ ZNÁMÉ pozici (bez extrapolace,
+    // ta by ducha odnesla přes půl mapy), ztlumeně; statický objekt bez
+    // kružnice nejistoty — stanice ani planeta nikam neodletí
+    const memory = c.memory === true
     // odhad polohy: poslední známá pozice + vel · (stáří dat + čas od snapshotu)
-    const est = this.exPos(c.pos, c.vel, c.age)
+    const est = memory ? c.pos : this.exPos(c.pos, c.vel, c.age)
     const p = this.worldToScreen(est)
+    if (memory) ctx.save()
+    if (memory) ctx.globalAlpha = 0.45
     this.pickables.push({ id: c.shipId, x: p.x, y: p.y })
     // kapitulovaná loď: šedobílá + vlajka ▽ (už není hrozba)
     const surrendered = this.state?.ships.find(s => s.id === c.shipId)?.surrendered === true
@@ -675,17 +706,19 @@ export class TacticalPlot {
       ? CLR.surrendered
       : c.idQuality === 0 ? CLR.contactUnknown : CLR.contactHostile
 
-    // kroužek nejistoty ~ age · |vel|
-    const rKm = c.age * Math.hypot(c.vel.x, c.vel.y)
-    const rPx = Math.min(500, Math.max(6, rKm / this.kmPerPx))
-    ctx.save()
-    ctx.strokeStyle = color
-    ctx.globalAlpha = 0.45
-    ctx.setLineDash([2, 4])
-    ctx.beginPath()
-    ctx.arc(p.x, p.y, rPx, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.restore()
+    // kroužek nejistoty ~ age · |vel| (statický paměťový objekt ho nemá)
+    if (c.staticObject !== true) {
+      const rKm = c.age * Math.hypot(c.vel.x, c.vel.y)
+      const rPx = Math.min(500, Math.max(6, rKm / this.kmPerPx))
+      ctx.save()
+      ctx.strokeStyle = color
+      ctx.globalAlpha = memory ? 0.3 : 0.45
+      ctx.setLineDash([2, 4])
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, rPx, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.restore()
+    }
 
     this.drawVelVector(ctx, p, c.vel, color)
 
@@ -708,9 +741,15 @@ export class TacticalPlot {
       // vlajka kapitulace nad značkou
       ctx.fillText('▽', p.x - 4, p.y - 10)
       ctx.fillText(`${cls} · kapituloval`, p.x + 10, p.y + 14)
+    } else if (memory) {
+      // paměťový pin: poslední známé zakreslení (statika trvale, lodě stárnou)
+      ctx.fillText(
+        c.staticObject === true ? `${cls} · zakresleno` : `${cls} · paměť ${Math.round(c.age)} s`,
+        p.x + 10, p.y + 14)
     } else {
       ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
     }
+    if (memory) ctx.restore()
   }
 
   private drawMissile(ctx: CanvasRenderingContext2D, m: MissileState): void {

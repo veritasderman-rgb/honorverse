@@ -16,9 +16,9 @@ describe('příběh kampaně (story.ts)', () => {
     expect(CAMPAIGN_INTRO).toContain('Cádiz')
   })
 
-  it('každá mise 1–10 má neprázdný prolog i epilog', () => {
+  it('každá mise 1–11 má neprázdný prolog i epilog', () => {
     const ids = Object.keys(SCENARIOS)
-    expect(ids).toHaveLength(10)
+    expect(ids).toHaveLength(11)
     for (const id of ids) {
       const story = MISSION_STORY[id]
       expect(story, `chybí příběh mise ${id}`).toBeDefined()

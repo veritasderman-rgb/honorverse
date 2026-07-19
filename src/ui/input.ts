@@ -26,6 +26,8 @@ export class UIController {
   private selectedShipIds: number[] = []
   private targetId: number | null = null
   private courseMode = false
+  /** rozpracovaná vícebodová trasa (Shift-kliky v režimu kurzu) */
+  private routeStarted = false
   private salvoMode: DriveMode = 0 // výchozí LO — plný dostřel (HI jen zblízka)
   private compression = 0
   /** poslední nenulová komprese (pro obnovení po pauze) */
@@ -235,6 +237,7 @@ export class UIController {
       case 'course':
         this.courseMode = !this.courseMode
         this.plot.setCourseCursor(this.courseMode)
+        this.routeStarted = false // nový režim kurzu = nová trasa
         break
       case 'salvo2': this.salvo(own, 2); break
       case 'salvo4': this.salvo(own, 4); break
@@ -391,12 +394,21 @@ export class UIController {
   // ---------- klik do plotu ----------
 
   private onPlotClick(id: number | null, world: Vec2, shift: boolean): void {
-    // režim „klik = kurz" — kurz dostanou VŠECHNY vybrané lodě
+    // režim „klik = kurz" — kurz dostanou VŠECHNY vybrané lodě.
+    // Shift-klik PŘIDÁVÁ waypoint trasy (režim zůstává aktivní pro další
+    // body); klik bez Shiftu zadá poslední bod a režim ukončí.
     if (this.courseMode && this.ownShipId != null) {
-      this.courseMode = false
-      this.plot.setCourseCursor(false)
+      // první bod trasy NAHRAZUJE starý kurz, další body se přidávají
+      const append = this.routeStarted
+      if (!shift) {
+        this.courseMode = false
+        this.plot.setCourseCursor(false)
+        this.routeStarted = false
+      } else {
+        this.routeStarted = true
+      }
       for (const sh of this.selectedShips()) {
-        this.send({ kind: 'setCourse', shipId: sh.id, dest: world, arriveAtRest: false })
+        this.send({ kind: 'setCourse', shipId: sh.id, dest: world, arriveAtRest: false, append })
       }
       this.refresh()
       return
@@ -524,11 +536,12 @@ export class UIController {
       <div class="help-grid">
         <b>Intercept</b><span>autopilot spočítá stíhací kurz na cíl</span>
         <b>Kurz sem</b><span>klikni do plotu — loď poletí na bod; u vybrané lodi plot kreslí PREDIKOVANOU KŘIVKU manévru (otáčení + setrvačnost, značka = 1 minuta letu) — čím rychleji letíš, tím širší oblouk</span>
+        <b>Trasa (Shift)</b><span>v režimu kurzu SHIFT-klik přidává další waypointy (kosočtverce spojené čarou); obyčejný klik zadá poslední bod a režim ukončí — predikovaná křivka ukáže skutečný průlet body včetně setrvačnosti</span>
         <b>Salva 2/4/plná</b><span>odpal raket na vybraný cíl</span>
         <b>Pohon LO/HI</b><span>LO = 46k g / 180 s (dostřel ~7 M km), HI = 92k g / 60 s (rychlost, ~1,6 M km)</span>
         <b>Salva X+Y</b><span>vrstvená salva: LO vlna + zpožděná HI vlna dorazí spolu a saturují bodovou obranu</span>
         <b>Obě salvy</b><span>dvojitá boční salva: levobok LO, otočka (8 s, bez palby), pravobok HI na společný dopad — dvojnásobná vlna</span>
-        <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce</span>
+        <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce — a řídí i ENERGETICKÉ baterie (pálí na cíl či nejbližšího nepřítele v dosahu 500 tis. km)</span>
         <b>Energie</b><span>lasery/grasery — drtivé pod 100 tis. km, max. 500 tis. km</span>
         <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu — ale ODVALENÝ NESTŘÍLÍ (klín maskuje boky) a PDLC je oslabená; protirakety fungují dál</span>
         <b>Návnada</b><span>tažená návnada: příchozí raketa na ni může přeskočit (šance dle kvality ECM lodi, víc při slabém zámku) a návnadu ZNIČÍ — jedna návnada ≈ jedna raketa, další lze vypustit hned; omezená zásoba</span>

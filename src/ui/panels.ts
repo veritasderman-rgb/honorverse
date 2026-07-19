@@ -900,7 +900,10 @@ export class Panels {
     const sensM = fmtM(def?.activeSensorRange ?? 5_000_000)
     const tip = {
       intercept: 'Autopilot spočítá a drží stíhací kurz na vybraný cíl. Intercepty na miliony km trvají desítky minut.',
-      course: 'Klikni do plotu — autopilot poletí na zvolený bod.',
+      course: 'Klikni do plotu — autopilot poletí na zvolený bod. '
+        + 'SHIFT-klik přidává další waypointy trasy (režim zůstává aktivní); '
+        + 'obyčejný klik zadá poslední bod. Predikovaná křivka ukáže, jak se '
+        + 'loď pokusí body proletět i se setrvačností.',
       salvo: (n: string): string =>
         `Odpálí ${n} raket na vybraný cíl v režimu ${ui.salvoMode === 1 ? 'HI' : 'LO'}; přebíjení šachet ${TUBE_COOLDOWN} s.`,
       mode: `Režim pohonu raket: LO = ${mdef.accelG[0].toLocaleString('cs-CZ')} g / ${mdef.driveTime[0]} s hoření `
@@ -908,7 +911,8 @@ export class Panels {
         + `(rychlý přílet, dostřel ~${fmtM(envHi)} M km). Dostřel natahuje i vlastní vektor k cíli.`,
       layered: `Vrstvená salva: ${loC}× LO hned + ${hiC}× HI se zpožděním tak, aby obě vlny dorazily spolu `
         + `a saturovaly bodovou obranu (víc raket v okně = nižší Pk obrany).`,
-      autoFire: 'AUTO palba: loď sama opakuje plné salvy, dokud je cíl v poháněné obálce. A',
+      autoFire: 'AUTO palba: loď sama opakuje plné salvy, dokud je cíl v poháněné obálce, '
+        + 'a řídí i energetické baterie (cíl či nejbližší nepřítel do 500 tis. km). A',
       autonomous: 'Režim dalších odpalů. ŘÍZENÁ salva: plný zámek dle palebného řešení, loď ji vede '
         + '(drží zámek, lze ji přesměrovat) — ale eroduje při ztrátě kontaktu na cíl nebo za dosahem '
         + 'řízení 10 M km. AUTONOMNÍ: zámek ×0,85, ale letí sama — ideální „vystřel a zhasni" '

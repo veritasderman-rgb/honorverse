@@ -189,6 +189,7 @@ const MISSION_SCENES: Record<string, string> = {
   mission08: 'scene-battle',
   mission09: 'scene-battle',
   mission10: 'scene-hyperwave',
+  mission11: 'scene-battle',
 }
 
 function showBriefing(sc: Scenario): void {

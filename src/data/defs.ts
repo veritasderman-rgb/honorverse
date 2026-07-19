@@ -189,6 +189,17 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
       + 'Dvě šachty a papírové boční štíty znamenají, že proti soustředěné palbě '
       + 'nevydrží ani jednu pořádnou salvu — a její kapitáni to vědí.',
   },
+  /** planeta — statický objekt mapy (nehybná, nezničitelná v praxi, beze zbraní) */
+  'planet': {
+    id: 'planet', name: 'planeta', hullCode: 'PLT', tonnage: 5.97e18,
+    maxAccelG: 0, sidewallStrength: 0, hullPoints: 1_000_000,
+    tubesPerBroadside: 0, cmLaunchers: 0, pdlcClusters: 0,
+    energyMountsPerBroadside: 0, energyDamage: 0,
+    magazineMissiles: 0, magazineCMs: 0,
+    wedgeDetectionRange: 0, activeSensorRange: 0, ecm: 0, decoyCount: 0,
+    lore: 'Planeta — kotva soustavy a důvod, proč se o ni bojuje. Jednou '
+      + 'zanesená do map se už nikam nehne: poslední známé zakreslení platí navždy.',
+  },
   /** „obchodník" s vojenským kompenzátorem — mise 1 (zvrat) */
   'merch-runner': {
     id: 'merch-runner', name: 'nákladní loď (?)', hullCode: 'MERCH', tonnage: 2_000_000,

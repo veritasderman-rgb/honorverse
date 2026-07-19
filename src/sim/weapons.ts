@@ -406,9 +406,10 @@ export function updateMissiles(state: SimState, dt: number): void {
     // Autonomní salvy (fire-and-forget) spoj nepotřebují.
     if (m.shooterId !== undefined && m.autonomous !== true) {
       const shooter = state.ships.find(s => s.id === m.shooterId && !s.destroyed)
+      // paměťový pin (memory) spoj nedrží — je to jen zákres, ne živý track
       const linked = !!shooter
         && dist(shooter.pos, m.pos) < CONTROL_RANGE
-        && state.contacts[m.side].some(c => c.shipId === m.targetId)
+        && state.contacts[m.side].some(c => c.shipId === m.targetId && c.memory !== true)
       if (!linked) erodeLock(state, m, LINK_LOCK_DECAY * dt)
     }
 
