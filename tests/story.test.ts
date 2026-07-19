@@ -1,6 +1,6 @@
 /**
  * Testy příběhových dat kampaně (src/data/story.ts):
- * každá mise 1–8 má neprázdný prolog i epilog, úvod kampaně existuje
+ * každá mise 1–10 má neprázdný prolog i epilog, úvod kampaně existuje
  * a epilogy/prology vážou mise na sebe (kastorská linka).
  */
 import { describe, expect, it } from 'vitest'
@@ -16,9 +16,9 @@ describe('příběh kampaně (story.ts)', () => {
     expect(CAMPAIGN_INTRO).toContain('Kastor')
   })
 
-  it('každá mise 1–8 má neprázdný prolog i epilog', () => {
+  it('každá mise 1–10 má neprázdný prolog i epilog', () => {
     const ids = Object.keys(SCENARIOS)
-    expect(ids).toHaveLength(8)
+    expect(ids).toHaveLength(10)
     for (const id of ids) {
       const story = MISSION_STORY[id]
       expect(story, `chybí příběh mise ${id}`).toBeDefined()

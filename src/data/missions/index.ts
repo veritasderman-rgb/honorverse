@@ -8,6 +8,8 @@ import { mission05 } from './mission05'
 import { mission06 } from './mission06'
 import { mission07 } from './mission07'
 import { mission08 } from './mission08'
+import { mission09 } from './mission09'
+import { mission10 } from './mission10'
 
 export const SCENARIOS: Record<string, Scenario> = {
   [mission01.id]: mission01,
@@ -18,4 +20,6 @@ export const SCENARIOS: Record<string, Scenario> = {
   [mission06.id]: mission06,
   [mission07.id]: mission07,
   [mission08.id]: mission08,
+  [mission09.id]: mission09,
+  [mission10.id]: mission10,
 }

@@ -29,6 +29,11 @@ export interface MissionStory {
   prolog: string
   epilog: string
   epilogLose?: string
+  /**
+   * Epilogy výhry podle flagů stavu (finále s více konci): první klíč,
+   * který je v state.flags nastaven, vybírá text; jinak platí `epilog`.
+   */
+  epilogByFlag?: Record<string, string>
 }
 
 export const MISSION_STORY: Record<string, MissionStory> = {
@@ -181,6 +186,76 @@ export const MISSION_STORY: Record<string, MissionStory> = {
       'Demonstrace síly vyšla: stěna prorazila hlídku a kaledonské přístavy '
       + 'počítají ztráty. Hlasy proti paktu sílí — přesně jak Direktoriát '
       + 'plánoval. Aliance krvácí dřív, než se stačila narodit.',
+  },
+
+  mission09: {
+    prolog:
+      'Nájezdy podřezávají direktoriátní logistiku a Direktoriát to ví — '
+      + 'proto vsadil všechno na jednu kartu: přímý úder na Albionskou '
+      + 'křižovatku, dřív než mu dojde dech. Bitva, na kterou se obě strany '
+      + 'celou válku chystaly, přijde k tobě domů. Tvoje eskadra — vlajkový '
+      + 'Praporec, Hradba, Vichr a Bouře — je to jediné, co stojí mezi '
+      + 'invazním svazem a třemi tisíci lidí na stanici Křižovatka. Útočník '
+      + 'musí přistát na hyperlimitu a hodiny se dopravovat dovnitř. Ty ty '
+      + 'hodiny musíš proměnit v hřbitov.',
+    epilog:
+      'Oba sledy invaze leží rozbité mezi hyperlimitem a Křižovatkou. '
+      + 'Direktoriát vsadil na jeden úder všechno, co mu logistika ještě '
+      + 'unesla — a prohrál obojí: lodě i iniciativu. Poprvé od Tharsis je '
+      + 'to Albion, kdo si vybere, kde se bude bojovat příště. A Admiralita '
+      + 'už vybrala: v trezoru čekají čtyři roky staré záznamy Aurory '
+      + 'a na nich soustava, kde tohle všechno začalo. Kastor.',
+    epilogLose:
+      'Křižovatka hoří a s ní i všechno, z čeho se platí albionská flotila. '
+      + 'Zbytek námořnictva se stahuje k domovské planetě na poslední obrannou '
+      + 'linii — a Direktoriát si může vybrat, co zaplatí anexi příštích '
+      + 'deset let. Bitva, na kterou se obě strany chystaly celou válku, '
+      + 'skončila špatně pro tu, která si nemohla dovolit prohrát.',
+  },
+
+  mission10: {
+    prolog:
+      'Kruh se uzavírá. Před čtyřmi lety jsi Kastorem proklouzl balisticky '
+      + 'a tvoje Aurora přivezla mapy rozestavěné základny; loni jsi '
+      + 'u Keravu potopil konvoj, který ji měl dostavět. Teď vedeš úderný '
+      + 'svaz — Praporec, Vanguard a tu samou Auroru — proti základně, '
+      + 'která je díky tobě pořád jen napůl hotová. Rozkaz Admirality zní '
+      + 'jasně: Kastor nesmí být nikdy dokončen. Mezi hyperlimitem '
+      + 'a základnou leží hlídka, hluboká soustava — a všechno, co si '
+      + 'obránce připravil na osu útoku, kterou zná stejně dobře jako ty.',
+    epilog:
+      'Kastor je vyřízený a válka u konce. Kruh, který se otevřel nad '
+      + 'zabaveným nákladem u Strážné brány, se uzavřel tam, kde Direktoriát '
+      + 'začal svou válku stavět.',
+    epilogByFlag: {
+      'ending-clean':
+        'Základna Kastor přestala existovat dřív, než stačila diplomacie '
+        + 'cokoli podepsat. Předsunutá pěst Direktoriátu je pryč a s ní '
+        + 'i poslední šance obnovit ofenzívu: příměří, které přijde o týden '
+        + 'později, se podepisuje podle albionských podmínek. Kruh se uzavřel '
+        + '— data z Aurory, čas vykoupený u Keravu a jedna přesná salva. '
+        + 'Admiralita ti vzkazuje: „Dobrá práce." Víc u Admirality neexistuje.',
+      'ending-spirit':
+        'Základna padla minutu před platností příměří — Kastor už Direktoriát '
+        + 'nikdy neopevní. Právníci Admirality budou měsíce řešit, jestli jsi '
+        + 'rozkaz porušil, nebo naplnil; historici budou stručnější: doslovné '
+        + 'znění rozkazu by válku jen přerušilo, jeho duch ji ukončil. Příměří '
+        + 'drží — protože Direktoriátu nezbylo nic, od čeho by příští útok '
+        + 'odrazil. Tvoje kariéra u soudu skončí. Tvoje jméno v učebnicích ne.',
+      'ending-orders':
+        'Rozkaz je rozkaz: svaz se stáhl a příměří vstoupilo v platnost — '
+        + 's nedostavěnou základnou Kastor jako zástavou na direktoriátní '
+        + 'straně stolu. Diplomaté slaví, Admiralita mlčí. Za pět let, až '
+        + 'Direktoriát doplní sklady a dostaví doky, se k Strážné bráně '
+        + 'poletí znovu — ale to už bude jiná válka a jiný příběh. Dnes ses '
+        + 'naučil poslední lekci důstojníka: některá vítězství chutnají '
+        + 'jako prohra a nosí se stejně těžko.',
+    },
+    epilogLose:
+      'Praporec zůstal v Kastoru a úderný svaz se domů vrací bez vlajkové '
+      + 'lodi. Základna se dostaví, příměří se podepíše podle direktoriátních '
+      + 'podmínek — a mapy, které kdysi přivezla Aurora, zestárnou v trezoru '
+      + 'na papír. Válka nekončí porážkou. Jen se odkládá.',
   },
 }
 

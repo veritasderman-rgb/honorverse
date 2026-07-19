@@ -327,16 +327,20 @@ export type LossCause =
 export interface TriggerCondition {
   kind: 'time' | 'distanceBelow' | 'distanceAbove' | 'shipDestroyed' | 'flag'
     | 'wedgeOn' | 'shipsDestroyedCount' | 'shipSurrendered' | 'classified'
+    | 'flagNot' | 'hullBelow'
   t?: number
   shipA?: number
   shipB?: number
   distance?: number
   shipId?: number
+  /** flag: splněno, když flag JE nastaven; flagNot: splněno, když NENÍ */
   flag?: string
   /** shipsDestroyedCount: strana, jejíž ztráty se počítají; classified: pozorující strana (default 'player') */
   side?: Side
   /** shipsDestroyedCount: splněno při počtu zničených lodí strany >= count */
   count?: number
+  /** hullBelow: splněno, když loď ŽIJE a hull < fraction × hullPoints třídy */
+  fraction?: number
 }
 
 export interface TriggerAction {

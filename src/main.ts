@@ -65,9 +65,9 @@ function showCampaignIntro(onDone: () => void): void {
   })
 }
 
-/** úvodní menu: číslovaný seznam misí kampaně (1→8) + rozbalitelný příběh */
+/** úvodní menu: číslovaný seznam misí kampaně (1→10) + rozbalitelný příběh */
 function showMissionSelect(): void {
-  // kampaňové pořadí = pořadí registrace v SCENARIOS (mission01 → mission08)
+  // kampaňové pořadí = pořadí registrace v SCENARIOS (mission01 → mission10)
   const rows = Object.values(SCENARIOS).map((sc, i) =>
     `<div class="mission-row">`
     + `<button data-mission="${esc(sc.id)}">${i + 1}. ${esc(sc.title)}</button>`
@@ -105,6 +105,8 @@ const MISSION_SCENES: Record<string, string> = {
   mission06: 'scene-hyperwave',
   mission07: 'scene-convoy',
   mission08: 'scene-battle',
+  mission09: 'scene-battle',
+  mission10: 'scene-hyperwave',
 }
 
 function showBriefing(sc: Scenario): void {
@@ -131,7 +133,13 @@ function showOutcome(state: SimState): void {
     return `<div class="obj ${o.state}">${mark} ${esc(o.text)}</div>`
   }).join('')
   const story = MISSION_STORY[currentMissionId]
-  const epilog = win ? story?.epilog : (story?.epilogLose ?? (story ? DEFEAT_GENERIC : undefined))
+  let epilog = win ? story?.epilog : (story?.epilogLose ?? (story ? DEFEAT_GENERIC : undefined))
+  // finále s více konci: epilog dle flagu stavu (ending-orders/-spirit/-clean)
+  if (win && story?.epilogByFlag) {
+    for (const [flag, text] of Object.entries(story.epilogByFlag)) {
+      if (state.flags[flag]) { epilog = text; break }
+    }
+  }
   const el = overlay(
     `<h2 class="${win ? 'win' : 'lose'}">${win ? 'VÍTĚZSTVÍ' : 'PORÁŽKA'}</h2>`
     + `<div class="brief">Mise ukončena v čase ${fmtTime(state.t)}.</div>`

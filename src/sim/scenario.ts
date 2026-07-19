@@ -95,6 +95,20 @@ function evalCondition(state: SimState, c: TriggerCondition): boolean {
       return byId(state, c.shipId)?.surrendered === true
     case 'flag':
       return c.flag !== undefined && state.flags[c.flag] === true
+    case 'flagNot':
+      // negace flagu — „dokud se X nestalo": jednorázové obranné pody (mise 9),
+      // vzájemně výlučné konce finále (mise 10). Uvnitř JEDNOHO průchodu
+      // updateTriggers platí pořadí pole triggers: dřívější trigger, který
+      // flag nastaví, pozdějším podmínku flagNot zneplatní.
+      return c.flag !== undefined && state.flags[c.flag] !== true
+    case 'hullBelow': {
+      // loď ŽIJE a trup pod zlomkem hullPoints třídy (poškozená základna —
+      // spouštěč politického rozkazu mise 10); zničená loď podmínku NEplní
+      const ship = byId(state, c.shipId)
+      if (!ship || ship.destroyed || c.fraction === undefined) return false
+      const def = SHIP_CLASSES[ship.classId]
+      return !!def && ship.hull < c.fraction * def.hullPoints
+    }
     case 'wedgeOn': {
       // splněno, když loď žije a má zapnutý klín (prozrazení — mise 4)
       const ship = byId(state, c.shipId)
