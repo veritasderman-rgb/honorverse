@@ -7,6 +7,7 @@ import type { Contact, DriveMode, Order, ShipState, SimState, Side } from './typ
 import { AI_ACTIVE_SENSORS_RANGE, CM_INTERCEPT_RANGE, SENSOR_UPDATE_INTERVAL } from './constants'
 import { add, angleDiff, angleOf, dist, norm, scale, sub, vec } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
+import { voiceEnemyFleeing } from './voice'
 
 /** aproximace dostřelu poháněné obálky v režimu LO (mode 0), km */
 const SALVO_RANGE_LO = 6_000_000
@@ -165,6 +166,8 @@ function pirateOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
   if (!def) return
 
   if (ship.hull < 0.5 * def.hullPoints) {
+    // hláska taktického hráči: pirát se dal na útěk (jen když ho vidíme)
+    voiceEnemyFleeing(state, ship)
     // ústup bez palby → EMCON: aktivní senzory vypnout (nevyzařovat)
     if (ship.activeSensors) {
       orders.push({ kind: 'setActiveSensors', shipId: ship.id, on: false })

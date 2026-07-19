@@ -7,6 +7,7 @@ import type { Contact, SimState } from './types'
 import { C, SENSOR_UPDATE_INTERVAL } from './constants'
 import { dist } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
+import { voiceFirstContact, voiceWarshipClassified } from './voice'
 
 /** akumulátor času od poslední aktualizace, per stav (mimo SimState kvůli kontraktu) */
 const sensorClock = new WeakMap<SimState, number>()
@@ -85,6 +86,12 @@ export function updateSensors(state: SimState, dt: number): void {
           side,
           slowdown: true,
         })
+        // hláska spojaře: první nepřátelský kontakt mise (jen strana hráče)
+        if (side === 'player') voiceFirstContact(state, target)
+      }
+      // hláska taktického: klasifikace VÁLEČNÉ lodi (jednou na loď)
+      if (side === 'player' && classGuess !== 'neznámá') {
+        voiceWarshipClassified(state, target)
       }
     }
 

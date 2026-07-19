@@ -14,6 +14,8 @@ import { SHIP_CLASSES } from '../data/defs'
 import { SUBSYSTEM_NAMES } from './damage'
 import { add, dist, scale } from './vec'
 import { rand } from './rng'
+import { poweredEnvelope } from './weapons'
+import { voiceShipStatus, voiceTargetInEnvelope } from './voice'
 
 const SUBSYSTEM_KEYS = Object.keys(SUBSYSTEM_NAMES) as (keyof Subsystems)[]
 
@@ -113,13 +115,35 @@ function maybeCrewEvent(state: SimState, ship: ShipState, dt: number): void {
   }
 }
 
+/**
+ * Situační hlásky lodi hráče (edge-triggered, viz voice.ts):
+ * stav trupu/munice/CM + hlídání vstupu cílů do poháněné obálky.
+ */
+function voiceChecks(state: SimState, ship: ShipState): void {
+  voiceShipStatus(state, ship)
+  // „cíl v obálce": jen loď schopná raketové palby
+  const def = SHIP_CLASSES[ship.classId]
+  if (!def || def.tubesPerBroadside <= 0 || ship.missiles <= 0) return
+  for (const c of state.contacts[ship.side] ?? []) {
+    if (state.flags[`said:in-envelope:${c.shipId}`] === true) continue
+    const target = state.ships.find(s => s.id === c.shipId)
+    if (!target || target.destroyed || target.surrendered || !hostileTo(ship.side, target.side)) continue
+    const tPos = estPos(c)
+    const d = dist(ship.pos, tPos)
+    if (d <= poweredEnvelope(ship.pos, ship.vel, tPos, c.vel, 0)) {
+      voiceTargetInEnvelope(state, ship, target)
+    }
+  }
+}
+
 /** Krok posádky: opravy všech lodí + náhodné události hráčových lodí za boje. */
 export function updateCrew(state: SimState, dt: number): void {
   for (const ship of state.ships) {
     if (ship.destroyed) continue
     updateRepairs(state, ship, dt)
-    if (ship.doctrine === 'player' && inCombat(state, ship)) {
-      maybeCrewEvent(state, ship, dt)
+    if (ship.doctrine === 'player') {
+      voiceChecks(state, ship)
+      if (inCombat(state, ship)) maybeCrewEvent(state, ship, dt)
     }
   }
 }

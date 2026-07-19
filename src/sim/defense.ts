@@ -16,6 +16,7 @@ import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { angleDiff, angleOf, dist, len, sub } from './vec'
 import { rand } from './rng'
 import { applyBeamDamage, type Aspect } from './damage'
+import { voiceEnemyHit } from './voice'
 
 /**
  * Dno eroze zámku rakety („posádky se ECM propálí"):
@@ -258,6 +259,8 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
     slowdown: target.side === 'player',
     text: `${target.name}: zásah laserovou hlavicí (${hits}× paprsek, ${aspect})`,
   })
+  // hláska taktického: pozorovaný zásah nepřítele (jednou na cíl)
+  if (missile.side === 'player') voiceEnemyHit(state, target)
   for (let i = 0; i < hits; i++) {
     applyBeamDamage(state, target, mDef.rodDamage, aspect)
   }

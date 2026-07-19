@@ -6,6 +6,7 @@ import type { ShipState, SimState, Subsystems } from './types'
 import { REPAIR_CAP, REPAIR_RATE } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
 import { rand } from './rng'
+import { voiceOwnHit } from './voice'
 
 export type Aspect = 'throat' | 'kilt' | 'port' | 'stbd'
 
@@ -64,6 +65,9 @@ export function applyBeamDamage(
   }
 
   target.hull -= dmg
+
+  // hláska posádky hráče: lehký (inženýr) / těžký (XO) zásah — jednou per typ
+  voiceOwnHit(state, target, dmg)
 
   // Zásah subsystémů: šance úměrná prošlému poškození, 1–2 systémy.
   if (rand(state.rng) < Math.min(1, dmg / 45)) {

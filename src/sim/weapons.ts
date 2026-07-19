@@ -15,6 +15,7 @@ import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { add, angleOf, clampLen, dist, dot, len, norm, scale, sub } from './vec'
 import { applyBeamDamage, effectiveTubes } from './damage'
 import { attackAspect, erodeLock, resolveTerminal } from './defense'
+import { voiceIncomingSalvo } from './voice'
 
 const DEFAULT_MISSILE = 'std-shipkiller'
 
@@ -212,6 +213,8 @@ export function launchSalvo(
     ship.missiles -= n
     ship.tubeCooldown = TUBE_COOLDOWN
   }
+  // hláska taktického: první příchozí salva mise (nepřítel pálí na hráče)
+  if (target) voiceIncomingSalvo(state, ship, target, nAttack)
   // odpaly NEzpomalují čas (slowdown false) — UI jen loguje;
   // výjimka: saturační salva z podů je dramatická událost (slowdown true)
   state.events.push(opts.podLaunch
