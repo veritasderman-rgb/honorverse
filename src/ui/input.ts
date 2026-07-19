@@ -527,7 +527,7 @@ export class UIController {
         <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu — ale ODVALENÝ NESTŘÍLÍ (klín maskuje boky) a PDLC je oslabená; protirakety fungují dál</span>
         <b>Návnada</b><span>tažená návnada: příchozí raketa na ni může přeskočit (šance dle kvality ECM lodi, víc při slabém zámku) a návnadu ZNIČÍ — jedna návnada ≈ jedna raketa, další lze vypustit hned; omezená zásoba</span>
         <b>+rušička</b><span>salva obětuje 1 raketu jako eskortní rušičku — zbytek má proti bodové obraně cíle Pk ×0,75 (min. 3 rakety)</span>
-        <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočníků</span>
+        <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočních štítů</span>
         <b>Akt. senzory</b><span>plná identifikace zblízka + lepší zámek našich raket; pozor — vyzařování zlepšuje řešení nepříteli o 15 %</span>
       </div>
       <h4>Výkon pohonu a rozpočet reaktoru</h4>
@@ -535,15 +535,15 @@ export class UIController {
         <b>tah 20–120 %</b><span>stupňovitý přepínač v liště rozkazů; 80 % je standard s bezpečnostní rezervou kompenzátoru</span>
         <b>100 %</b><span>plný projektovaný výkon — bez rizika, ale bez rezervy</span>
         <b>120 % (červeně)</b><span>NOUZOVÝ výkon „za červenou čarou": +20 % akcelerace, ale se zapnutým klínem hrozí poškození impelerového prstence (v průměru ~1× za 33 minut) — inženýr varuje</span>
-        <b>Tah vs. bočníky</b><span>reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ bočníky 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 % — rychlý přílet znamená papírové boky (readout „výkon bočníků" v panelu lodi)</span>
+        <b>Tah vs. boční štíty</b><span>reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ boční štíty 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 % — rychlý přílet znamená papírové boky (readout „výkon bočních štítů" v panelu lodi)</span>
         <b>Hromadně</b><span>přepínač platí pro celý hromadný výběr — „(×N)" u tlačítka</span>
       </div>
       <h4>Poškození a opravy</h4>
       <div class="help-grid">
-        <b>Bočníky tlumí, neblokují</b><span>boční zásah VŽDY něco prosákne (silný bočník slabý paprsek čtvrtí); absorbovaná energie navíc generátory bočníku opotřebovává — soustavná palba štít postupně mele</span>
+        <b>Boční štíty tlumí, neblokují</b><span>boční zásah VŽDY něco prosákne (silný boční štít slabý paprsek čtvrtí); absorbovaná energie navíc generátory bočního štítu opotřebovává — soustavná palba štít postupně mele</span>
         <b>Umírání po částech</b><span>loď vydrží řádově 10–15 zásahů; každý prošlý paprsek má slušnou šanci vyřadit kus vybavení (šachty, impelery, senzory…) — bojeschopnost klesá dřív, než dojde trup</span>
         <b>Poškozené impelery</b><span>akcelerace klesá s průměrem obou prstenců — loď se zásahem do pohonu reálně zpomaluje v manévru</span>
-        <b>Polní opravy</b><span>poškozené subsystémy se BĚHEM boje samy opravují (~7 % za minutu, provizorně do 70 %); buff inženýra opravy ×4 — o vyřazený bočník či šachty se dá přetahovat</span>
+        <b>Polní opravy</b><span>poškozené subsystémy se BĚHEM boje samy opravují (~7 % za minutu, provizorně do 70 %); buff inženýra opravy ×4 — o vyřazený boční štít či šachty se dá přetahovat</span>
       </div>
       <h4>Eskadra a formace</h4>
       <div class="help-grid">

@@ -23,7 +23,7 @@ export interface ShipClassDef {
   tonnage: number
   /** maximální akcelerace v g (100 % kompenzátoru) */
   maxAccelG: number
-  /** odolnost bočníku: práh poškození, které paprsek musí překonat */
+  /** odolnost bočního štítu: práh poškození, které paprsek musí překonat */
   sidewallStrength: number
   /** strukturní body trupu (vyčerpání = zničení) */
   hullPoints: number
@@ -69,7 +69,7 @@ export interface MissileDef {
   standoffRange: number
   /** počet laserových tyčí (paprsků) na hlavici */
   laserRods: number
-  /** poškození jednoho paprsku před odečtením bočníku */
+  /** poškození jednoho paprsku před odečtením bočního štítu */
   rodDamage: number
   /** max. rychlost (km/s) — tvrdý strop */
   maxSpeed: number
@@ -207,7 +207,7 @@ export interface ShipState {
   throttle: number
   /** aktivní navigační plán autopilota */
   nav: NavPlan
-  /** klín zapnut (vypnutý = stealth, nulová akcelerace, žádné bočníky) */
+  /** klín zapnut (vypnutý = stealth, nulová akcelerace, žádné boční štíty) */
   wedgeOn: boolean
   /** aktivní senzory zapnuty */
   activeSensors: boolean

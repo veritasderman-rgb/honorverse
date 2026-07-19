@@ -115,7 +115,7 @@ export function voiceOwnHit(state: SimState, ship: ShipState, hullDamage: number
     if (!once(state, `said:hit-heavy:${ship.id}`)) return
     say(state, ship, 'xo', pick(state, `hit-heavy:${ship.id}`, [
       'Těžký zásah! Hlášení škod jdou ze tří palub najednou — týmy nasazuji, kde se dá.',
-      'To šlo hluboko, kapitáne. Prosekli bočník — škody se teprve sčítají.',
+      'To šlo hluboko, kapitáne. Prosekli boční štít — škody se teprve sčítají.',
       'Průnik trupem! Přetlakové přepážky drží… zatím.',
     ]))
   } else {
@@ -123,7 +123,7 @@ export function voiceOwnHit(state: SimState, ship: ShipState, hullDamage: number
     say(state, ship, 'engineer', pick(state, `hit-light:${ship.id}`, [
       'Zásah do trupu — škody povrchové. Týmy oprav už běží.',
       'Dostali jsme šlehanec. Nic, co by se nedalo zalátat za provozu.',
-      'Lehký zásah, kapitáne. Bočník pohltil většinu.',
+      'Lehký zásah, kapitáne. Boční štít pohltil většinu.',
     ]))
   }
 }

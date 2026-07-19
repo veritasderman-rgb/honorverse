@@ -1,5 +1,5 @@
 /**
- * Poškození: bočníky, trup, subsystémy (viz GAME_DESIGN.md kap. 5).
+ * Poškození: boční štíty, trup, subsystémy (viz GAME_DESIGN.md kap. 5).
  * Lodě umírají po částech — žádný prostý HP bar.
  */
 import type { ShipState, SimState, Subsystems } from './types'
@@ -14,8 +14,8 @@ export type Aspect = 'throat' | 'kilt' | 'port' | 'stbd'
 export const SUBSYSTEM_NAMES: Record<keyof Subsystems, string> = {
   impellerFwd: 'přední impelerový prstenec',
   impellerAft: 'zadní impelerový prstenec',
-  sidewallPort: 'levý bočník',
-  sidewallStbd: 'pravý bočník',
+  sidewallPort: 'levý boční štít',
+  sidewallStbd: 'pravý boční štít',
   tubesPort: 'raketové šachty (levobok)',
   tubesStbd: 'raketové šachty (pravobok)',
   energyPort: 'energetické zbraně (levobok)',
@@ -41,7 +41,7 @@ export function effectiveAccelFactor(ship: ShipState): number {
 }
 
 /**
- * Výkon bočníků dle rozkazového tahu (rozpočet reaktoru — pohon a štítové
+ * Výkon bočních štítů dle rozkazového tahu (rozpočet reaktoru — pohon a štítové
  * generátory se o výkon dělí): lomená čára SIDEWALL_POWER_CURVE, lineární
  * interpolace. Tah ≤ 40 % ⇒ 1.2, 60 % ⇒ 1.0, 80 % ⇒ 0.6, 100 % ⇒ 0.4,
  * 120 % ⇒ 0.25. Sdílí sim (applyBeamDamage) i UI (readout u ovládání tahu).
@@ -61,11 +61,11 @@ export function sidewallPowerFactor(throttle: number): number {
 
 /**
  * Aplikuje jeden paprsek (laserová tyč hlavice / energetický mount).
- * Boky: racionální útlum bočníkem — prošlé dmg²/(dmg+práh): silný bočník
+ * Boky: racionální útlum bočním štítem — prošlé dmg²/(dmg+práh): silný boční štít
  * čtvrtí slabé paprsky (ale VŽDY něco prosákne — žádná věčná imunita),
- * slabý bočník těžký graser skoro nezpomalí. Absorbovaná energie navíc
- * pálí generátory bočníku (SIDEWALL_WEAR) — soustavná palba štít mele.
- * Hrdlo: bez bočníku, ·1.25. Záď: bez bočníku, bonus šance na zadní impeler.
+ * slabý boční štít těžký graser skoro nezpomalí. Absorbovaná energie navíc
+ * pálí generátory bočního štítu (SIDEWALL_WEAR) — soustavná palba štít mele.
+ * Hrdlo: bez bočního štítu, ·1.25. Záď: bez bočního štítu, bonus šance na zadní impeler.
  */
 export function applyBeamDamage(
   state: SimState,
@@ -80,10 +80,10 @@ export function applyBeamDamage(
   if (aspect === 'port' || aspect === 'stbd') {
     const wallKey = aspect === 'port' ? 'sidewallPort' : 'sidewallStbd'
     const wall = target.subsystems[wallKey]
-    // rozpočet reaktoru: rychlá loď (vysoký tah) má bočníky podvyživené
+    // rozpočet reaktoru: rychlá loď (vysoký tah) má boční štíty podvyživené
     const threshold = def.sidewallStrength * wall * sidewallPowerFactor(target.throttle)
     const through = (dmg * dmg) / (dmg + threshold)
-    // opotřebení generátorů absorbovanou energií — bočník se palbou mele
+    // opotřebení generátorů absorbovanou energií — boční štít se palbou mele
     if (threshold > 0) {
       target.subsystems[wallKey] =
         Math.max(0, wall - ((dmg - through) / def.sidewallStrength) * SIDEWALL_WEAR)

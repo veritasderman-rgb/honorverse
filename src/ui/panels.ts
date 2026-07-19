@@ -58,8 +58,8 @@ const COMP_BTNS: { f: number; label: string }[] = [
 const SUBSYS: { key: keyof Subsystems; label: string }[] = [
   { key: 'impellerFwd', label: 'impelery příď' },
   { key: 'impellerAft', label: 'impelery záď' },
-  { key: 'sidewallPort', label: 'bočník LB' },
-  { key: 'sidewallStbd', label: 'bočník PB' },
+  { key: 'sidewallPort', label: 'boční štít LB' },
+  { key: 'sidewallStbd', label: 'boční štít PB' },
   { key: 'tubesPort', label: 'šachty LB' },
   { key: 'tubesStbd', label: 'šachty PB' },
   { key: 'energyPort', label: 'energet. LB' },
@@ -472,7 +472,7 @@ export class Panels {
         ['detekce klínu', fmtKm(def.wedgeDetectionRange)],
         ['aktivní senzory', fmtKm(def.activeSensorRange)],
         ['ECM', `${Math.round(def.ecm * 100)} %`],
-        ['bočníky', String(def.sidewallStrength)],
+        ['boční štíty', String(def.sidewallStrength)],
       ]
       out += `<div class="cls-table">`
         + kv.map(([k, v]) => `<span class="dim">${k}</span><span>${v}</span>`).join('')
@@ -534,12 +534,12 @@ export class Panels {
         + `<span>senzory: <b class="${own.activeSensors ? 'amber' : 'ok'}">${own.activeSensors ? 'AKTIVNÍ' : 'PASIVNÍ'}</b></span></div>`
         + `<div class="row"><span>poloha: <b class="${own.rolledTo != null ? 'amber' : 'ok'}">${own.rolledTo != null ? 'ODVALENÁ' : 'normální'}</b></span>`
         + `<span>tah: ${Math.round(own.throttle * 100)} %</span></div>`
-        // rozpočet reaktoru: výkon bočníků klesá s tahem (sim: applyBeamDamage)
+        // rozpočet reaktoru: výkon bočních štítů klesá s tahem (sim: applyBeamDamage)
         + (() => {
           const sw = sidewallPowerFactor(own.throttle)
           const cls = sw >= 1 ? 'ok' : sw >= 0.6 ? 'amber' : 'bad'
-          return `<div class="row" title="Reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ bočníky 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 %.">`
-            + `<span>výkon bočníků:</span><b class="${cls}">${Math.round(sw * 100)} %</b></div>`
+          return `<div class="row" title="Reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ boční štíty 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 %.">`
+            + `<span>výkon bočních štítů:</span><b class="${cls}">${Math.round(sw * 100)} %</b></div>`
         })()
 
     // funkční šachty (vliv poškození subsystémů na palbu — lepší bok)
@@ -553,7 +553,7 @@ export class Panels {
 
     // cooldown šachet jako progres bar (plný = připraveno)
     const ready = 1 - Math.min(1, own.tubeCooldown / TUBE_COOLDOWN)
-    const cdRow = `<div class="subsys ${ready >= 1 ? 'ok' : 'amber'}"><span class="nm">šachty nabití</span>`
+    const cdRow = `<div class="subsys ${ready >= 1 ? 'ok' : 'amber'}"><span class="nm">raketové šachty</span>`
       + `<span class="bar"><i style="width:${Math.round(ready * 100)}%"></i></span>`
       + `<span class="pc">${own.tubeCooldown > 0 ? Math.ceil(own.tubeCooldown) + ' s' : 'OK'}</span></div>`
 
@@ -561,7 +561,7 @@ export class Panels {
     // které energetické zbraně nesou)
     const energyReady = 1 - Math.min(1, own.energyCooldown / ENERGY_COOLDOWN)
     const energyRow = (def?.energyMountsPerBroadside ?? 0) > 0
-      ? `<div class="subsys ${energyReady >= 1 ? 'ok' : 'amber'}"><span class="nm">energetika nabití</span>`
+      ? `<div class="subsys ${energyReady >= 1 ? 'ok' : 'amber'}"><span class="nm">energetické zbraně</span>`
         + `<span class="bar"><i style="width:${Math.round(energyReady * 100)}%"></i></span>`
         + `<span class="pc">${own.energyCooldown > 0 ? Math.ceil(own.energyCooldown) + ' s' : 'OK'}</span></div>`
       : ''
@@ -908,13 +908,13 @@ export class Panels {
         + 'HI časovaný na společný dopad — dvojnásobná vlna saturuje obranu. Loď se během '
         + 'otočky nemůže bránit palbou.',
       wedge: 'Vypnutý klín = EMCON: loď je téměř neviditelná (jen aktivní senzory zblízka), '
-        + 'bez bočníků; k dispozici jen manévrovací trysky ~5 g na korekce driftu.',
+        + 'bez bočních štítů; k dispozici jen manévrovací trysky ~5 g na korekce driftu.',
       sensors: `Plná identifikace cílů do ${sensM} mil. km + lepší zámek našich raket (plné palebné `
         + 'řešení 100 % místo 70 %); pozor — vyzařování zlepšuje řešení nepříteli o 15 %. '
         + 'Pasivní detekce cizího klínu funguje vždy.',
       throttle: 'Výkon pohonu (kompenzátoru): 80 % je standard, 100 % plný výkon, '
         + '120 % = NOUZOVÝ výkon „za červenou čarou" (riziko poškození prstence ~1× za 33 min). '
-        + 'POZOR — reaktor neutáhne pohon i bočníky: tah ≤ 40 % ⇒ bočníky 120 %, 60 % ⇒ 100 %, '
+        + 'POZOR — reaktor neutáhne pohon i boční štíty: tah ≤ 40 % ⇒ boční štíty 120 %, 60 % ⇒ 100 %, '
         + '80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 %. Rychlý přílet = papírové boky. Platí pro celý výběr.',
       formation: 'Formace eskadry (aktivní při výběru ≥ 2 ovladatelných lodí; aktivní loď = leader, '
         + 'ostatní dostanou sloty a drží je automaticky — vlastní kurz ignorují). '

@@ -15,25 +15,25 @@ export const MISSILE_MAX_SPEED = 0.8 * C
 /** standardní provozní výkon kompenzátoru */
 export const STANDARD_THROTTLE = 0.8
 
-/** ---------- rozpočet reaktoru: pohon vs. bočníky ---------- */
+/** ---------- rozpočet reaktoru: pohon vs. boční štíty ---------- */
 /**
  * Reaktor neutáhne plný pohon i plné štítové generátory zároveň. Výkon
- * bočníků je funkcí rozkazového tahu (lomená čára, lineární interpolace):
- *   tah ≤ 40 %  → bočníky 120 % (přebytek výkonu přebíjí generátory),
- *   tah 60 %    → bočníky 100 %,
- *   tah 80 %    → bočníky  60 %,
- *   tah 100 %   → bočníky  40 %,
- *   tah 120 %   → bočníky  25 % („za červenou čarou" nezbývá skoro nic).
+ * bočních štítů je funkcí rozkazového tahu (lomená čára, lineární interpolace):
+ *   tah ≤ 40 %  → boční štíty 120 % (přebytek výkonu přebíjí generátory),
+ *   tah 60 %    → boční štíty 100 %,
+ *   tah 80 %    → boční štíty  60 %,
+ *   tah 100 %   → boční štíty  40 %,
+ *   tah 120 %   → boční štíty  25 % („za červenou čarou" nezbývá skoro nic).
  * Reálné taktické dilema: rychle se přiblížit s papírovými boky, nebo
- * zpomalit a nechat bočníky žrát salvy.
+ * zpomalit a nechat boční štíty žrát salvy.
  */
 export const SIDEWALL_POWER_CURVE: ReadonlyArray<readonly [number, number]> = [
   [0.0, 1.2], [0.4, 1.2], [0.6, 1.0], [0.8, 0.6], [1.0, 0.4], [1.2, 0.25],
 ]
 /**
- * Opotřebení generátorů bočníku palbou: absorbovaná energie paprsku pálí
- * generátory — subsystém bočníku ztrácí (absorbováno/síla bočníku)·WEAR
- * za paprsek. Soustavná boční palba tak bočník POSTUPNĚ mele (a s ním roste
+ * Opotřebení generátorů bočního štítu palbou: absorbovaná energie paprsku pálí
+ * generátory — subsystém bočního štítu ztrácí (absorbováno/síla bočního štítu)·WEAR
+ * za paprsek. Soustavná boční palba tak boční štít POSTUPNĚ mele (a s ním roste
  * prošlé poškození) — loď „umírá po částech" i bokem, žádná věčná imunita.
  * Proti tomu běží polní opravy (REPAIR_RATE) — přetahovaná o štít je reálná.
  */

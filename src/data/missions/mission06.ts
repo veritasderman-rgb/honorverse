@@ -24,7 +24,7 @@ export const mission06: Scenario = {
   title: 'Ústup od Tharsis',
   briefing:
     'Střetnutí u Tharsis jsme prohráli. ANS Resolute ustupuje s vyřazeným '
-    + 'zadním impelerovým prstencem, potrhaným pravým bočníkem a polovinou '
+    + 'zadním impelerovým prstencem, potrhaným pravým bočním štítem a polovinou '
     + 'levobokých šachet — a za zádí visí imperiální svaz, který je '
     + 'RYCHLEJŠÍ než ty. Jediná šance: udržet náskok do hyperlimitu, krýt '
     + 'záď rolováním a nenechat se stáhnout do boje. Každý zbytečný manévr '
@@ -84,7 +84,7 @@ export const mission06: Scenario = {
       actions: [
         {
           kind: 'comm', speaker: 'engineer',
-          text: 'Inženýr: „Zadní prstenec drží na 35 %, víc z něj nedostanu. Jestli nás dohoní, s tímhle bočníkem druhé kolo nepřežijeme."',
+          text: 'Inženýr: „Zadní prstenec drží na 35 %, víc z něj nedostanu. Jestli nás dohoní, s tímhle bočním štítem druhé kolo nepřežijeme."',
         },
       ],
     },

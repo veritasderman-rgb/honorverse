@@ -25,7 +25,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     lore: 'Páteřní torpédoborec Královského námořnictva, pojmenovaný po náhlých '
       + 'horských vichrech avalonské domoviny. Konstrukce upřednostňuje protiraketové '
       + 'zásobníky a kadenci obrany před vlastní údernou silou — Vichr je stavěný jako '
-      + 'eskortní deštník konvojů. Slabina: pouhé tři šachty na bok a tenké bočníky; '
+      + 'eskortní deštník konvojů. Slabina: pouhé tři šachty na bok a tenké boční štíty; '
       + 'v přímém přestřelu s křižníkem nemá co pohledávat.',
   },
   'cl-sokol': {
@@ -51,7 +51,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45, decoyCount: 8,
     missileQuality: 1.08,
     lore: 'Těžký křižník stavěný jako pohyblivá pevnost — odtud jméno. Osm šachet '
-      + 'na bok, silné bočníky a vrstvená bodová obrana z Bastionu dělají loď, která '
+      + 'na bok, silné boční štíty a vrstvená bodová obrana z Bastionu dělají loď, která '
       + 'dokáže držet linii i proti přesile. Daní je tonáž: pomalejší akcelerace '
       + 'a velký senzorový obraz, který se špatně skrývá.',
   },
@@ -82,7 +82,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
       + 'je nasazuje jako pasti na eskorty — kontejnery skrývají raketová lůžka '
       + 'a energetické baterie, které se odhalí až zblízka. Proti nic netušící lodi '
       + 'je Q-ship smrtící; jakmile je odhalen, zrazuje ho civilní kompenzátor '
-      + 'a improvizované bočníky.',
+      + 'a improvizované boční štíty.',
   },
   /** kurýrní loď: rychlá, beze zbraní — mise 4 (zvrat) */
   'disp-courier': {
@@ -124,7 +124,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     lore: 'Dreadnought — stěna bitvy vtělená do šesti milionů tun. Vladař je '
       + 'odpověď Avalonu na tonáž Impéria: místo počtu trupů avalonská kvalita '
       + '— nejlepší senzory, ECM a raketová elektronika, jaké loděnice '
-      + 'Království umí postavit. Čtrnáct šachet na bok, bočníky, které zblízka '
+      + 'Království umí postavit. Čtrnáct šachet na bok, boční štíty, které zblízka '
       + 'nepropustí ani graser, a vrstvená obrana hlubší než u kterékoli menší '
       + 'třídy. Daň je stará známá: 435 g a manévr spíš symbolický. Vladař '
       + 'neuhýbá — Vladař stojí a drží linii.',
@@ -155,7 +155,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 300, magazineCMs: 600,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.3, decoyCount: 12,
     lore: 'Orbitální překladiště a pevnost v jednom. Bez klínu se nikam nehne, '
-      + 'zato štítové generátory nahrazují bočníky po celém obvodu a zásobníky '
+      + 'zato štítové generátory nahrazují boční štíty po celém obvodu a zásobníky '
       + 'protiraket vydrží hodiny nepřetržité palby. Kdo chce stanici dobýt, musí '
       + 'nejdřív vyčerpat její obranu — nebo ji obejít a odříznout.',
   },
@@ -184,7 +184,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     missileQuality: 0.9,
     lore: 'Lehký nájezdník pirátských flotil — rychlý, laciný a postradatelný. '
       + 'Šalupa loví ve smečkách: jedna váže eskortu, ostatní trhají konvoj. '
-      + 'Dvě šachty a papírové bočníky znamenají, že proti soustředěné palbě '
+      + 'Dvě šachty a papírové boční štíty znamenají, že proti soustředěné palbě '
       + 'nevydrží ani jednu pořádnou salvu — a její kapitáni to vědí.',
   },
   /** „obchodník" s vojenským kompenzátorem — mise 1 (zvrat) */

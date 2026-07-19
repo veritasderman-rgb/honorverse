@@ -1,6 +1,6 @@
 /**
  * Testy bojového modelu: rng, salvy, vrstvená obrana (statisticky),
- * bočníky a subsystémové umírání. Spouštět: npx vitest run tests/combat.test.ts
+ * boční štíty a subsystémové umírání. Spouštět: npx vitest run tests/combat.test.ts
  */
 import { describe, expect, it } from 'vitest'
 import type { MissileState, ShipState, SimState, Subsystems } from '../src/sim/types'
@@ -238,18 +238,18 @@ describe('gradient vzdálenosti — zblízka obrana slábne (statistika nad seed
   })
 })
 
-// ---------- bočníky a aspekty ----------
+// ---------- boční štíty a aspekty ----------
 
-describe('bočníky a aspekty', () => {
-  it('bočník tlumí boční paprsky (racionální útlum, VŽDY něco prosákne), hrdlo ·1.25', () => {
+describe('boční štíty a aspekty', () => {
+  it('boční štít tlumí boční paprsky (racionální útlum, VŽDY něco prosákne), hrdlo ·1.25', () => {
     const state = makeState(3)
     const ca = makeShip(1, 'ca-bastion') // sidewallStrength 22
-    ca.throttle = 0.6 // výkon bočníků 100 % (rozpočet reaktoru)
+    ca.throttle = 0.6 // výkon bočních štítů 100 % (rozpočet reaktoru)
     state.ships.push(ca)
 
     applyBeamDamage(state, ca, 14, 'stbd') // práh 22 → projde 14²/(14+22) ≈ 5.4
     expect(ca.hull).toBeCloseTo(300 - (14 * 14) / (14 + 22), 4)
-    // absorbovaná energie pálí generátory bočníku (opotřebení)
+    // absorbovaná energie pálí generátory bočního štítu (opotřebení)
     expect(ca.subsystems.sidewallStbd).toBeLessThan(1)
 
     const before = ca.hull
@@ -257,7 +257,7 @@ describe('bočníky a aspekty', () => {
     expect(ca.hull).toBeCloseTo(before - 14 * 1.25, 4)
   })
 
-  it('oslabený bočník propustí víc — a soustavná palba ho mele dál', () => {
+  it('oslabený boční štít propustí víc — a soustavná palba ho mele dál', () => {
     const state = makeState(4)
     const ca = makeShip(1, 'ca-bastion')
     ca.throttle = 0.6
@@ -268,7 +268,7 @@ describe('bočníky a aspekty', () => {
     expect(ca.subsystems.sidewallStbd).toBeLessThan(0.3)
   })
 
-  it('rozpočet reaktoru: výkon bočníků klesá s tahem dle lomené čáry', () => {
+  it('rozpočet reaktoru: výkon bočních štítů klesá s tahem dle lomené čáry', () => {
     expect(sidewallPowerFactor(0)).toBeCloseTo(1.2)
     expect(sidewallPowerFactor(0.4)).toBeCloseTo(1.2)
     expect(sidewallPowerFactor(0.5)).toBeCloseTo(1.1)
@@ -306,11 +306,11 @@ describe('bočníky a aspekty', () => {
     expect(attackAspect(ship, vec(0, -1000))).toBe('stbd')
   })
 
-  it('energetická palba na max. dosah přes zdravý bočník sotva škrábne', () => {
+  it('energetická palba na max. dosah přes zdravý boční štít sotva škrábne', () => {
     const state = makeState(5)
     const dd = makeShip(1, 'dd-vichr', { pos: vec(0, 450_000) }) // z boku (port)
     const ca = makeShip(2, 'ca-bastion', { side: 'enemy' })
-    ca.throttle = 0.6 // bočníky na 100 %
+    ca.throttle = 0.6 // boční štíty na 100 %
     state.ships.push(dd, ca)
     fireEnergy(state, dd, ca)
     // 30 · ~0.26 ≈ 7.8 na paprsek, racionální útlum práh 22 → ~2 prosáknou
@@ -324,7 +324,7 @@ describe('bočníky a aspekty', () => {
     const state = makeState(6)
     const bc = makeShip(1, 'bc-praporec', { pos: vec(0, 80_000) }) // pod rozhodující vzdáleností
     const cl = makeShip(2, 'cl-sokol', { side: 'enemy' })
-    cl.throttle = 0.8 // standardní tah — bočníky na 60 %
+    cl.throttle = 0.8 // standardní tah — boční štíty na 60 %
     state.ships.push(bc, cl)
     fireEnergy(state, bc, cl)
     // 5 mountů × 65, práh 16·0.6 = 9.6 → ~57/paprsek — CL to FAKT pocítí
