@@ -669,7 +669,9 @@ export class Panels {
       + `<button data-act="salvo2" title="${esc(tip.salvo('2'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 2</button>`
       + `<button data-act="salvo4" title="${esc(tip.salvo('4'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 4</button>`
       + `<button data-act="salvoFull" title="${esc(tip.salvo(`všechny (${tubes})`))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Plná salva</button>`
-      + `<button data-act="mode" title="${esc(tip.mode)}">Pohon: ${ui.salvoMode === 1 ? 'HI' : 'LO'}</button>`
+      + `<span title="${esc(tip.mode)}">pohon raket: `
+      + `<button data-act="modeLo" class="${ui.salvoMode === 0 ? 'active' : ''}">LO</button>`
+      + `<button data-act="modeHi" class="${ui.salvoMode === 1 ? 'active' : ''}">HI</button></span>`
       + `</div>`
       + `<div class="btnrow">`
       + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva ${loC}+${hiC}</button>`

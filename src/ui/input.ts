@@ -203,6 +203,12 @@ export class UIController {
       case 'mode':
         this.salvoMode = this.salvoMode === 1 ? 0 : 1
         break
+      case 'modeLo':
+        this.salvoMode = 0
+        break
+      case 'modeHi':
+        this.salvoMode = 1
+        break
       case 'autonomous':
         // režim dalších odpalů: řízené / autonomní salvy (fire-and-forget)
         this.autonomousMode = !this.autonomousMode
