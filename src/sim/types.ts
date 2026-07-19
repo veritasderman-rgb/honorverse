@@ -45,6 +45,8 @@ export interface ShipClassDef {
   activeSensorRange: number
   /** síla ECM 0–1 (snižuje zámek útočných raket) */
   ecm: number
+  /** lore třídy: původ jména, v čem vyniká, slabiny (rozklikávací detail v UI) */
+  lore?: string
 }
 
 export interface MissileDef {
