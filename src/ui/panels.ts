@@ -2,8 +2,12 @@
  * Panely v #sidebar a horní lišta v #topbar — prosté DOM (innerHTML),
  * přerender ze snapshotu (sidebar throttlovaný na ~7 Hz).
  * Akce tlačítek se chytají na pointerdown delegací (přežije přerender).
+ * Nově: komunikační panel (avatary z img/<speaker>.png), detail cíle,
+ * stav AUTO palby + progres bar šachet, overlay toasty u plotu.
  */
 import { SHIP_CLASSES } from '../data/defs'
+import { TUBE_COOLDOWN } from '../sim/constants'
+import { poweredEnvelope } from '../sim/weapons'
 import type { Contact, DriveMode, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
@@ -45,6 +49,27 @@ const SUBSYS: { key: keyof Subsystems; label: string }[] = [
   { key: 'ecm', label: 'ECM' },
 ]
 
+/** české názvy rolí + iniciály fallbacku (soubory avatarů dle docs/ART_PROMPTS.md) */
+/** ilustrace tříd lodí (public/img/<hodnota>.png) — klíč je classId nebo hullCode */
+const SHIP_IMAGES: Record<string, string> = {
+  'dd-vichr': 'ship-dd', 'cl-sokol': 'ship-cl', 'ca-bastion': 'ship-ca',
+  'merch-freighter': 'ship-merch', 'merch-runner': 'ship-merch',
+  'merch-qship': 'ship-qship', 'disp-courier': 'ship-courier',
+  DD: 'ship-dd', CL: 'ship-cl', CA: 'ship-ca', MERCH: 'ship-merch', DB: 'ship-courier',
+}
+
+const SPEAKERS: Record<string, { name: string; initials: string }> = {
+  'captain': { name: 'Kapitán', initials: 'KPT' },
+  'xo': { name: 'První důstojník', initials: 'XO' },
+  'engineer': { name: 'Inženýr', initials: 'INŽ' },
+  'tactical': { name: 'Taktický důstojník', initials: 'TAK' },
+  'comms': { name: 'Spojař', initials: 'SPO' },
+  'enemy-captain': { name: 'Nepřátelský kapitán', initials: 'NPŘ' },
+  'pirate': { name: 'Pirát', initials: 'PIR' },
+  'station': { name: 'Stanice', initials: 'STN' },
+  'governor': { name: 'Guvernér', initials: 'GUV' },
+}
+
 // ---------- formátovací pomocníci (sdílené i pro main.ts) ----------
 
 export const esc = (s: string): string =>
@@ -71,11 +96,21 @@ const pctClass = (v: number): string => (v >= 0.995 ? 'ok' : v >= 0.5 ? 'amber' 
 export const contactEstPos = (c: Contact): { x: number; y: number } =>
   ({ x: c.pos.x + c.vel.x * c.age, y: c.pos.y + c.vel.y * c.age })
 
+/** avatar mluvčího: obrázek img/<speaker>.png, při chybě načtení iniciály */
+const avatarHtml = (speaker: string): string => {
+  const sp = SPEAKERS[speaker] ?? { name: speaker, initials: '??' }
+  return `<span class="comm-ava">`
+    + `<img src="img/${esc(speaker)}.png" alt="" onerror="this.parentElement.classList.add('noimg')">`
+    + `<i>${esc(sp.initials)}</i></span>`
+}
+
 // ---------- panely ----------
 
 export class Panels {
   private log: { t: number; text: string; warn: boolean }[] = []
+  private commLog: { t: number; speaker: string; text: string }[] = []
   private lastSidebarAt = 0
+  private toasts: HTMLElement | null = null
 
   constructor(
     private sidebar: HTMLElement,
@@ -96,12 +131,49 @@ export class Panels {
     }
     sidebar.addEventListener('pointerdown', handler)
     topbar.addEventListener('pointerdown', handler)
+
+    // kontejner na toasty u plotu (poslední hail + vlastní zásahy)
+    const plotContainer = document.getElementById('plot-container')
+    if (plotContainer) {
+      this.toasts = document.createElement('div')
+      this.toasts.id = 'toasts'
+      plotContainer.appendChild(this.toasts)
+    }
+  }
+
+  /** toast overlay u plotu — zmizí po pár sekundách */
+  private showToast(html: string, cls: string, ms: number): void {
+    if (!this.toasts) return
+    const el = document.createElement('div')
+    el.className = `toast ${cls}`
+    el.innerHTML = html
+    this.toasts.appendChild(el)
+    // max 4 toasty najednou
+    while (this.toasts.children.length > 4) this.toasts.firstElementChild?.remove()
+    setTimeout(() => { el.classList.add('fade'); setTimeout(() => el.remove(), 600) }, ms)
   }
 
   /** připojí nové události ze snapshotu do logu (worker je po odeslání maže) */
   addEvents(events: SimEvent[]): void {
     for (const ev of events) {
-      this.log.unshift({ t: ev.t, text: ev.text, warn: !!ev.slowdown || ev.kind === 'shipDestroyed' })
+      const speakerName = ev.speaker ? SPEAKERS[ev.speaker]?.name ?? ev.speaker : null
+      const logText = speakerName && ev.kind !== 'message' ? `${speakerName}: ${ev.text}` : ev.text
+      this.log.unshift({ t: ev.t, text: logText, warn: !!ev.slowdown || ev.kind === 'shipDestroyed' })
+
+      // komunikace → comm log + výrazný toast
+      if (ev.kind === 'comm' && ev.speaker) {
+        this.commLog.unshift({ t: ev.t, speaker: ev.speaker, text: ev.text })
+        if (this.commLog.length > 8) this.commLog.length = 8
+        this.showToast(
+          `${avatarHtml(ev.speaker)}<span class="toast-body"><b>${esc(SPEAKERS[ev.speaker]?.name ?? ev.speaker)}</b>`
+          + `<span>${esc(ev.text)}</span></span>`,
+          'toast-comm', 9000)
+      }
+      // vlastní zásah → červený toast „ZÁSAH — …"
+      if (ev.kind === 'subsystemHit' && ev.side === 'player') {
+        const detail = ev.text.replace(/^.*?zásah — /, '')
+        this.showToast(`<b>ZÁSAH</b> — ${esc(detail)}`, 'toast-hit', 5000)
+      }
     }
     if (this.log.length > 40) this.log.length = 40
   }
@@ -121,20 +193,23 @@ export class Panels {
     this.topbar.innerHTML =
       `<span class="tb-time">ČAS ${fmtTime(state.t)}</span>`
       + `<span class="tb-comp">${btns}</span>`
+      + `<button data-act="help" title="nápověda (H)">?</button>`
       + (ui.slowdownText ? `<span class="tb-slow">⚠ ZPOMALENO: ${esc(ui.slowdownText)}</span>` : '')
   }
 
   private renderSidebar(state: SimState, ui: UiState): void {
     const own = state.ships.find(s => s.id === ui.ownShipId) ?? null
     this.sidebar.innerHTML =
-      this.panelOwnShip(own)
+      this.panelOwnShip(own, state)
       + this.panelContacts(state, own, ui)
+      + this.panelTargetDetail(state, own, ui)
       + this.panelOrders(own, ui)
       + this.panelObjectives(state)
+      + this.panelComms()
       + this.panelLog()
   }
 
-  private panelOwnShip(own: ShipState | null): string {
+  private panelOwnShip(own: ShipState | null, state: SimState): string {
     if (!own) return `<div class="panel"><h3>Vlastní loď</h3><div class="dim">žádná loď</div></div>`
     const def = SHIP_CLASSES[own.classId]
     const speed = Math.hypot(own.vel.x, own.vel.y)
@@ -154,12 +229,41 @@ export class Panels {
         + `<span>senzory: <b class="${own.activeSensors ? 'amber' : 'ok'}">${own.activeSensors ? 'AKTIVNÍ' : 'PASIVNÍ'}</b></span></div>`
         + `<div class="row"><span>poloha: <b class="${own.rolledTo != null ? 'amber' : 'ok'}">${own.rolledTo != null ? 'ODVALENÁ' : 'normální'}</b></span>`
         + `<span>tah: ${Math.round(own.throttle * 100)} %</span></div>`
+
+    // cooldown šachet jako progres bar (plný = připraveno)
+    const ready = 1 - Math.min(1, own.tubeCooldown / TUBE_COOLDOWN)
+    const cdRow = `<div class="subsys ${ready >= 1 ? 'ok' : 'amber'}"><span class="nm">šachty nabití</span>`
+      + `<span class="bar"><i style="width:${Math.round(ready * 100)}%"></i></span>`
+      + `<span class="pc">${own.tubeCooldown > 0 ? Math.ceil(own.tubeCooldown) + ' s' : 'OK'}</span></div>`
+
+    // stav AUTO palby
+    const fc = own.fireControl
+    let fireRow = ''
+    if (fc.mode === 'auto' && fc.targetId != null) {
+      const tgt = state.ships.find(s => s.id === fc.targetId)
+      const tgtName = tgt ? tgt.name : `#${fc.targetId}`
+      const next = fc.engaged
+        ? (own.tubeCooldown > 0 ? `další salva za ${Math.ceil(own.tubeCooldown)} s` : 'pálí')
+        : 'čeká na obálku'
+      fireRow = `<div class="row auto-fire"><span class="amber">AUTO → ${esc(tgtName)}</span>`
+        + `<span>${next} · zbývá ${own.missiles}</span></div>`
+    }
+    // druhá vlna vrstvené salvy
+    let waveRow = ''
+    if (own.pendingWave) {
+      waveRow = `<div class="row auto-fire"><span class="amber">2. vlna (HI)</span>`
+        + `<span>start za ${Math.max(0, Math.ceil(own.pendingWave.launchAt - state.t))} s</span></div>`
+    }
+
     return `<div class="panel"><h3>Vlastní loď</h3>`
       + `<div class="row"><b>${esc(own.name)}</b><span class="dim">${esc(def?.name ?? own.classId)} (${def?.hullCode ?? '?'})</span></div>`
       + `<div class="row"><span>rychlost: ${Math.round(speed).toLocaleString('cs-CZ')} km/s</span><span>akcel.: ${Math.round(accG)} g</span></div>`
       + `<div class="row"><span>trup: <b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></span>`
       + `<span>rakety ${own.missiles} · CM ${own.cms}</span></div>`
       + status
+      + cdRow
+      + fireRow
+      + waveRow
       + `<div style="margin-top:5px">${rows}</div>`
       + `</div>`
   }
@@ -184,12 +288,84 @@ export class Panels {
     return `<div class="panel"><h3>Kontakty</h3>${rows || '<div class="dim">žádné kontakty</div>'}</div>`
   }
 
+  /** DETAIL CÍLE: geometrie, klasifikace, odhad výzbroje a obálek */
+  private panelTargetDetail(state: SimState, own: ShipState | null, ui: UiState): string {
+    if (ui.targetId == null) return ''
+    const c = state.contacts.player.find(x => x.shipId === ui.targetId)
+    if (!c || !own) return ''
+
+    const est = contactEstPos(c)
+    const dx = est.x - own.pos.x
+    const dy = est.y - own.pos.y
+    const d = Math.hypot(dx, dy)
+    // radiální rychlost: + = vzdaluje se, − = přibližuje
+    const ux = d > 0 ? dx / d : 1
+    const uy = d > 0 ? dy / d : 0
+    const vr = (c.vel.x - own.vel.x) * ux + (c.vel.y - own.vel.y) * uy
+    const closingTxt = vr < -0.5
+      ? `<span class="bad">přibližuje se ${Math.round(-vr).toLocaleString('cs-CZ')} km/s</span>`
+      : vr > 0.5
+        ? `vzdaluje se ${Math.round(vr).toLocaleString('cs-CZ')} km/s`
+        : 'drží vzdálenost'
+    const qLabel = ['jen impelerový klín', 'přibližná klasifikace', 'plná identifikace'][c.idQuality]
+
+    let body =
+      `<div class="row"><span>vzdálenost:</span><b>${fmtKm(d)}</b></div>`
+      + `<div class="row"><span>radiálně:</span><span>${closingTxt}</span></div>`
+      + `<div class="row"><span>stáří dat:</span><span>${Math.round(c.age)} s (light-lag)</span></div>`
+      + `<div class="row"><span>klasifikace:</span><span>${qLabel}</span></div>`
+
+    const tDef = SHIP_CLASSES[c.classGuess]
+    if (c.idQuality >= 1 && tDef) {
+      // ilustrace třídy (public/img/ship-*.png; chybějící obrázek se skryje)
+      const img = SHIP_IMAGES[c.classGuess] ?? SHIP_IMAGES[tDef.hullCode]
+      if (img) {
+        body += `<img class="target-img" src="img/${img}.png" alt="" onerror="this.remove()">`
+      }
+      // odhad třídy / tonáže / akcelerace
+      body += `<div class="row"><span>třída:</span><b>${esc(tDef.name)} (${tDef.hullCode})</b></div>`
+        + `<div class="row"><span>tonáž:</span><span>~${Math.round(tDef.tonnage / 1000).toLocaleString('cs-CZ')} kt</span></div>`
+        + `<div class="row"><span>max. akcel.:</span><span>~${tDef.maxAccelG} g</span></div>`
+    } else if (c.idQuality >= 1) {
+      body += `<div class="row dim"><span>třída neznámá — přibliž se / aktivní senzory</span></div>`
+    }
+
+    if (c.idQuality >= 2 && tDef) {
+      // výzbroj + porovnání raketových obálek (dle aktuální geometrie)
+      body += `<div class="row"><span>výzbroj:</span>`
+        + `<span>${tDef.tubesPerBroadside}× šachta/bok · ${tDef.energyMountsPerBroadside}× energet.</span></div>`
+      const ourEnv = poweredEnvelope(own.pos, own.vel, est, c.vel, 0)
+      const hisEnv = tDef.tubesPerBroadside > 0
+        ? poweredEnvelope(est, c.vel, own.pos, own.vel, 0)
+        : 0
+      const fmtEnv = (km: number): string => (km / 1e6).toFixed(1).replace('.', ',')
+      const timeTo = (env: number): string => {
+        if (d <= env) return 'TEĎ'
+        if (vr >= -0.5) return '—'
+        const min = (d - env) / -vr / 60
+        return min > 600 ? '—' : `~${Math.max(1, Math.round(min))} min`
+      }
+      body += `<div class="row"><span>naše obálka:</span><span>${fmtEnv(ourEnv)} M km · dostřel ${timeTo(ourEnv)}</span></div>`
+      body += tDef.tubesPerBroadside > 0
+        ? `<div class="row"><span>jeho obálka:</span><span class="amber">${fmtEnv(hisEnv)} M km · dostřelí nás ${timeTo(hisEnv)}</span></div>`
+        : `<div class="row dim"><span>raketami neozbrojen</span></div>`
+    } else if (c.idQuality < 2) {
+      body += `<div class="row dim"><span>výzbroj neznámá (ident. vyžaduje aktivní senzory zblízka)</span></div>`
+    }
+
+    return `<div class="panel"><h3>Detail cíle #${c.shipId}</h3>${body}</div>`
+  }
+
   private panelOrders(own: ShipState | null, ui: UiState): string {
     const hasTarget = ui.targetId != null
     const dis = (cond: boolean): string => (cond ? '' : ' disabled')
     const noShip = !own || own.destroyed
     const canFire = !noShip && hasTarget
     const rolled = own?.rolledTo != null
+    const tubes = SHIP_CLASSES[own?.classId ?? '']?.tubesPerBroadside ?? 4
+    const hiC = Math.max(1, Math.round(tubes / 3))
+    const loC = Math.max(1, tubes - hiC)
+    const auto = own?.fireControl.mode === 'auto'
     return `<div class="panel"><h3>Rozkazy</h3>`
       + `<div class="btnrow">`
       + `<button data-act="intercept"${dis(canFire)}>Intercept</button>`
@@ -202,6 +378,10 @@ export class Panels {
       + `<button data-act="mode" title="režim pohonu raket">Pohon: ${ui.salvoMode === 1 ? 'HI' : 'LO'}</button>`
       + `</div>`
       + `<div class="btnrow">`
+      + `<button data-act="salvoLayered" title="vrstvená salva: LO vlna + HI follow-up na společný přílet (saturace obrany)"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva ${loC}+${hiC}</button>`
+      + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="AUTO palba na vybraný cíl (A)"${dis(canFire || auto)}>AUTO palba: ${auto ? 'ZAP' : 'VYP'}</button>`
+      + `</div>`
+      + `<div class="btnrow">`
       + `<button data-act="energy"${dis(canFire)}>Energie</button>`
       + (rolled
         ? `<button data-act="rollBack" class="active">Roll zpět</button>`
@@ -211,7 +391,7 @@ export class Panels {
       + `<button data-act="wedge" class="${own?.wedgeOn ? 'active' : ''}"${dis(!noShip)}>Klín: ${own?.wedgeOn ? 'ZAP' : 'VYP'}</button>`
       + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}"${dis(!noShip)}>Akt. senzory: ${own?.activeSensors ? 'ZAP' : 'VYP'}</button>`
       + `</div>`
-      + `<div class="dim">mezerník pauza · +/− komprese · R roll</div>`
+      + `<div class="dim">mezerník pauza · +/− komprese · R roll · A auto · H nápověda</div>`
       + `</div>`
   }
 
@@ -221,6 +401,17 @@ export class Panels {
       return `<div class="obj ${o.state}">${mark} ${esc(o.text)}</div>`
     }).join('')
     return `<div class="panel"><h3>Cíle mise</h3>${rows || '<div class="dim">—</div>'}</div>`
+  }
+
+  /** komunikační log — avatary a hlášky (kind 'comm') */
+  private panelComms(): string {
+    const rows = this.commLog.slice(0, 5).map(c => {
+      const sp = SPEAKERS[c.speaker] ?? { name: c.speaker, initials: '??' }
+      return `<div class="comm-row">${avatarHtml(c.speaker)}`
+        + `<div class="comm-body"><div class="comm-name">${esc(sp.name)} <span class="dim">[${fmtTime(c.t)}]</span></div>`
+        + `<div class="comm-text">${esc(c.text)}</div></div></div>`
+    }).join('')
+    return `<div class="panel"><h3>Komunikace</h3>${rows || '<div class="dim">žádná komunikace</div>'}</div>`
   }
 
   private panelLog(): string {

@@ -6,7 +6,7 @@
  */
 import { SHIP_CLASSES } from '../data/defs'
 import { CM_INTERCEPT_RANGE, ENERGY_MAX_RANGE } from '../sim/constants'
-import type { Contact, ShipState, SimState, Vec2 } from '../sim/types'
+import type { Contact, Hyperlimit, ShipState, SimState, Vec2 } from '../sim/types'
 
 const ZOOM_MIN = 50        // km/px
 const ZOOM_MAX = 500_000   // km/px
@@ -31,6 +31,9 @@ const CLR = {
   sel: '#eaffea',
   label: '#6fae74',
   path: '#3a8a44',
+  hyperlimit: '#d8b34f',
+  nav: '#3f7f8f',
+  navSel: '#7fd0e0',
 }
 
 interface Pickable { id: number; x: number; y: number }
@@ -53,6 +56,8 @@ export class TacticalPlot {
   private state: SimState | null = null
   private snapAt = 0
   private compression = 0
+  /** hyperlimit scénáře (nastavuje main.ts při onReady) */
+  private hyperlimit: Hyperlimit | null = null
   private kmPerPx = 20_000
   /** posun kamery vůči sledované lodi (km) */
   private pan: Vec2 = { x: 0, y: 0 }
@@ -118,6 +123,10 @@ export class TacticalPlot {
 
   setCourseCursor(on: boolean): void {
     this.canvas.style.cursor = on ? 'crosshair' : 'default'
+  }
+
+  setHyperlimit(h: Hyperlimit | null): void {
+    this.hyperlimit = h
   }
 
   /** vycentruje kameru zpět na sledovanou loď */
@@ -202,11 +211,15 @@ export class TacticalPlot {
 
     this.pickables = []
     this.drawGrid(ctx, w, h)
+    this.drawHyperlimit(ctx, w, h)
 
     const s = this.state
     if (!s) return
 
     this.drawRangeRings(ctx)
+    for (const ship of s.ships) {
+      if (ship.side === 'player' && !ship.destroyed) this.drawNavPlan(ctx, ship)
+    }
     for (const m of s.missiles) this.drawMissile(ctx, m.pos, m.vel, m.side === 'player', m.phase)
     for (const ship of s.ships) {
       if (ship.side === 'player' && !ship.destroyed) this.drawOwnShip(ctx, ship)
@@ -249,6 +262,80 @@ export class TacticalPlot {
       ctx.fillText(fmtDist(wy), 4, sy - 3)
     }
     ctx.fillText('dílek = ' + fmtDist(step) + '   měřítko ' + fmtDist(this.kmPerPx) + '/px', 4, 14)
+  }
+
+  /** čárkovaná jantarová hyperlimitní čára/kružnice s popiskem */
+  private drawHyperlimit(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const hl = this.hyperlimit
+    if (!hl) return
+    ctx.save()
+    ctx.setLineDash([8, 8])
+    ctx.strokeStyle = CLR.hyperlimit
+    ctx.fillStyle = CLR.hyperlimit
+    ctx.globalAlpha = 0.7
+    ctx.lineWidth = 1.5
+    if (hl.kind === 'lineX') {
+      const sx = this.worldToScreen({ x: hl.x, y: 0 }).x
+      if (sx > -50 && sx < w + 50) {
+        ctx.beginPath()
+        ctx.moveTo(sx, 0)
+        ctx.lineTo(sx, h)
+        ctx.stroke()
+        ctx.fillText('HYPERLIMIT', sx + 6, 28)
+      }
+    } else {
+      const c = this.worldToScreen(hl.center)
+      const rPx = hl.radius / this.kmPerPx
+      // kružnice může být obří — kreslíme jen když je aspoň část vidět
+      const dCenter = Math.hypot(c.x - w / 2, c.y - h / 2)
+      if (rPx > 4 && dCenter - rPx < Math.hypot(w, h)) {
+        ctx.beginPath()
+        ctx.arc(c.x, c.y, rPx, 0, Math.PI * 2)
+        ctx.stroke()
+        // popisek na průsečíku kružnice se směrem ke středu obrazovky
+        const ang = Math.atan2(h / 2 - c.y, w / 2 - c.x)
+        ctx.fillText('HYPERLIMIT', c.x + Math.cos(ang) * rPx + 6, c.y + Math.sin(ang) * rPx - 6)
+      }
+    }
+    ctx.restore()
+  }
+
+  /** navigační kurz vlastní/spojenecké lodi: tečkovaná čára k cíli + waypoint */
+  private drawNavPlan(ctx: CanvasRenderingContext2D, ship: ShipState): void {
+    const s = this.state
+    const nav = ship.nav
+    if (!s || !nav) return
+    let destWorld: Vec2 | null = null
+    if (nav.kind === 'course') {
+      destWorld = nav.dest
+    } else {
+      const target = s.ships.find(x => x.id === nav.targetId && !x.destroyed)
+      if (target) destWorld = this.exPos(target.pos, target.vel)
+    }
+    if (!destWorld) return
+    const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
+    const d = this.worldToScreen(destWorld)
+    const selected = ship.id === this.selectedId || ship.id === this.followId
+    ctx.save()
+    ctx.strokeStyle = selected ? CLR.navSel : CLR.nav
+    ctx.fillStyle = selected ? CLR.navSel : CLR.nav
+    ctx.globalAlpha = selected ? 0.9 : 0.55
+    ctx.setLineDash([1, 5])
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.lineTo(d.x, d.y)
+    ctx.stroke()
+    // symbol waypointu: malý kosočtverec (course) / kroužek (intercept)
+    ctx.setLineDash([])
+    ctx.beginPath()
+    if (nav.kind === 'course') {
+      ctx.moveTo(d.x, d.y - 4); ctx.lineTo(d.x + 4, d.y); ctx.lineTo(d.x, d.y + 4); ctx.lineTo(d.x - 4, d.y)
+      ctx.closePath()
+    } else {
+      ctx.arc(d.x, d.y, 4, 0, Math.PI * 2)
+    }
+    ctx.stroke()
+    ctx.restore()
   }
 
   private drawRangeRings(ctx: CanvasRenderingContext2D): void {

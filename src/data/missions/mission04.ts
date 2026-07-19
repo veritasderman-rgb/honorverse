@@ -30,6 +30,9 @@ export const mission04: Scenario = {
     + 'ale nelze manévrovat. Volba okamžiku je na tobě.',
   seed: 19940829, // pevný seed — determinismus
 
+  // hyperlimit soustavy Kastor — úniková čára na −x (za ní lze do hyperu)
+  hyperlimit: { kind: 'lineX', x: -200_000_000 },
+
   ships: [
     {
       // hráčův lehký křižník — balistický drift, klín VYPNUT
@@ -91,6 +94,11 @@ export const mission04: Scenario = {
       actions: [
         { kind: 'message', text: 'Nouzový signál kurýra Hermes! Loď driftuje bez pohonu hluboko v soustavě.' },
         {
+          // zachycené nouzové volání kurýra
+          kind: 'comm', speaker: 'comms',
+          text: 'Zachycené nouzové volání: „…tady kurýr Hermes, pohon vyřazen, driftujeme… kyslík na dva dny… prosím, slyší nás někdo?"',
+        },
+        {
           kind: 'spawnShip',
           ship: {
             classId: 'disp-courier', side: 'player', name: 'Hermes',
@@ -131,6 +139,11 @@ export const mission04: Scenario = {
         { kind: 'setDoctrine', shipId: 2, doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: 3, doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: 4, doctrine: 'hunter' },
+        {
+          // direktoriátní rozkaz zastavit
+          kind: 'comm', speaker: 'enemy-captain',
+          text: 'VDS Rigel na všech frekvencích: „Neznámá lodi, tady Vegský direktoriát. Vypněte pohon a vzdejte se, nebo budete zničeni. Druhá výzva nebude."',
+        },
       ],
     },
 

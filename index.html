@@ -49,9 +49,36 @@
     .overlay h2.win { color: #58e06a; } .overlay h2.lose { color: #e06c5a; }
     .overlay .brief { white-space: pre-wrap; margin-bottom: 14px; color: #9fd8a0; }
     .overlay button { padding: 6px 22px; font-size: 13px; }
+    .brief-img { width: 100%; max-height: 260px; object-fit: cover; border: 1px solid #2a5a2e; margin-bottom: 12px; display: block; }
+    .target-img { width: 100%; max-height: 110px; object-fit: cover; border: 1px solid #1c3a1e; margin: 4px 0; display: block; }
     .mission-row { margin-bottom: 10px; }
     .mission-row button { display: block; width: 100%; text-align: left; }
     .mission-desc { color: #6fae74; margin-top: 3px; font-size: 12px; }
+    /* --- komunikace: avatary, panel, toasty --- */
+    .comm-ava { position: relative; flex: 0 0 34px; width: 34px; height: 34px; border: 1px solid #2a5a2e; background: #0b1a0c; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+    .comm-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .comm-ava i { display: none; font-style: normal; font-size: 10px; color: #d8b34f; }
+    .comm-ava.noimg img { display: none; }
+    .comm-ava.noimg i { display: block; }
+    .comm-row { display: flex; gap: 6px; padding: 4px 0; border-bottom: 1px solid #0e2012; }
+    .comm-body { flex: 1; min-width: 0; }
+    .comm-name { color: #d8b34f; font-size: 11px; }
+    .comm-text { color: #9fd8a0; font-size: 11px; line-height: 1.4; }
+    #toasts { position: absolute; left: 12px; bottom: 34px; z-index: 10; display: flex; flex-direction: column; gap: 6px; max-width: 420px; pointer-events: none; }
+    .toast { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #2a5a2e; background: #081008ee; padding: 6px 10px; font-size: 12px; box-shadow: 0 0 18px #0f5a1430; transition: opacity .5s; }
+    .toast.fade { opacity: 0; }
+    .toast-comm { border-color: #8a6a1f; }
+    .toast-comm .toast-body { display: flex; flex-direction: column; gap: 2px; }
+    .toast-comm b { color: #d8b34f; }
+    .toast-hit { border-color: #7a2a1f; color: #e06c5a; }
+    .toast-hit b { color: #ff8a75; letter-spacing: 1px; }
+    .auto-fire { border-top: 1px dotted #2a5a2e; margin-top: 3px; padding-top: 3px; }
+    /* --- nápověda --- */
+    .help-box { max-width: 720px; max-height: 84vh; overflow-y: auto; }
+    .help-box h4 { color: #d8b34f; margin: 12px 0 4px 0; }
+    .help-grid { display: grid; grid-template-columns: 130px 1fr; gap: 2px 10px; font-size: 12px; }
+    .help-grid b { color: #9fd8a0; }
+    .help-grid span { color: #6fae74; }
   </style>
 </head>
 <body>

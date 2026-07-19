@@ -3,13 +3,14 @@
  * Lodě umírají po částech — žádný prostý HP bar.
  */
 import type { ShipState, SimState, Subsystems } from './types'
+import { REPAIR_CAP, REPAIR_RATE } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
 import { rand } from './rng'
 
 export type Aspect = 'throat' | 'kilt' | 'port' | 'stbd'
 
-/** České názvy subsystémů pro eventy. */
-const SUBSYSTEM_NAMES: Record<keyof Subsystems, string> = {
+/** České názvy subsystémů pro eventy (sdílí i crew.ts). */
+export const SUBSYSTEM_NAMES: Record<keyof Subsystems, string> = {
   impellerFwd: 'přední impelerový prstenec',
   impellerAft: 'zadní impelerový prstenec',
   sidewallPort: 'levý bočník',
@@ -75,6 +76,7 @@ export function applyBeamDamage(
         key = SUBSYSTEM_KEYS[Math.floor(rand(state.rng) * SUBSYSTEM_KEYS.length)]
       }
       const loss = 0.15 + rand(state.rng) * 0.25
+      const prev = target.subsystems[key]
       target.subsystems[key] = Math.max(0, target.subsystems[key] - loss)
       state.events.push({
         t: state.t,
@@ -83,6 +85,18 @@ export function applyBeamDamage(
         side: target.side,
         text: `${target.name}: zásah — ${SUBSYSTEM_NAMES[key]} (${Math.round(target.subsystems[key] * 100)} %)`,
       })
+      // hlášení inženýra hráči při prvním poškození subsystému (s odhadem opravy)
+      if (target.side === 'player' && prev >= 1 && target.subsystems[key] < 1) {
+        const v = target.subsystems[key]
+        const text = v < REPAIR_CAP
+          ? `Inženýr: ${SUBSYSTEM_NAMES[key]} — poškození na ${Math.round(v * 100)} %, `
+            + `provizorní oprava ~${Math.max(1, Math.round((REPAIR_CAP - v) / REPAIR_RATE / 60))} min.`
+          : `Inženýr: ${SUBSYSTEM_NAMES[key]} — lehké poškození (${Math.round(v * 100)} %), zvládneme za provozu.`
+        state.events.push({
+          t: state.t, kind: 'message', shipId: target.id, side: target.side,
+          speaker: 'engineer', text,
+        })
+      }
     }
   }
 

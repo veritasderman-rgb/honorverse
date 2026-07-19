@@ -49,6 +49,14 @@ export function spawnShip(state: SimState, spec: ShipSpec): ShipState {
     energyCooldown: spec.energyCooldown ?? 0,
     destroyed: spec.destroyed ?? false,
     doctrine: spec.doctrine ?? (spec.side === 'player' ? 'player' : 'freighter'),
+    fireControl: spec.fireControl
+      ? { ...spec.fireControl }
+      : { mode: 'hold', targetId: null, salvoSize: Math.max(1, def.tubesPerBroadside), driveMode: 0, engaged: false },
+    pendingWave: spec.pendingWave ? { ...spec.pendingWave } : null,
+    buffs: spec.buffs
+      ? { ...spec.buffs }
+      : { lockBonus: 0, lockUntil: 0, repairBonus: 1, repairUntil: 0 },
+    terminalTimes: spec.terminalTimes ? [...spec.terminalTimes] : [],
   }
   state.ships.push(ship)
   return ship
@@ -91,6 +99,12 @@ function applyAction(state: SimState, a: TriggerAction): void {
   switch (a.kind) {
     case 'message':
       state.events.push({ t: state.t, kind: 'message', text: a.text ?? '', slowdown: true })
+      break
+    case 'comm':
+      // komunikace (hail) — event se speaker, UI zobrazí avatar + toast
+      state.events.push({
+        t: state.t, kind: 'comm', text: a.text ?? '', speaker: a.speaker, slowdown: true,
+      })
       break
     case 'setDoctrine': {
       const ship = byId(state, a.shipId)

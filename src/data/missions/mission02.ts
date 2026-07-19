@@ -51,6 +51,9 @@ export const mission02: Scenario = {
     + 'neubrání. Doveď k cíli aspoň tři ze čtyř lodí.',
   seed: 19920217, // pevný seed — determinismus
 
+  // okraj soustavy: za cílovou bójí začíná hyperlimit (vizuální orientace)
+  hyperlimit: { kind: 'lineX', x: 150_000_000 },
+
   ships: [
     {
       // hráčův torpédoborec, drží se u konvoje
@@ -82,6 +85,30 @@ export const mission02: Scenario = {
   ],
 
   triggers: [
+    {
+      // pirát vyhrožuje konvoji, jakmile se přiblíží na dosah senzorů obchodníků
+      id: 'trg-comm-pirate-threat', once: true,
+      conditions: [
+        { kind: 'distanceBelow', shipA: MERCH[0], shipB: PIRATE1, distance: 25_000_000 },
+      ],
+      actions: [
+        {
+          kind: 'comm', speaker: 'pirate',
+          text: '„Konvoji Pomezím: vypněte stroje a opusťte lodě, a možná vás necháme dýchat. Ta plechovka od námořnictva vás nezachrání."',
+        },
+      ],
+    },
+    {
+      // obchodníci prosí o pomoc, když zvrat odhalí přepad ze dvou stran
+      id: 'trg-comm-merch-plea', once: true,
+      conditions: [{ kind: 'flag', flag: 'ambush' }],
+      actions: [
+        {
+          kind: 'comm', speaker: 'comms',
+          text: 'Argonaut volá: „Doprovode, kde jste?! Máme impelerové kontakty ze dvou stran — proboha, vraťte se ke konvoji!"',
+        },
+      ],
+    },
     {
       // ZVRAT: eskorta se rozjela za návnadou → z opačné strany startují dva DD
       id: 'trg-ambush', once: true,

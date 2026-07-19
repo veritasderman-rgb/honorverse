@@ -22,6 +22,9 @@ export const mission01: Scenario = {
     + 'opustit soustavu přes hyperlimit.',
   seed: 19881003, // pevný seed — determinismus
 
+  // hyperlimitní čára soustavy (plot ji kreslí jantarově); bóje zůstává pro triggery
+  hyperlimit: { kind: 'lineX', x: 250_000_000 },
+
   ships: [
     {
       // hráčův torpédoborec, v klidu u terminálu
@@ -48,6 +51,28 @@ export const mission01: Scenario = {
 
   triggers: [
     {
+      // úvodní komunikace: Kontrola Brány nařizuje Cygnu zastavit
+      id: 'trg-comm-halt-order', once: true,
+      conditions: [{ kind: 'time', t: 8 }],
+      actions: [
+        {
+          kind: 'comm', speaker: 'station',
+          text: 'Kontrola Brány volá Cygnus: „Nákladní lodi Cygnus, vypněte klín a připravte se na celní kontrolu. Dauntless je na cestě k vám."',
+        },
+      ],
+    },
+    {
+      // vzdorovitá odpověď Cygnusu
+      id: 'trg-comm-cygnus-reply', once: true,
+      conditions: [{ kind: 'time', t: 25 }],
+      actions: [
+        {
+          kind: 'comm', speaker: 'enemy-captain',
+          text: 'Cygnus: „Kontrolo, vezeme zemědělské stroje a máme skluz. Tohle si vyřídíme s vaším guvernérem — nezdržujte nás."',
+        },
+      ],
+    },
+    {
       // zvrat: při přiblížení hráče Cygnus odhodí masku a prchá
       id: 'trg-runner-flees', once: true,
       conditions: [
@@ -58,6 +83,11 @@ export const mission01: Scenario = {
         { kind: 'setDoctrine', shipId: CYGNUS, doctrine: 'runner' },
         { kind: 'setFlag', flag: 'runner-fleeing' },
         { kind: 'revealClass', shipId: CYGNUS },
+        {
+          // automatická výzva ke kapitulaci od hráčova spojaře
+          kind: 'comm', speaker: 'comms',
+          text: 'Vysílám výzvu: „Cygnusi, zastavte a vypněte klín, nebo zahájíme palbu." …Neodpovídají, kapitáne.',
+        },
       ],
     },
     {

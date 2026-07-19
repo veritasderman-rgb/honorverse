@@ -22,6 +22,9 @@ export const mission03: Scenario = {
     + 'pomalé plutí. Zpravodajství nemá o lodi žádné záznamy.',
   seed: 19930411, // pevný seed — determinismus
 
+  // hyperlimit žluté hvězdy soustavy (stanice Sázava leží hluboko uvnitř)
+  hyperlimit: { kind: 'circle', center: { x: 200_000_000, y: 0 }, radius: 360_000_000 },
+
   ships: [
     {
       // hráčův torpédoborec, letí podél obchodníka
@@ -48,6 +51,17 @@ export const mission03: Scenario = {
 
   triggers: [
     {
+      // Mercator prosí o doprovod (maska „poškozeného obchodníka")
+      id: 'trg-comm-mercator-plea', once: true,
+      conditions: [{ kind: 'time', t: 10 }],
+      actions: [
+        {
+          kind: 'comm', speaker: 'comms',
+          text: 'Mercator vysílá: „Díky, že jste tu, Dauntless. Přední prstenec sotva drží pohromadě — držte se blízko, prosím. Kdyby se něco utrhlo, ať to nikdo neschytá."',
+        },
+      ],
+    },
+    {
       // ZVRAT: po 30 minutách plavby bok po boku Q-ship odhodí masku
       id: 'trg-qship-reveal', once: true,
       conditions: [
@@ -61,6 +75,16 @@ export const mission03: Scenario = {
         { kind: 'setFlag', flag: 'qship-revealed' },
         { kind: 'objectiveFail', objectiveId: 'obj-escort', text: 'Doprovod byl léčka — obchodník je nepřátelská bojová loď.' },
         { kind: 'addObjective', objectiveId: 'obj-destroy', text: 'Znič pomocný křižník' },
+        {
+          // výsměšná zpráva direktoriátního kapitána
+          kind: 'comm', speaker: 'enemy-captain',
+          text: '„Vaše Království si myslí, že mu Pomezí patří. Tohle je odpověď Direktoriátu, Dauntless. Doufám, že jste si užili eskortní službu."',
+        },
+        {
+          // hráčova (automatická) výzva ke kapitulaci
+          kind: 'comm', speaker: 'comms',
+          text: 'Vysílám výzvu ke kapitulaci: „Mercatore, složte zbraně a vypněte klín." Odpovědí je odpal raket, kapitáne.',
+        },
       ],
     },
     {

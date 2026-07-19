@@ -47,6 +47,10 @@ function makeShip(id: number, classId: string, over: Partial<ShipState> = {}): S
     subsystems: fullSubsystems(),
     hull: def.hullPoints, missiles: def.magazineMissiles, cms: def.magazineCMs,
     tubeCooldown: 0, energyCooldown: 0, destroyed: false, doctrine: 'player',
+    fireControl: { mode: 'hold', targetId: null, salvoSize: def.tubesPerBroadside, driveMode: 0, engaged: false },
+    pendingWave: null,
+    buffs: { lockBonus: 0, lockUntil: 0, repairBonus: 1, repairUntil: 0 },
+    terminalTimes: [],
     ...over,
   }
 }

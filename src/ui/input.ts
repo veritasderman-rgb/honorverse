@@ -112,8 +112,35 @@ export class UIController {
       case 'salvo2': this.salvo(own, 2); break
       case 'salvo4': this.salvo(own, 4); break
       case 'salvoFull': this.salvo(own, SHIP_CLASSES[own.classId]?.tubesPerBroadside ?? 4); break
+      case 'salvoLayered': {
+        // vrstvená salva: LO hlavní vlna + HI follow-up (saturace obrany)
+        if (t == null || own.missiles <= 0) break
+        const tubes = SHIP_CLASSES[own.classId]?.tubesPerBroadside ?? 3
+        const hi = Math.max(1, Math.round(tubes / 3))
+        const lo = Math.max(1, tubes - hi)
+        this.send({ kind: 'launchLayered', shipId: own.id, targetId: t, countLo: lo, countHi: hi })
+        break
+      }
+      case 'autoFire': {
+        const enable = own.fireControl.mode !== 'auto'
+        if (enable && t == null) break
+        this.send({
+          kind: 'setFireControl', shipId: own.id,
+          fc: enable
+            ? {
+                mode: 'auto', targetId: t,
+                salvoSize: SHIP_CLASSES[own.classId]?.tubesPerBroadside ?? 4,
+                driveMode: this.salvoMode,
+              }
+            : { mode: 'hold' },
+        })
+        break
+      }
       case 'mode':
         this.salvoMode = this.salvoMode === 1 ? 0 : 1
+        break
+      case 'help':
+        this.toggleHelp()
         break
       case 'energy':
         if (t != null) this.send({ kind: 'fireEnergy', shipId: own.id, targetId: t })
@@ -214,7 +241,73 @@ export class UIController {
         this.doOrder(own.rolledTo != null ? 'rollBack' : 'rollThreat')
         break
       }
+      case 'a': case 'A':
+        this.doOrder('autoFire')
+        break
+      case 'h': case 'H':
+        this.toggleHelp()
+        break
+      case 'Escape':
+        this.helpEl?.remove()
+        this.helpEl = null
+        break
     }
+  }
+
+  // ---------- nápověda ----------
+
+  private helpEl: HTMLElement | null = null
+
+  /** overlay NÁPOVĚDA — přehled příkazů, kláves a mechanik */
+  private toggleHelp(): void {
+    if (this.helpEl) {
+      this.helpEl.remove()
+      this.helpEl = null
+      return
+    }
+    const el = document.createElement('div')
+    el.className = 'overlay'
+    el.innerHTML = `<div class="box help-box"><h2>NÁPOVĚDA</h2>
+      <h4>Klávesy</h4>
+      <div class="help-grid">
+        <b>mezerník</b><span>pauza / pokračovat</span>
+        <b>+ / −</b><span>komprese času (1× až 10 000×)</span>
+        <b>R</b><span>rolování lodi (klín k hrozbě / zpět)</span>
+        <b>A</b><span>AUTO palba na vybraný cíl</span>
+        <b>H nebo ?</b><span>tato nápověda</span>
+        <b>kolečko</b><span>zoom plotu, tažení = posun kamery</span>
+        <b>klik</b><span>výběr lodi/kontaktu; vlastní loď = převzetí</span>
+      </div>
+      <h4>Rozkazy</h4>
+      <div class="help-grid">
+        <b>Intercept</b><span>autopilot spočítá stíhací kurz na cíl</span>
+        <b>Kurz sem</b><span>klikni do plotu — loď poletí na bod</span>
+        <b>Salva 2/4/plná</b><span>odpal raket na vybraný cíl</span>
+        <b>Pohon LO/HI</b><span>LO = 46k g / 180 s (dostřel ~7 M km), HI = 92k g / 60 s (rychlost, ~1,6 M km)</span>
+        <b>Salva X+Y</b><span>vrstvená salva: LO vlna + zpožděná HI vlna dorazí spolu a saturují bodovou obranu</span>
+        <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce</span>
+        <b>Energie</b><span>lasery/grasery — drtivé pod 100 tis. km, max. 500 tis. km</span>
+        <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu; loď ale nemanévruje</span>
+        <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočníků</span>
+        <b>Akt. senzory</b><span>plná identifikace cílů zblízka — ale prozrazuje</span>
+      </div>
+      <h4>Mechaniky</h4>
+      <div class="help-grid">
+        <b>Poháněná obálka</b><span>dostřel raket = pohon + vektor lodi při odpalu; odpal „po směru" dostřel natahuje</span>
+        <b>Vrstvená obrana</b><span>ECM → protirakety → PDLC → klín; z velké salvy projde jen zlomek</span>
+        <b>Saturace</b><span>víc raket ve stejném okně = PDLC nestíhá (vrstvená salva!)</span>
+        <b>Poškození</b><span>subsystémy po částech; posádka provizorně opravuje do 70 %</span>
+        <b>Light-lag</b><span>kontakty jsou staré vzdálenost/c sekund — u 30 M km ~100 s</span>
+        <b>Hyperlimit</b><span>jantarová čára — za ní lodě unikají do hyperprostoru</span>
+      </div>
+      <div style="margin-top:12px"><button id="btn-help-close">ZAVŘÍT (Esc)</button></div>
+    </div>`
+    el.querySelector('#btn-help-close')?.addEventListener('click', () => {
+      el.remove()
+      this.helpEl = null
+    })
+    document.body.appendChild(el)
+    this.helpEl = el
   }
 
   // ---------- pomocné ----------

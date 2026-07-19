@@ -1,14 +1,18 @@
 /**
  * Engine — integrace všech modulů do SimApi.
- * Tick smyčka: cooldowny → fyzika → rakety → obrana → senzory → AI → triggery.
+ * Tick smyčka: cooldowny → fyzika → rakety → obrana → senzory → AI
+ *   → řízení palby (AUTO/vrstvené salvy) → posádka (opravy/události) → triggery.
  */
 import type { Order, Scenario, ShipState, SimApi, SimState } from './types'
 import { updateShipPhysics } from './physics'
-import { fireEnergy, launchSalvo, updateMissiles } from './weapons'
+import { fireEnergy, launchSalvo, missileFlightTime, updateMissiles } from './weapons'
 import { updateDefenses } from './defense'
 import { updateSensors } from './sensors'
+import { updateFireControl } from './firecontrol'
+import { updateCrew } from './crew'
 import { collectAIOrders } from './ai'
 import { spawnShip, updateTriggers } from './scenario'
+import { dist, dot, norm, sub } from './vec'
 import { SCENARIOS } from '../data/missions'
 
 /**
@@ -73,13 +77,46 @@ function applyOrder(state: SimState, order: Order): void {
         launchSalvo(state, ship, order.targetId, order.count, order.mode)
       }
       break
+    case 'launchLayered': {
+      // vrstvená salva: LO vlna hned, HI follow-up zpožděný na společný přílet
+      const target = liveTarget(state, order.targetId)
+      if (!target) break
+      const before = state.missiles.length
+      launchSalvo(state, ship, order.targetId, order.countLo, 0)
+      if (state.missiles.length === before) break // LO neodešla (cooldown/munice) — feedback dal launchSalvo
+      const d = dist(ship.pos, target.pos)
+      const closing = dot(sub(ship.vel, target.vel), norm(sub(target.pos, ship.pos)))
+      const tLo = missileFlightTime(d, closing, 0)
+      const tHi = missileFlightTime(d, closing, 1)
+      const delay = Number.isFinite(tLo) && Number.isFinite(tHi) ? Math.max(0, tLo - tHi) : 0
+      ship.pendingWave = { targetId: order.targetId, count: order.countHi, mode: 1, launchAt: state.t + delay }
+      if (ship.doctrine === 'player') {
+        state.events.push({
+          t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'tactical',
+          text: `Vrstvená salva: druhá vlna (HI) odstartuje za ${Math.round(delay)} s — společný přílet.`,
+        })
+      }
+      break
+    }
     case 'fireEnergy': {
       const target = liveTarget(state, order.targetId)
       if (target) fireEnergy(state, ship, target)
       break
     }
     case 'holdFire':
-      break // no-op — nav zůstává
+      // zastaví AUTO palbu (nav zůstává)
+      ship.fireControl.mode = 'hold'
+      ship.fireControl.engaged = false
+      break
+    case 'setFireControl': {
+      const fc = ship.fireControl
+      if (order.fc.mode !== undefined) fc.mode = order.fc.mode
+      if (order.fc.targetId !== undefined) fc.targetId = order.fc.targetId
+      if (order.fc.salvoSize !== undefined) fc.salvoSize = Math.max(1, Math.floor(order.fc.salvoSize))
+      if (order.fc.driveMode !== undefined) fc.driveMode = order.fc.driveMode
+      fc.engaged = false // hrana „palebné řešení" se vyhodnotí znovu
+      break
+    }
   }
 }
 
@@ -125,10 +162,14 @@ export const sim: SimApi = {
     updateSensors(state, dt)
     // (6) AI — rozkazy přes stejnou validaci jako UI
     for (const order of collectAIOrders(state)) applyOrder(state, order)
-    // (7) triggery scénáře
+    // (7) řízení palby: AUTO salvy + druhé vlny vrstvených salv
+    updateFireControl(state)
+    // (8) posádka: polní opravy + náhodné události za boje
+    updateCrew(state, dt)
+    // (9) triggery scénáře
     const scenario = scenarioFor(state)
     if (scenario) updateTriggers(state, scenario)
-    // (8) čas
+    // (10) čas
     state.t += dt
   },
 

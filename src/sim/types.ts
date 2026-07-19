@@ -68,6 +68,42 @@ export interface MissileDef {
 
 export type DriveMode = 0 | 1 // index do accelG/driveTime: 0=LO(dostřel), 1=HI(akcelerace)
 
+/** Mluvčí komunikace/hlášek — přesně názvy avatarů z docs/ART_PROMPTS.md (img/<speaker>.png). */
+export type Speaker =
+  | 'captain' | 'xo' | 'engineer' | 'tactical' | 'comms'
+  | 'enemy-captain' | 'pirate' | 'station' | 'governor'
+
+/** Řízení palby lodi (AUTO režim = engine sám opakuje salvy na cíl v obálce). */
+export interface FireControl {
+  mode: 'hold' | 'auto'
+  targetId: number | null
+  salvoSize: number
+  driveMode: DriveMode
+  /** interní stav enginu: cíl byl minulý tick v poháněné obálce (hrana pro hlášky) */
+  engaged: boolean
+}
+
+/** Naplánovaná druhá vlna vrstvené salvy (HI follow-up časovaný na společný přílet). */
+export interface PendingWave {
+  targetId: number
+  count: number
+  mode: DriveMode
+  /** sim čas odpalu druhé vlny */
+  launchAt: number
+}
+
+/** Dočasné bonusy posádky (náhodné události — taktik/inženýr). */
+export interface ShipBuffs {
+  /** bonus zámku nově odpálených raket (0.2 = +20 %) */
+  lockBonus: number
+  /** sim čas konce lock bonusu */
+  lockUntil: number
+  /** násobič rychlosti polních oprav (1 = normál) */
+  repairBonus: number
+  /** sim čas konce repair bonusu */
+  repairUntil: number
+}
+
 export type MissilePhase = 'boost' | 'ballistic' | 'terminal' | 'dead'
 
 export interface MissileState {
@@ -138,6 +174,14 @@ export interface ShipState {
   destroyed: boolean
   /** AI doktrína ('player' = ovládá hráč) */
   doctrine: string
+  /** řízení palby (AUTO/HOLD, cíl, velikost salvy, režim pohonu) */
+  fireControl: FireControl
+  /** čekající druhá vlna vrstvené salvy (null = žádná) */
+  pendingWave: PendingWave | null
+  /** dočasné bonusy posádky */
+  buffs: ShipBuffs
+  /** časy nedávných terminálních náletů NA tuto loď (okno saturace PDLC) */
+  terminalTimes: number[]
 }
 
 /** Senzorový kontakt — co daná strana VÍ (ne pravda). */
@@ -165,8 +209,12 @@ export type Order =
   | { kind: 'setActiveSensors'; shipId: number; on: boolean }
   | { kind: 'roll'; shipId: number; towards: number | null }
   | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveMode }
+  /** vrstvená salva: hlavní vlna LO hned + follow-up HI časovaný na společný přílet */
+  | { kind: 'launchLayered'; shipId: number; targetId: number; countLo: number; countHi: number }
   | { kind: 'fireEnergy'; shipId: number; targetId: number }
   | { kind: 'holdFire'; shipId: number }
+  /** parciální update řízení palby (engaged spravuje engine) */
+  | { kind: 'setFireControl'; shipId: number; fc: Partial<Omit<FireControl, 'engaged'>> }
 
 // ---------- události (engine -> UI/scenario) ----------
 
@@ -176,11 +224,14 @@ export interface SimEvent {
     | 'launch' | 'missileKilled' | 'missileHit' | 'missileMiss'
     | 'energyHit' | 'shipDestroyed' | 'subsystemHit'
     | 'contactNew' | 'contactClassified' | 'message' | 'objective'
+    | 'comm'
   text: string
   shipId?: number
   side?: Side
   /** UI: událost, u které má komprese času spadnout na 1× */
   slowdown?: boolean
+  /** mluvčí hlášky/komunikace (id avataru z docs/ART_PROMPTS.md) */
+  speaker?: Speaker
 }
 
 // ---------- scénář / mise ----------
@@ -203,13 +254,15 @@ export interface TriggerCondition {
 export interface TriggerAction {
   kind: 'message' | 'setDoctrine' | 'spawnShip' | 'revealClass' | 'setFlag'
     | 'objectiveComplete' | 'objectiveFail' | 'winMission' | 'loseMission'
-    | 'addObjective'
+    | 'addObjective' | 'comm'
   text?: string
   shipId?: number
   doctrine?: string
   ship?: Partial<ShipState> & { classId: string; side: Side; name: string; pos: Vec2; vel: Vec2 }
   flag?: string
   objectiveId?: string
+  /** kind 'comm': mluvčí komunikace */
+  speaker?: Speaker
 }
 
 export interface Trigger {
@@ -222,6 +275,11 @@ export interface Trigger {
 
 export interface Objective { id: string; text: string; state: 'open' | 'done' | 'failed' }
 
+/** Hyperlimit soustavy — kružnice kolem hvězdy, nebo svislá čára (okraj scény). */
+export type Hyperlimit =
+  | { kind: 'circle'; center: Vec2; radius: number }
+  | { kind: 'lineX'; x: number }
+
 export interface Scenario {
   id: string
   title: string
@@ -230,6 +288,8 @@ export interface Scenario {
   ships: (Partial<ShipState> & { classId: string; side: Side; name: string; pos: Vec2; vel: Vec2 })[]
   objectives: Objective[]
   triggers: Trigger[]
+  /** volitelný hyperlimit (plot ho vykresluje jantarovou čárou/kružnicí) */
+  hyperlimit?: Hyperlimit
 }
 
 // ---------- celkový stav ----------

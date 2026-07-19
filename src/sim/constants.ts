@@ -24,13 +24,17 @@ export const CM_DRIVE_TIME = 75
 export const CM_INTERCEPT_RANGE = 2_500_000
 /** základní P(kill) jedné CM na jednu útočnou raketu */
 export const CM_PK = 0.35
-/** cooldown odpalu CM na jeden odpalovač (s) */
-export const CM_COOLDOWN = 12
+/** cooldown odpalu CM na jeden odpalovač (s) — vysoká kadence, zásobníky rychle tečou */
+export const CM_COOLDOWN = 5
 
 /** bodová obrana */
 export const PDLC_RANGE = 100_000
 /** základní P(kill) jednoho clusteru na raketu v okně průletu */
-export const PDLC_PK = 0.25
+export const PDLC_PK = 0.32
+/** saturace: Pk klesá faktorem 1/(1 + PDLC_SATURATION·(n−1)), n = rakety v okně */
+export const PDLC_SATURATION = 0.12
+/** okno saturace — terminální nálety na týž cíl v posledních X s (s) */
+export const SATURATION_WINDOW = 15
 
 /** energetické zbraně */
 export const ENERGY_MAX_RANGE = 500_000
@@ -51,3 +55,18 @@ export const SENSOR_UPDATE_INTERVAL = 5
 
 /** rychlost otáčení lodi (rad/s) — impelerové lodě se otáčejí rychle */
 export const TURN_RATE = 0.15
+
+/** polní opravy subsystémů: rychlost (podíl/s) a strop provizorní opravy */
+export const REPAIR_RATE = 0.0004
+export const REPAIR_CAP = 0.7
+
+/** náhodné události posádky: střední doba mezi událostmi za boje (s) */
+export const CREW_EVENT_MEAN_TIME = 240
+/** „za boje" = nepřátelský kontakt blíž než (km), nebo letí rakety */
+export const CREW_COMBAT_RANGE = 10_000_000
+/** buff taktického důstojníka: bonus zámku a trvání (s) */
+export const LOCK_BUFF = 0.2
+export const LOCK_BUFF_TIME = 600
+/** buff inženýra: násobič oprav a trvání (s) */
+export const REPAIR_BUFF = 4
+export const REPAIR_BUFF_TIME = 300

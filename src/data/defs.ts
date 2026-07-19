@@ -38,7 +38,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
   'merch-qship': {
     id: 'merch-qship', name: 'pomocný křižník (Q-ship)', hullCode: 'MERCH', tonnage: 3_000_000,
     maxAccelG: 310, sidewallStrength: 15, hullPoints: 110,
-    tubesPerBroadside: 6, cmLaunchers: 6, pdlcClusters: 8,
+    tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
     energyMountsPerBroadside: 3, energyDamage: 30,
     magazineMissiles: 140, magazineCMs: 160,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.35,

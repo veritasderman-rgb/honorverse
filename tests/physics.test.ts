@@ -42,6 +42,10 @@ function makeShip(over: Partial<ShipState> = {}): ShipState {
     energyCooldown: 0,
     destroyed: false,
     doctrine: 'player',
+    fireControl: { mode: 'hold', targetId: null, salvoSize: 3, driveMode: 0, engaged: false },
+    pendingWave: null,
+    buffs: { lockBonus: 0, lockUntil: 0, repairBonus: 1, repairUntil: 0 },
+    terminalTimes: [],
     ...over,
   }
 }

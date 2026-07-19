@@ -6,7 +6,10 @@
  * při odpalu — deterministické, žádné letící objekty navíc.
  */
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
-import { C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, LOCK_LOST, PDLC_PK } from './constants'
+import {
+  C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, LOCK_LOST,
+  PDLC_PK, PDLC_SATURATION, SATURATION_WINDOW,
+} from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { angleDiff, angleOf, dist, len, sub } from './vec'
 import { rand } from './rng'
@@ -91,12 +94,18 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   missile.phase = 'dead'
 
   // --- vrstva 3: PDLC — okno střelby se zavírá s rychlostí přiblížení ---
+  // saturace: n-tá raketa v okně SATURATION_WINDOW s na týž cíl přetěžuje
+  // clustery — Pk klesá faktorem 1/(1 + PDLC_SATURATION·(n−1))
+  target.terminalTimes = target.terminalTimes.filter(t => t > state.t - SATURATION_WINDOW)
+  target.terminalTimes.push(state.t)
+  const nWindow = target.terminalTimes.length
+  const pdlcPk = PDLC_PK / (1 + PDLC_SATURATION * (nWindow - 1))
   const vClose = len(sub(missile.vel, target.vel))
   const cFrac = vClose / C
   const window = cFrac <= 0.1 ? 1 : cFrac >= 0.5 ? 1 / 3 : 1 - ((cFrac - 0.1) / 0.4) * (2 / 3)
   const clusters = Math.floor(tDef.pdlcClusters * target.subsystems.pdlc * window)
   for (let i = 0; i < clusters; i++) {
-    if (rand(state.rng) < PDLC_PK) {
+    if (rand(state.rng) < pdlcPk) {
       state.events.push({
         t: state.t, kind: 'missileKilled', shipId: target.id, side: target.side,
         text: `${target.name}: bodová obrana sestřelila raketu`,

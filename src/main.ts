@@ -52,9 +52,19 @@ function showMissionSelect(): void {
   })
 }
 
+/** úvodní scéna mise (public/img/<hodnota>.png) */
+const MISSION_SCENES: Record<string, string> = {
+  mission01: 'scene-station',
+  mission02: 'scene-convoy',
+  mission03: 'scene-battle',
+  mission04: 'scene-hyperwave',
+}
+
 function showBriefing(sc: Scenario): void {
+  const scene = MISSION_SCENES[sc.id]
   const el = overlay(
-    `<h2>${esc(sc.title)}</h2>`
+    (scene ? `<img class="brief-img" src="img/${scene}.png" alt="" onerror="this.remove()">` : '')
+    + `<h2>${esc(sc.title)}</h2>`
     + `<div class="brief">${esc(sc.briefing)}</div>`
     + `<button id="btn-start">START</button>`,
   )
@@ -90,6 +100,7 @@ function showOutcome(state: SimState): void {
 
 bridge.onReady = scenario => {
   currentMissionId = scenario.id
+  plot.setHyperlimit(scenario.hyperlimit ?? null)
   showBriefing(scenario)
   plot.start()
 }
