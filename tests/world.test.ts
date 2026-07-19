@@ -276,11 +276,10 @@ describe('mise 1 — Hlídka u Strážné brány', () => {
     expect(mission01.objectives).toHaveLength(2)
   })
 
-  it('zvrat: přiblížení na 5 mil. km přepne Cygnus na runnera a odhalí třídu', () => {
+  it('zvrat: v t=40 se Cygnus přepne na runnera a odhalí třídu (honička od začátku)', () => {
     const scenario = structuredClone(mission01)
     const state = build(scenario)
-    // hráč se přiblížil na 4 mil. km
-    state.ships[0].pos = { x: 36_000_000, y: 0 }
+    state.t = 45 // po vzdorovité odpovědi Cygnus bolts (t=40)
     updateTriggers(state, scenario)
     expect(state.flags['runner-fleeing']).toBe(true)
     expect(state.flags['revealed:2']).toBe(true)

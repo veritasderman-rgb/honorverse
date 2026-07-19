@@ -1,7 +1,15 @@
 /**
  * Mise 1 — „Hlídka u Strážné brány" (tutoriál, DD).
- * Celní kontrola u wormhole terminálu; „obchodník" Cygnus má vojenský
- * kompenzátor a po výzvě prchá k hyperlimitu. Viz docs/GAME_DESIGN.md kap. 7.
+ * Celní kontrola u wormhole terminálu; „obchodník" Cygnus po výzvě odhodí
+ * masku a od t=40 s PRCHÁ k hyperlimitu na plný vojenský kompenzátor —
+ * celá mise je zadní honička s termínem. Viz docs/GAME_DESIGN.md kap. 7.
+ *
+ * Geometrie honičky (propočet, oba prakticky z klidu):
+ *   Dauntless 520 g (5,10 km/s² na 100 %) vs. Cygnus 420 g (4,12 km/s²);
+ *   start 25 mil. km, hyperlimit na 250 mil. km. Na 100 % tahu dostih
+ *   u ~150 mil. km (rezerva ~40 %); na standardních 80 % (4,08 < 4,12)
+ *   Cygnus NEdoženeš — lekce rozpočtu reaktoru. Zaváhání nad ~8 minut
+ *   zachrání jen nouzových 120 %.
  *
  * Id lodí (pořadí pole ships, od 1):
  *   1 = ANS Dauntless (hráč), 2 = Cygnus, 3 = bóje „Hyperlimit"
@@ -19,7 +27,8 @@ export const mission01: Scenario = {
     'ANS Dauntless drží celní hlídku u wormhole terminálu Strážné brány. '
     + 'Kontrola Brány hlásí nákladní loď Cygnus s podezřelým manifestem — '
     + 'proveďte kontrolu: přibližte se na 1 milion km a nedovolte jí '
-    + 'opustit soustavu přes hyperlimit.',
+    + 'opustit soustavu přes hyperlimit. Pozor: jestli má ta loď co '
+    + 'skrývat, poběží — a hyperlimit je jen 250 milionů km daleko.',
   seed: 19881003, // pevný seed — determinismus
 
   // hyperlimitní čára soustavy (plot ji kreslí jantarově); bóje zůstává pro triggery
@@ -32,9 +41,10 @@ export const mission01: Scenario = {
       pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, doctrine: 'player',
     },
     {
-      // „obchodník" — ve skutečnosti runner s vojenským kompenzátorem
+      // „obchodník" — ve skutečnosti runner s vojenským kompenzátorem;
+      // start 25 mil. km (viz propočet honičky v hlavičce souboru)
       classId: 'merch-runner', side: 'enemy', name: 'Cygnus',
-      pos: { x: 40_000_000, y: 0 }, vel: { x: 500, y: 0 }, doctrine: 'freighter',
+      pos: { x: 25_000_000, y: 0 }, vel: { x: 500, y: 0 }, doctrine: 'freighter',
     },
     {
       // statická bóje značící hyperlimitní čáru (klín vypnut, AI ji ignoruje)
@@ -74,11 +84,9 @@ export const mission01: Scenario = {
     },
     {
       // předzvěst: spojař zachytí detail, který k „uhlířské bárce" nesedí
-      // (foreshadowing zvratu — hráč dostane šanci zbystřit dřív než senzory)
+      // (foreshadowing zvratu — přichází PŘED útěkem, hráč dostane šanci zbystřit)
       id: 'trg-comm-foreshadow', once: true,
-      conditions: [
-        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: CYGNUS, distance: 12_000_000 },
-      ],
+      conditions: [{ kind: 'time', t: 15 }],
       actions: [
         {
           kind: 'comm', speaker: 'comms',
@@ -87,13 +95,12 @@ export const mission01: Scenario = {
       ],
     },
     {
-      // zvrat: při přiblížení hráče Cygnus odhodí masku a prchá
+      // ZVRAT: po vzdorovité odpovědi Cygnus odhodí masku a PRCHÁ na plný
+      // vojenský kompenzátor — od téhle chvíle běží honička s termínem
       id: 'trg-runner-flees', once: true,
-      conditions: [
-        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: CYGNUS, distance: 5_000_000 },
-      ],
+      conditions: [{ kind: 'time', t: 40 }],
       actions: [
-        { kind: 'message', text: 'Cygnus zrychluje! Vojenský kompenzátor!' },
+        { kind: 'message', text: 'Cygnus zrychluje k hyperlimitu! Vojenský kompenzátor!' },
         { kind: 'setDoctrine', shipId: CYGNUS, doctrine: 'runner' },
         { kind: 'setFlag', flag: 'runner-fleeing' },
         { kind: 'revealClass', shipId: CYGNUS },
@@ -101,6 +108,17 @@ export const mission01: Scenario = {
           // callback na předzvěst + automatická výzva ke kapitulaci
           kind: 'comm', speaker: 'comms',
           text: 'Říkal jsem, že ta vysílačka smrdí! Vysílám výzvu: „Cygnusi, zastavte a vypněte klín, nebo zahájíme palbu." …Neodpovídají, kapitáne.',
+        },
+      ],
+    },
+    {
+      // lekce rozpočtu reaktoru: na 80 % tahu runnera NEdoženeš (4,08 < 4,12)
+      id: 'trg-comm-throttle-lesson', once: true,
+      conditions: [{ kind: 'flag', flag: 'runner-fleeing' }, { kind: 'time', t: 120 }],
+      actions: [
+        {
+          kind: 'comm', speaker: 'xo',
+          text: 'První důstojník: „Táhne přes čtyři sta g — na standardních osmdesáti procentech ho NEdoženeme. Doporučuju plný výkon; a jestli jsme zaváhali, zbývá jedině nouzových sto dvacet. Boční štíty to položí na kolena, ale on stejně skoro nemá čím střílet."',
         },
       ],
     },

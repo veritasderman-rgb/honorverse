@@ -391,19 +391,19 @@ describe('komunikační triggery (kind comm)', () => {
     }
   })
 
-  it('mise 1: Kontrola Brány → vzdor Cygnusu → výzva ke kapitulaci po zvratu', () => {
+  it('mise 1: Kontrola Brány → předzvěst → vzdor Cygnusu → útěk s výzvou ke kapitulaci', () => {
     const scenario = structuredClone(mission01)
     const state = sim.create(scenario)
     state.t = 30
     updateTriggers(state, scenario)
-    expect(state.events.filter(e => e.kind === 'comm')).toHaveLength(2) // station + enemy-captain
+    // station (t8) + předzvěst spojaře (t15) + enemy-captain (t25)
+    expect(state.events.filter(e => e.kind === 'comm')).toHaveLength(3)
     state.events.length = 0
-    state.ships[0].pos = { x: 36_000_000, y: 0 } // zvrat
+    state.t = 45 // zvrat: Cygnus bolts v t=40
     updateTriggers(state, scenario)
-    // při skoku na 36 M km vystřelí i předzvěst zvratu (šifrování) — hledej
-    // konkrétní výzvu ke kapitulaci mezi comm eventy spojaře
     const comms = state.events.filter(e => e.kind === 'comm' && e.speaker === 'comms')
     expect(comms.some(e => e.text.includes('zastavte'))).toBe(true)
+    expect(state.flags['runner-fleeing']).toBe(true)
   })
 })
 

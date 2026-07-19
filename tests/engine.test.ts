@@ -51,13 +51,12 @@ describe('E2E mise 1 — Hlídka u Strážné brány', () => {
     expect(state.outcome).toBe('running')
     openingOrders(state)
 
-    // (a) přiblížení: do ~2 h sim času vystřelí trigger zvratu
+    // (a) zvrat: Cygnus odhodí masku v t=40 a prchá (honička od začátku)
     while (!state.flags['runner-fleeing'] && state.t < 7200) {
       sim.tick(state, SIM_DT)
     }
     expect(state.flags['runner-fleeing']).toBe(true)
-    expect(state.t).toBeLessThan(7200)
-    expect(gap(state)).toBeLessThan(5_000_000)
+    expect(state.t).toBeLessThan(60)
     expect(state.ships[1].doctrine).toBe('runner')
     expect(state.events.some(e => e.kind === 'message' && e.text.includes('Vojenský kompenzátor'))).toBe(true)
 
@@ -85,6 +84,20 @@ describe('E2E mise 1 — Hlídka u Strážné brány', () => {
     expect(state.ships[1].destroyed).toBe(true)
     expect(state.objectives.find(o => o.id === 'obj-no-escape')?.state).toBe('done')
     expect(state.events.some(e => e.kind === 'shipDestroyed' && e.shipId === CYGNUS)).toBe(true)
+  })
+})
+
+describe('E2E mise 1 — lekce rozpočtu reaktoru', () => {
+  it('na standardních 80 % tahu Cygnus unikne (4,08 < 4,12 km/s²)', () => {
+    const state = sim.create(mission01)
+    sim.applyOrder(state, { kind: 'setThrottle', shipId: DAUNTLESS, throttle: 0.8 })
+    sim.applyOrder(state, { kind: 'intercept', shipId: DAUNTLESS, targetId: CYGNUS })
+    while (state.outcome === 'running' && state.t < 4 * 3600) {
+      sim.tick(state, SIM_DT)
+      fightStep(state)
+      state.events.length = 0
+    }
+    expect(state.outcome).toBe('lose') // hyperlimit dřív, než se přiblížíme
   })
 })
 
