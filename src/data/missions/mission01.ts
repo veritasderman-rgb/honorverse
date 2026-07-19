@@ -73,6 +73,20 @@ export const mission01: Scenario = {
       ],
     },
     {
+      // předzvěst: spojař zachytí detail, který k „uhlířské bárce" nesedí
+      // (foreshadowing zvratu — hráč dostane šanci zbystřit dřív než senzory)
+      id: 'trg-comm-foreshadow', once: true,
+      conditions: [
+        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: CYGNUS, distance: 12_000_000 },
+      ],
+      actions: [
+        {
+          kind: 'comm', speaker: 'comms',
+          text: 'Kapitáne… zachytávám provoz Cygnusu s Bránou. Obsah sedí, ale to šifrování ne — civilní bárky jedou na komerčním kódu, tohle je vojenská třída D. Buď si koupili pancéřovanou vysílačku… nebo nevezou zemědělské stroje.',
+        },
+      ],
+    },
+    {
       // zvrat: při přiblížení hráče Cygnus odhodí masku a prchá
       id: 'trg-runner-flees', once: true,
       conditions: [
@@ -84,9 +98,9 @@ export const mission01: Scenario = {
         { kind: 'setFlag', flag: 'runner-fleeing' },
         { kind: 'revealClass', shipId: CYGNUS },
         {
-          // automatická výzva ke kapitulaci od hráčova spojaře
+          // callback na předzvěst + automatická výzva ke kapitulaci
           kind: 'comm', speaker: 'comms',
-          text: 'Vysílám výzvu: „Cygnusi, zastavte a vypněte klín, nebo zahájíme palbu." …Neodpovídají, kapitáne.',
+          text: 'Říkal jsem, že ta vysílačka smrdí! Vysílám výzvu: „Cygnusi, zastavte a vypněte klín, nebo zahájíme palbu." …Neodpovídají, kapitáne.',
         },
       ],
     },
