@@ -53,6 +53,13 @@ export const CM_DRIVE_TIME = 75
 export const CM_INTERCEPT_RANGE = 2_500_000
 /** základní P(kill) jedné CM na jednu útočnou raketu */
 export const CM_PK = 0.35
+/**
+ * „Dva výstřely na cíl": interceptní geometrie dovolí na jednu útočnou
+ * raketu максимум 2 pokusy protiraket CELKEM. Bez stropu obrana s velkým
+ * zásobníkem CM matematicky vždy přestřílí útočníkovy zásobníky raket
+ * (souboj malých lodí byl sterilní — 90 raket, 85 sestřelů, 0 zásahů).
+ */
+export const CM_SHOTS_PER_MISSILE = 2
 /** cooldown odpalu CM na jeden odpalovač (s) — vysoká kadence, zásobníky rychle tečou */
 export const CM_COOLDOWN = 5
 

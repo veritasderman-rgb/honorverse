@@ -8,7 +8,7 @@
  */
 import type { DriveMode, ShipState, SimState } from './types'
 import {
-  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
+  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, CM_SHOTS_PER_MISSILE,
   CONTROL_RANGE, G, LOCK_FLOOR, LOCK_FLOOR_GUIDED, LOCK_LOST, PDLC_PK,
   PDLC_ROLLED_FACTOR, PDLC_SATURATION,
 } from './constants'
@@ -68,11 +68,17 @@ export function estimatePenetration(
   const floor = shooter.activeSensors && d < CONTROL_RANGE ? LOCK_FLOOR_GUIDED : LOCK_FLOOR
   const lockEnd = Math.max(lock0 - erosion, Math.min(lock0, floor))
 
-  // --- vrstva CM: kadence × čas v obálce × Pk; odpaly omezuje munice,
-  // intercepty počet raket (CM pálí opakovaně, dokud salva letí) ---
+  // --- vrstva CM: kadence × čas v obálce × Pk; odpaly omezuje munice
+  // a „dva výstřely na cíl" (CM_SHOTS_PER_MISSILE pokusů na raketu) ---
   const cmRate = (tDef.cmLaunchers * target.subsystems.cm) / CM_COOLDOWN
-  const cmLaunches = Math.min(cmRate * tailTime(CM_INTERCEPT_RANGE), target.cms)
-  const cmKills = Math.min(count, cmLaunches * CM_PK)
+  const cmLaunches = Math.min(
+    cmRate * tailTime(CM_INTERCEPT_RANGE),
+    target.cms,
+    count * CM_SHOTS_PER_MISSILE,
+  )
+  // očekávané zásahy při rovnoměrném rozdělení pokusů: 1−(1−Pk)^(pokusy/raketa)
+  const shotsPer = count > 0 ? cmLaunches / count : 0
+  const cmKills = count * (1 - Math.pow(1 - CM_PK, shotsPer))
   const afterCm = count - cmKills
 
   // --- vrstva PDLC: okno dle rychlosti přiblížení + saturace celou salvou ---

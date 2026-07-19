@@ -7,7 +7,7 @@
  */
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
 import {
-  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
+  ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK, CM_SHOTS_PER_MISSILE,
   CONTROL_RANGE, DECOY_SEDUCE_BASE, DISPERSED_ECM_BONUS,
   LOCK_FLOOR, LOCK_FLOOR_GUIDED,
   LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_PK, PDLC_ROLLED_FACTOR, PDLC_SATURATION,
@@ -154,9 +154,12 @@ export function updateDefenses(state: SimState, dt: number): void {
     if (rate <= 0) continue
 
     // příchozí hrozby v interceptní obálce: nejdřív vlastní, pak chráněnci;
-    // uvnitř skupiny nejbližší první (determinismus: tiebreak id)
+    // uvnitř skupiny nejbližší první (determinismus: tiebreak id).
+    // „Dva výstřely na cíl": raketa s vyčerpanými pokusy se už neostřeluje —
+    // musí ji řešit PDLC/klín (bez stropu byla obrana matematicky neprůstřelná).
     const incoming = state.missiles
       .filter(m => m.phase !== 'dead' && m.side !== ship.side
+        && (m.cmShots ?? 0) < CM_SHOTS_PER_MISSILE
         && (m.targetId === ship.id || sideOf.get(m.targetId) === ship.side)
         && dist(m.pos, ship.pos) < CM_INTERCEPT_RANGE)
       .map(m => ({ m, d: dist(m.pos, ship.pos), self: m.targetId === ship.id ? 0 : 1 }))
@@ -175,6 +178,7 @@ export function updateDefenses(state: SimState, dt: number): void {
     for (let i = 0; i < n; i++) {
       ship.cms--
       const threat = incoming[i].m
+      threat.cmShots = (threat.cmShots ?? 0) + 1
       if (rand(state.rng) < cmPk) {
         threat.phase = 'dead'
         state.events.push({

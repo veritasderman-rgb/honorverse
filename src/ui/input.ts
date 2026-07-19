@@ -26,7 +26,7 @@ export class UIController {
   private selectedShipIds: number[] = []
   private targetId: number | null = null
   private courseMode = false
-  private salvoMode: DriveMode = 1
+  private salvoMode: DriveMode = 0 // výchozí LO — plný dostřel (HI jen zblízka)
   private compression = 0
   /** poslední nenulová komprese (pro obnovení po pauze) */
   private lastRunning = 1

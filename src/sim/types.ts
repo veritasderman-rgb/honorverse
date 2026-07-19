@@ -153,6 +153,8 @@ export interface MissileState {
   jammerEscort?: boolean
   /** raketa už prošla testem svedení návnadou (jeden test na aktivaci) */
   decoyChecked?: boolean
+  /** počet pokusů protiraket na tuto raketu (strop CM_SHOTS_PER_MISSILE) */
+  cmShots?: number
 }
 
 /** Poškoditelné subsystémy — hodnoty 0–1 (1 = plně funkční). */
