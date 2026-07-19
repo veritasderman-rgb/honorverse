@@ -10,11 +10,13 @@ import {
   ENERGY_MAX_RANGE, G, JAMMER_MIN_SALVO, LINK_LOCK_DECAY, LOCK_LOST,
   RETARGET_LOCK_PENALTY, ROLL_TIME,
   SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
+  VEE_SOLUTION_BONUS,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { add, angleOf, clampLen, dist, dot, len, norm, scale, sub } from './vec'
 import { applyBeamDamage, effectiveTubes } from './damage'
 import { attackAspect, erodeLock, resolveTerminal } from './defense'
+import { inVeeFormation } from './formation'
 import { voiceIncomingSalvo } from './voice'
 
 const DEFAULT_MISSILE = 'std-shipkiller'
@@ -119,6 +121,8 @@ export function fireSolution(state: SimState, shooter: ShipState, target: ShipSt
   if (state.contacts[shooter.side]?.some(c => c.shipId === target.id && c.idQuality === 2)) {
     q += SOLUTION_TRACK_BONUS
   }
+  // šíp (vee): členové sdílejí nejlepší senzorový obraz eskadry
+  if (inVeeFormation(state, shooter)) q += VEE_SOLUTION_BONUS
   q *= 0.7 + 0.3 * Math.min(1, Math.max(0, shooter.subsystems.sensors))
   return Math.min(1, q)
 }

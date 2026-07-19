@@ -116,6 +116,17 @@ export interface ShipBuffs {
   repairUntil: number
 }
 
+/** Druh formace eskadry (jen hráčem ovladatelné lodě). */
+export type FormationKind = 'wall' | 'vee' | 'dispersed'
+
+/** Členství lodi ve formaci: drží slot vůči leaderovi (plain data). */
+export interface FormationState {
+  leaderId: number
+  /** pořadí slotu 1..n (rozmístění dle druhu formace) */
+  slot: number
+  kind: FormationKind
+}
+
 export type MissilePhase = 'boost' | 'ballistic' | 'terminal' | 'dead'
 
 export interface MissileState {
@@ -212,6 +223,8 @@ export interface ShipState {
   buffs: ShipBuffs
   /** časy nedávných terminálních náletů NA tuto loď (okno saturace PDLC) */
   terminalTimes: number[]
+  /** členství ve formaci eskadry (null/chybí = žádná; jen ovladatelné lodě) */
+  formation?: FormationState | null
 }
 
 /** Senzorový kontakt — co daná strana VÍ (ne pravda). */
@@ -265,6 +278,10 @@ export type Order =
   /** výzva ke kapitulaci — odpověď dorazí po 2·vzdálenost/C (pendingComms) */
   | { kind: 'demandSurrender'; shipId: number; targetId: number }
   | { kind: 'holdFire'; shipId: number }
+  /** zařazení lodi do formace: drží slot vůči leaderovi (jen ovladatelné lodě) */
+  | { kind: 'setFormation'; shipId: number; leaderId: number; slot: number; formation: FormationKind }
+  /** vyřazení lodi z formace (samostatné manévrování) */
+  | { kind: 'clearFormation'; shipId: number }
   /** parciální update řízení palby (engaged spravuje engine) */
   | { kind: 'setFireControl'; shipId: number; fc: Partial<Omit<FireControl, 'engaged'>> }
 

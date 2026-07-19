@@ -13,6 +13,8 @@ import { updateCrew } from './crew'
 import { collectAIOrders } from './ai'
 import { demandSurrender, updatePendingComms } from './surrender'
 import { spawnShip, updateTriggers } from './scenario'
+import { updateFormations } from './formation'
+import { EMERGENCY_THROTTLE_MAX } from './constants'
 import { dist, dot, norm, sub } from './vec'
 import { SCENARIOS } from '../data/missions'
 
@@ -39,7 +41,9 @@ function scenarioFor(state: SimState): Scenario | null {
   return copy
 }
 
-const clamp01 = (x: number): number => Math.min(1, Math.max(0, x))
+/** rozkazový výkon pohonu: 0–120 % (nad 100 % nouzový výkon) */
+const clampThrottle = (x: number): number =>
+  Math.min(EMERGENCY_THROTTLE_MAX, Math.max(0, x))
 
 const shipById = (state: SimState, id: number): ShipState | undefined =>
   state.ships.find(s => s.id === id)
@@ -61,9 +65,22 @@ function applyOrder(state: SimState, order: Order): void {
     case 'intercept':
       ship.nav = { kind: 'intercept', targetId: order.targetId }
       break
-    case 'setThrottle':
-      ship.throttle = clamp01(order.throttle)
+    case 'setThrottle': {
+      const prev = ship.throttle
+      ship.throttle = clampThrottle(order.throttle)
+      // první přechod NAD 100 %: jednorázové varování inženýra (per loď a misi)
+      if (ship.throttle > 1 && prev <= 1 && ship.doctrine === 'player'
+        && state.flags[`said:emergency-power:${ship.id}`] !== true) {
+        state.flags[`said:emergency-power:${ship.id}`] = true
+        state.events.push({
+          t: state.t, kind: 'comm', shipId: ship.id, side: ship.side,
+          speaker: 'engineer', slowdown: true,
+          text: 'Rozkaz potvrzen — kompenzátor nad sto procent. Jedeme za červenou čarou; '
+            + 'každá minuta navíc je ruleta s impelerovými prstenci!',
+        })
+      }
       break
+    }
     case 'setWedge':
       ship.wedgeOn = order.on // senzory zůstávají — jen klín
       break
@@ -123,6 +140,23 @@ function applyOrder(state: SimState, order: Order): void {
       ship.fireControl.mode = 'hold'
       ship.fireControl.engaged = false
       break
+    case 'setFormation': {
+      // formace jen mezi hráčem OVLADATELNÝMI loděmi (AI se formací neúčastní)
+      if (ship.doctrine !== 'player' || ship.side !== 'player') break
+      if (order.leaderId === ship.id) break
+      const leader = liveTarget(state, order.leaderId)
+      if (!leader || leader.surrendered) break
+      if (leader.doctrine !== 'player' || leader.side !== 'player') break
+      ship.formation = {
+        leaderId: order.leaderId,
+        slot: Math.max(1, Math.floor(order.slot)),
+        kind: order.formation,
+      }
+      break
+    }
+    case 'clearFormation':
+      ship.formation = null
+      break
     case 'setFireControl': {
       const fc = ship.fireControl
       if (order.fc.mode !== undefined) fc.mode = order.fc.mode
@@ -169,6 +203,9 @@ export const sim: SimApi = {
       ship.tubeCooldown = Math.max(0, ship.tubeCooldown - dt)
       ship.energyCooldown = Math.max(0, ship.energyCooldown - dt)
     }
+    // (1b) formace: rozpad při ztrátě leadera — PŘED fyzikou (station-keeping
+    // v updateShipPhysics už pracuje jen s platnými formacemi)
+    updateFormations(state)
     // (2) fyzika lodí
     for (const ship of state.ships) {
       if (!ship.destroyed) updateShipPhysics(state, ship, dt)

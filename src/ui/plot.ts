@@ -69,14 +69,20 @@ export class TacticalPlot {
   /** loď, na které je střed (vybraná vlastní loď) */
   followId: number | null = null
   selectedId: number | null = null
+  /** hromadný výběr vlastních lodí (dvojitý obrys; primární = followId silněji) */
+  selectedShipIds: number[] = []
   /** zvýrazněná vlastní salva (id salvy) — nastavuje controller */
   selectedSalvoId: number | null = null
   /** klik do plotu: nejbližší loď/kontakt do ~15 px (jinak null) + světová pozice */
-  onPick: ((id: number | null, world: Vec2) => void) | null = null
+  onPick: ((id: number | null, world: Vec2, shift: boolean) => void) | null = null
+  /** Shift-tažení: obdélníkový výběr — rohy ve světových souřadnicích */
+  onBoxSelect: ((a: Vec2, b: Vec2) => void) | null = null
 
   private pickables: Pickable[] = []
   private raf = 0
   private drag: { x: number; y: number; moved: boolean } | null = null
+  /** rozpracovaný obdélníkový výběr (Shift-tažení), screen souřadnice */
+  private boxSel: { x0: number; y0: number; x1: number; y1: number } | null = null
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -85,10 +91,24 @@ export class TacticalPlot {
     this.ctx = ctx
 
     canvas.addEventListener('pointerdown', e => {
-      this.drag = { x: e.clientX, y: e.clientY, moved: false }
+      // Shift-tažení = obdélníkový výběr vlastních lodí; bez Shiftu pan
+      if (e.shiftKey) {
+        const r = canvas.getBoundingClientRect()
+        const sx = e.clientX - r.left
+        const sy = e.clientY - r.top
+        this.boxSel = { x0: sx, y0: sy, x1: sx, y1: sy }
+      } else {
+        this.drag = { x: e.clientX, y: e.clientY, moved: false }
+      }
       canvas.setPointerCapture(e.pointerId)
     })
     canvas.addEventListener('pointermove', e => {
+      if (this.boxSel) {
+        const r = canvas.getBoundingClientRect()
+        this.boxSel.x1 = e.clientX - r.left
+        this.boxSel.y1 = e.clientY - r.top
+        return
+      }
       if (!this.drag) return
       const dx = e.clientX - this.drag.x
       const dy = e.clientY - this.drag.y
@@ -100,13 +120,26 @@ export class TacticalPlot {
       this.drag.y = e.clientY
     })
     canvas.addEventListener('pointerup', e => {
-      const wasClick = this.drag !== null && !this.drag.moved
-      this.drag = null
-      if (!wasClick) return
       const r = canvas.getBoundingClientRect()
       const sx = e.clientX - r.left
       const sy = e.clientY - r.top
-      this.onPick?.(this.pick(sx, sy), this.screenToWorld(sx, sy))
+      if (this.boxSel) {
+        const box = this.boxSel
+        this.boxSel = null
+        const movedBox = Math.hypot(box.x1 - box.x0, box.y1 - box.y0) >= 4
+        if (movedBox) {
+          this.onBoxSelect?.(
+            this.screenToWorld(box.x0, box.y0), this.screenToWorld(box.x1, box.y1))
+        } else {
+          // Shift-klik bez tažení: toggle výběru lodi
+          this.onPick?.(this.pick(sx, sy), this.screenToWorld(sx, sy), true)
+        }
+        return
+      }
+      const wasClick = this.drag !== null && !this.drag.moved
+      this.drag = null
+      if (!wasClick) return
+      this.onPick?.(this.pick(sx, sy), this.screenToWorld(sx, sy), e.shiftKey)
     })
     canvas.addEventListener('wheel', e => {
       e.preventDefault()
@@ -227,12 +260,49 @@ export class TacticalPlot {
     for (const ship of s.ships) {
       if (ship.side === 'player' && !ship.destroyed) this.drawNavPlan(ctx, ship)
     }
+    for (const ship of s.ships) {
+      if (ship.side === 'player' && !ship.destroyed) this.drawFormationLink(ctx, ship)
+    }
     for (const m of s.missiles) this.drawMissile(ctx, m)
     for (const ship of s.ships) {
       if (ship.side === 'player' && !ship.destroyed) this.drawOwnShip(ctx, ship)
     }
     for (const c of s.contacts.player) this.drawContact(ctx, c)
     this.drawSelectionMarker(ctx)
+    this.drawSelectionBox(ctx)
+  }
+
+  /** čárkovaný rám rozpracovaného obdélníkového výběru (Shift-tažení) */
+  private drawSelectionBox(ctx: CanvasRenderingContext2D): void {
+    const b = this.boxSel
+    if (!b) return
+    ctx.save()
+    ctx.strokeStyle = CLR.sel
+    ctx.setLineDash([5, 4])
+    ctx.lineWidth = 1
+    ctx.strokeRect(Math.min(b.x0, b.x1), Math.min(b.y0, b.y1),
+      Math.abs(b.x1 - b.x0), Math.abs(b.y1 - b.y0))
+    ctx.restore()
+  }
+
+  /** tenká čára člen formace → leader */
+  private drawFormationLink(ctx: CanvasRenderingContext2D, ship: ShipState): void {
+    const s = this.state
+    const f = ship.formation
+    if (!s || !f) return
+    const leader = s.ships.find(x => x.id === f.leaderId && !x.destroyed)
+    if (!leader) return
+    const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
+    const l = this.worldToScreen(this.exPos(leader.pos, leader.vel))
+    ctx.save()
+    ctx.strokeStyle = CLR.ownDim
+    ctx.globalAlpha = 0.35
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.lineTo(l.x, l.y)
+    ctx.stroke()
+    ctx.restore()
   }
 
   private drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number): void {
@@ -453,12 +523,13 @@ export class TacticalPlot {
     ctx.lineWidth = 1.5
     ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
     this.drawHullIcon(ctx, hull)
-    // aktivně ovládaná loď flotily: dvojitý obrys (zvětšená kopie ikony)
-    if (ship.id === this.followId) {
+    // vybrané lodě: dvojitý obrys (primární — followId — silněji)
+    const primary = ship.id === this.followId
+    if (primary || this.selectedShipIds.includes(ship.id)) {
       ctx.save()
-      ctx.scale(1.6, 1.6)
-      ctx.lineWidth = 1
-      ctx.globalAlpha = 0.8
+      ctx.scale(primary ? 1.6 : 1.45, primary ? 1.6 : 1.45)
+      ctx.lineWidth = primary ? 1 : 0.7
+      ctx.globalAlpha = primary ? 0.8 : 0.55
       this.drawHullIcon(ctx, hull)
       ctx.restore()
     }

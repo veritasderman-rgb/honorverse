@@ -7,6 +7,7 @@
 import type { Contact, ShipState, Side, SimState, Subsystems } from './types'
 import {
   CREW_COMBAT_RANGE, CREW_EVENT_MEAN_TIME,
+  EMERGENCY_DAMAGE_MAX, EMERGENCY_DAMAGE_MIN, EMERGENCY_DAMAGE_RATE,
   LOCK_BUFF, LOCK_BUFF_TIME,
   REPAIR_BUFF, REPAIR_BUFF_TIME, REPAIR_CAP, REPAIR_RATE,
 } from './constants'
@@ -53,6 +54,35 @@ function updateRepairs(state: SimState, ship: ShipState, dt: number): void {
         text: `Inženýr: ${SUBSYSTEM_NAMES[key]} znovu online — máme ${Math.round(REPAIR_CAP * 100)} % výkonu!`,
       })
     }
+  }
+}
+
+/** hlášky inženýra při poškození prstence nouzovým výkonem (výběr ze state.rng) */
+const EMERGENCY_MESSAGES = [
+  'Kompenzátor jede za červenou — jestli to neubereme, přijdeme o prstenec!',
+  'Přetížení! Alfa nody házejí harmoniky — sto dvacet procent dlouho nevydržíme!',
+  'Prstenec se přehřívá! Doporučuju okamžitě stáhnout výkon pod sto procent!',
+]
+
+/**
+ * Nouzový výkon (throttle > 1.0 se zapnutým klínem): každou sekundu riziko
+ * EMERGENCY_DAMAGE_RATE, že náhodný impelerový prstenec ztratí 0.08–0.15.
+ * Rng se čerpá JEN pro lodě nad 100 % — tok rng ostatních se nemění
+ * (determinismus referenčních běhů bez nouzového výkonu).
+ */
+function updateEmergencyPower(state: SimState, ship: ShipState, dt: number): void {
+  if (ship.throttle <= 1 || !ship.wedgeOn) return
+  if (rand(state.rng) >= EMERGENCY_DAMAGE_RATE * dt) return
+  const key: keyof Subsystems = rand(state.rng) < 0.5 ? 'impellerFwd' : 'impellerAft'
+  const loss = EMERGENCY_DAMAGE_MIN + rand(state.rng) * (EMERGENCY_DAMAGE_MAX - EMERGENCY_DAMAGE_MIN)
+  ship.subsystems[key] = Math.max(0, ship.subsystems[key] - loss)
+  const msg = EMERGENCY_MESSAGES[Math.floor(rand(state.rng) * EMERGENCY_MESSAGES.length)]
+  if (ship.doctrine === 'player') {
+    state.events.push({
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side,
+      speaker: 'engineer', slowdown: true,
+      text: `${msg} (${SUBSYSTEM_NAMES[key]} na ${Math.round(ship.subsystems[key] * 100)} %)`,
+    })
   }
 }
 
@@ -141,6 +171,7 @@ export function updateCrew(state: SimState, dt: number): void {
   for (const ship of state.ships) {
     if (ship.destroyed) continue
     updateRepairs(state, ship, dt)
+    updateEmergencyPower(state, ship, dt)
     if (ship.doctrine === 'player') {
       voiceChecks(state, ship)
       if (inCombat(state, ship)) maybeCrewEvent(state, ship, dt)

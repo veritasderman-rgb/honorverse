@@ -400,7 +400,9 @@ describe('komunikační triggery (kind comm)', () => {
     state.events.length = 0
     state.ships[0].pos = { x: 36_000_000, y: 0 } // zvrat
     updateTriggers(state, scenario)
-    const surrender = state.events.find(e => e.kind === 'comm' && e.speaker === 'comms')
-    expect(surrender?.text).toContain('zastavte')
+    // při skoku na 36 M km vystřelí i předzvěst zvratu (šifrování) — hledej
+    // konkrétní výzvu ke kapitulaci mezi comm eventy spojaře
+    const comms = state.events.filter(e => e.kind === 'comm' && e.speaker === 'comms')
+    expect(comms.some(e => e.text.includes('zastavte'))).toBe(true)
   })
 })

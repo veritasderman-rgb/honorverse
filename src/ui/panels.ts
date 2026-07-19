@@ -24,6 +24,8 @@ import type { AudioManager } from './audio'
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
 export interface UiState {
   ownShipId: number | null
+  /** hromadný výběr vlastních lodí (vždy obsahuje ownShipId, první) */
+  selectedShipIds: number[]
   targetId: number | null
   courseMode: boolean
   salvoMode: DriveMode
@@ -42,7 +44,7 @@ export interface UiState {
 export type PanelAction =
   | { kind: 'compression'; factor: number }
   | { kind: 'select'; id: number }
-  | { kind: 'order'; act: string }
+  | { kind: 'order'; act: string; shift?: boolean }
 
 const COMP_BTNS: { f: number; label: string }[] = [
   { f: 0, label: '⏸' },
@@ -219,7 +221,11 @@ export class Panels {
       const sel = el.getAttribute('data-sel')
       if (sel != null) { this.onAction({ kind: 'select', id: Number(sel) }); return }
       const act = el.getAttribute('data-act')
-      if (act != null) this.onAction({ kind: 'order', act })
+      if (act != null) {
+        // Shift-klik v rosteru = přidání/odebrání z hromadného výběru
+        const shift = (e as PointerEvent).shiftKey === true
+        this.onAction({ kind: 'order', act, shift })
+      }
     }
     root.addEventListener('pointerdown', handler)
 
@@ -417,7 +423,7 @@ export class Panels {
       + this.panelTargetDetail(state, own, ui)
       + this.panelSalvo(state, own, ui)
       + this.panelObjectives(state)
-    this.hudBottom.innerHTML = this.panelOrders(own, ui)
+    this.hudBottom.innerHTML = this.panelOrders(state, own, ui)
     this.hudBr.innerHTML =
       this.panelComms()
       + this.panelLog()
@@ -486,17 +492,23 @@ export class Panels {
       const ctrl = isControllable(s)
       const idx = controllable.findIndex(c => c.id === s.id)
       const active = s.id === ui.ownShipId
+      const inSel = !active && ui.selectedShipIds.includes(s.id)
       const auto = s.fireControl.mode === 'auto'
       const key = ctrl && idx >= 0 && idx < 9 ? `${idx + 1} ` : ''
       const mark = active ? '▶ ' : ''
-      return `<div class="fleet-row${active ? ' sel' : ''}${ctrl ? '' : ' dim'}"`
-        + (ctrl ? ` data-act="ownShip:${s.id}" title="převzít loď (klávesa ${idx + 1})"` : ' title="AI spojenec — nelze převzít"')
-        + `><div class="row"><span>${mark}${key}${esc(s.name)} <span class="dim">(${esc(def?.hullCode ?? '?')})</span></span>`
+      // značka formace: Σ stěna, V šíp, ◦ rozptyl
+      const fmark = s.formation
+        ? ` <span class="amber">${({ wall: 'Σ', vee: 'V', dispersed: '◦' } as const)[s.formation.kind]}</span>`
+        : ''
+      return `<div class="fleet-row${active ? ' sel' : ''}${inSel ? ' msel' : ''}${ctrl ? '' : ' dim'}"`
+        + (ctrl ? ` data-act="ownShip:${s.id}" title="převzít loď (klávesa ${idx + 1}); Shift-klik = přidat/odebrat z výběru"` : ' title="AI spojenec — nelze převzít"')
+        + `><div class="row"><span>${mark}${key}${esc(s.name)} <span class="dim">(${esc(def?.hullCode ?? '?')})</span>${fmark}</span>`
         + `<b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></div>`
         + `<div class="row dim"><span>rakety ${s.missiles} · CM ${s.cms}</span>`
         + `<span>${ctrl ? (auto ? 'AUTO' : '') : 'AI'}</span></div></div>`
     }).join('')
-    return this.panel('fleet', 'Flotila', rows, 'klávesy 1–9 přepínají aktivní loď')
+    return this.panel('fleet', 'Flotila', rows,
+      'klávesy 1–9 přepínají aktivní loď · Shift-klik přidá/odebere loď z hromadného výběru')
   }
 
   private panelOwnShip(own: ShipState | null, state: SimState): string {
@@ -826,7 +838,7 @@ export class Panels {
       + `Přesměrovat na ${esc(tgtLabel)}</button></div>`)
   }
 
-  private panelOrders(own: ShipState | null, ui: UiState): string {
+  private panelOrders(state: SimState, own: ShipState | null, ui: UiState): string {
     const hasTarget = ui.targetId != null
     const dis = (cond: boolean): string => (cond ? '' : ' disabled')
     const noShip = !own || own.destroyed
@@ -837,6 +849,9 @@ export class Panels {
     const hiC = Math.max(1, Math.round(tubes / 3))
     const loC = Math.max(1, tubes - hiC)
     const auto = own?.fireControl.mode === 'auto'
+    // hromadný výběr: „(×N)" u tlačítek působících na celý výběr
+    const selN = ui.selectedShipIds.length
+    const xN = selN > 1 ? ` <span class="dim">(×${selN})</span>` : ''
 
     // čísla mechanik do tooltipů (z defs/constants — žádná magie v textech)
     const fmtM = (km: number): string => (km / 1e6).toFixed(1).replace(/\.0$/, '').replace('.', ',')
@@ -877,7 +892,41 @@ export class Panels {
       sensors: `Plná identifikace cílů do ${sensM} mil. km + lepší zámek našich raket (plné palebné `
         + 'řešení 100 % místo 70 %); pozor — vyzařování zlepšuje řešení nepříteli o 15 %. '
         + 'Pasivní detekce cizího klínu funguje vždy.',
+      throttle: 'Výkon pohonu (kompenzátoru): 80 % je standard s bezpečnostní rezervou, 100 % plný výkon. '
+        + '120 % = NOUZOVÝ výkon „za červenou čarou" — o pětinu vyšší akcelerace, ale riziko poškození '
+        + 'impelerového prstence (v průměru ~1× za 33 minut letu). Platí pro celý výběr.',
+      formation: 'Formace eskadry (aktivní při výběru ≥ 2 ovladatelných lodí; aktivní loď = leader, '
+        + 'ostatní dostanou sloty a drží je automaticky — vlastní kurz ignorují). '
+        + 'STĚNA: kolmá řada, rozestup 400 tis. km — disciplinovaná palebná síť: Pk protiraket ×1,15, '
+        + 'příchozí rakety −5 % zámku. ŠÍP: sdílený senzorový obraz — +5 % palebného řešení členů. '
+        + 'ROZPTYL: rozestupy 1,5 M km — útočník nesaturuje eskadru jako celek, členové +3 % efektivního ECM. '
+        + '„—" formaci zruší. Rozpad při ztrátě leadera.',
     }
+
+    // stupňovitý přepínač výkonu pohonu 20–120 % (120 = nouzový, červeně)
+    const thrNow = own ? Math.round(own.throttle * 100) : null
+    const thrBtns = [20, 40, 60, 80, 100, 120].map(v =>
+      `<button data-act="throttle:${v}" class="${thrNow === v ? 'active' : ''}${v > 100 ? ' bad' : ''}"`
+      + `${dis(!noShip)}>${v}</button>`).join('')
+    const throttleSeg = `<span title="${esc(tip.throttle)}">tah:&nbsp;${thrBtns}&nbsp;%${xN}</span>`
+
+    // skupina FORMACE — aktivní jen s výběrem ≥ 2 ovladatelných lodí
+    const selOthers = ui.selectedShipIds.filter(id => id !== ui.ownShipId)
+      .map(id => state.ships.find(s => s.id === id))
+      .filter((s): s is ShipState => !!s && !s.destroyed)
+    const canForm = !noShip && selN >= 2 && selOthers.length > 0
+    const kindActive = (k: string): boolean => canForm
+      && selOthers.every(s => s.formation?.kind === k && s.formation.leaderId === ui.ownShipId)
+    const noneActive = canForm && selOthers.every(s => !s.formation)
+    const formBtn = (act: string, label: string, active: boolean): string =>
+      `<button data-act="formation:${act}" class="${active ? 'active' : ''}"${dis(canForm)}>${label}</button>`
+    const formationSeg = `<span class="obg" title="${esc(tip.formation)}">FORMACE:`
+      + formBtn('wall', 'Stěna', kindActive('wall'))
+      + formBtn('vee', 'Šíp', kindActive('vee'))
+      + formBtn('dispersed', 'Rozptyl', kindActive('dispersed'))
+      + formBtn('none', '—', noneActive)
+      + xN
+      + `</span>`
 
     // vodorovná command lišta: [pohyb] | [palba] | [obrana/EMCON]
     // progres přebíjení šachet jako tenká linka pod tlačítky
@@ -888,8 +937,9 @@ export class Panels {
     return this.panel('orders', 'Rozkazy',
       `<div class="ob">`
       + `<span class="obg">`
-      + `<button data-act="intercept" title="${esc(tip.intercept)}"${dis(canFire)}>Intercept</button>`
-      + `<button data-act="course" title="${esc(tip.course)}" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? 'Kurz: klikni do plotu…' : 'Kurz sem'}</button>`
+      + `<button data-act="intercept" title="${esc(tip.intercept)}"${dis(canFire)}>Intercept${xN}</button>`
+      + `<button data-act="course" title="${esc(tip.course)}" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? 'Kurz: klikni do plotu…' : `Kurz sem${xN}`}</button>`
+      + throttleSeg
       + `</span>`
       + `<span class="obg">`
       + `<button data-act="salvo2" title="${esc(tip.salvo('2'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 2</button>`
@@ -903,18 +953,19 @@ export class Panels {
       + `<button data-act="autonomous" class="${ui.autonomousMode ? 'active' : ''}" title="${esc(tip.autonomous)}"${dis(!noShip)}>`
       + `${ui.autonomousMode ? 'autonomní' : 'řízené'}</button>`
       + `<button data-act="escortJammer" class="${ui.escortJammerMode ? 'active' : ''}" title="${esc(tip.jammer)}"${dis(!noShip)}>+rušička</button>`
-      + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="${esc(tip.autoFire)}"${dis(canFire || auto)}>AUTO ${auto ? 'ZAP' : 'VYP'}</button>`
+      + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="${esc(tip.autoFire)}"${dis(canFire || auto)}>AUTO ${auto ? 'ZAP' : 'VYP'}${xN}</button>`
       + `</span>`
       + `<span class="obg">`
       + `<button data-act="energy" title="${esc(tip.energy)}"${dis(canFire)}>Energie</button>`
       + (rolled
-        ? `<button data-act="rollBack" class="active" title="${esc(tip.rollBack)}">Roll zpět</button>`
-        : `<button data-act="rollThreat" title="${esc(tip.rollThreat)}"${dis(!noShip)}>Roll</button>`)
+        ? `<button data-act="rollBack" class="active" title="${esc(tip.rollBack)}">Roll zpět${xN}</button>`
+        : `<button data-act="rollThreat" title="${esc(tip.rollThreat)}"${dis(!noShip)}>Roll${xN}</button>`)
       + `<button data-act="deployDecoy" title="${esc(tip.decoy)}"${dis(!noShip && (own?.decoys ?? 0) > 0)}>`
       + `Návnada (${own?.decoys ?? 0})</button>`
-      + `<button data-act="wedge" class="${own?.wedgeOn ? 'active' : ''}" title="${esc(tip.wedge)}"${dis(!noShip)}>Klín ${own?.wedgeOn ? 'ZAP' : 'VYP'}</button>`
-      + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}" title="${esc(tip.sensors)}"${dis(!noShip)}>Akt. senzory ${own?.activeSensors ? 'ZAP' : 'VYP'}</button>`
+      + `<button data-act="wedge" class="${own?.wedgeOn ? 'active' : ''}" title="${esc(tip.wedge)}"${dis(!noShip)}>Klín ${own?.wedgeOn ? 'ZAP' : 'VYP'}${xN}</button>`
+      + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}" title="${esc(tip.sensors)}"${dis(!noShip)}>Akt. senzory ${own?.activeSensors ? 'ZAP' : 'VYP'}${xN}</button>`
       + `</span>`
+      + formationSeg
       + `</div>`
       + cdLine,
       'mezerník pauza · +/− komprese · R roll · A auto · H nápověda')

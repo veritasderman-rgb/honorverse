@@ -98,10 +98,10 @@ describe('applyOrder — validace', () => {
     expect(state.ships.every(s => s.id !== 999)).toBe(true)
   })
 
-  it('setThrottle se ořezává na 0–1', () => {
+  it('setThrottle se ořezává na 0–1.2 (nouzový výkon nad 100 %)', () => {
     const state = sim.create(mission01)
     sim.applyOrder(state, { kind: 'setThrottle', shipId: DAUNTLESS, throttle: 5 })
-    expect(state.ships[0].throttle).toBe(1)
+    expect(state.ships[0].throttle).toBe(1.2)
     sim.applyOrder(state, { kind: 'setThrottle', shipId: DAUNTLESS, throttle: -3 })
     expect(state.ships[0].throttle).toBe(0)
   })

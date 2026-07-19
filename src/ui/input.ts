@@ -8,7 +8,9 @@ import type { DriveMode, Order, ShipState, SimEvent, SimState, Vec2 } from '../s
 import type { SimBridge } from '../worker/bridge'
 import type { TacticalPlot } from './plot'
 import { contactEstPos, type PanelAction, type Panels, type UiState } from './panels'
-import { resolveOwnShipId, rosterPick } from './roster'
+import {
+  boxSelectShips, normalizeSelection, resolveOwnShipId, rosterPick, toggleShipSelection,
+} from './roster'
 
 const COMP_LADDER = [0, 1, 10, 100, 1000, 10000]
 
@@ -20,6 +22,8 @@ const AUTOSLOW_GRACE_MS = 5000
 export class UIController {
   private state: SimState | null = null
   private ownShipId: number | null = null
+  /** hromadný výběr vlastních ovladatelných lodí (vždy obsahuje ownShipId) */
+  private selectedShipIds: number[] = []
   private targetId: number | null = null
   private courseMode = false
   private salvoMode: DriveMode = 1
@@ -46,7 +50,8 @@ export class UIController {
     private plot: TacticalPlot,
     private panels: Panels,
   ) {
-    plot.onPick = (id, world) => this.onPlotClick(id, world)
+    plot.onPick = (id, world, shift) => this.onPlotClick(id, world, shift)
+    plot.onBoxSelect = (a, b) => this.onBoxSelect(a, b)
     window.addEventListener('keydown', e => this.onKey(e))
     try {
       this.autoSlow = localStorage.getItem(AUTOSLOW_KEY) !== '0'
@@ -61,6 +66,8 @@ export class UIController {
 
     // výchozí vlastní loď (nebo náhrada za zničenou) — preferuj ovladatelné
     this.ownShipId = resolveOwnShipId(state, this.ownShipId)
+    // hromadný výběr: vyhoď zaniklé lodě, primární drž vždy uvnitř
+    this.selectedShipIds = normalizeSelection(state, this.selectedShipIds, this.ownShipId)
 
     // auto-slowdown: jen důležité události (filtr eventSlows) → komprese na 1×;
     // při vypnutém přepínači (⚠ VYP) jen indikátor/blik; grace po ruční změně
@@ -84,6 +91,7 @@ export class UIController {
     this.panels.addEvents(state.events)
     this.plot.followId = this.ownShipId
     this.plot.selectedId = this.targetId ?? this.ownShipId
+    this.plot.selectedShipIds = this.selectedShipIds
     this.plot.selectedSalvoId = this.selectedSalvoId
     this.plot.setSnapshot(state, this.compression)
     this.panels.update(state, this.ui())
@@ -145,12 +153,21 @@ export class UIController {
         this.refresh()
         break
       case 'order':
-        this.doOrder(a.act)
+        this.doOrder(a.act, a.shift === true)
         break
     }
   }
 
-  private doOrder(act: string): void {
+  /** vybrané živé lodě pro hromadné rozkazy (primární první) */
+  private selectedShips(): ShipState[] {
+    const s = this.state
+    if (!s) return []
+    return this.selectedShipIds
+      .map(id => s.ships.find(sh => sh.id === id))
+      .filter((sh): sh is ShipState => !!sh && !sh.destroyed)
+  }
+
+  private doOrder(act: string, shift = false): void {
     const s = this.state
     if (!s) return
     // přepínač auto-zpomalování funguje i bez vlastní lodi
@@ -160,17 +177,54 @@ export class UIController {
       this.refresh()
       return
     }
-    // roster FLOTILA: převzetí jiné ovladatelné lodi (funguje i bez živé vlastní)
+    // roster FLOTILA: klik = převzetí lodi, Shift-klik = přidat/odebrat z výběru
     if (act.startsWith('ownShip:')) {
-      this.switchOwnShip(Number(act.slice('ownShip:'.length)))
+      const id = Number(act.slice('ownShip:'.length))
+      if (shift) {
+        this.selectedShipIds = toggleShipSelection(s, this.selectedShipIds, this.ownShipId, id)
+        this.refresh()
+      } else {
+        this.switchOwnShip(id)
+      }
       return
     }
     const own = s.ships.find(sh => sh.id === this.ownShipId)
     if (!own || own.destroyed) return
     const t = this.targetId
+    // stupňovitý výkon pohonu (20–120 %) — platí pro celý výběr
+    if (act.startsWith('throttle:')) {
+      const v = Number(act.slice('throttle:'.length)) / 100
+      if (Number.isFinite(v)) {
+        for (const sh of this.selectedShips()) {
+          this.send({ kind: 'setThrottle', shipId: sh.id, throttle: v })
+        }
+      }
+      this.refresh()
+      return
+    }
+    // formace: primární loď = leader, ostatní vybrané dostanou sloty 1..n dle id
+    if (act.startsWith('formation:')) {
+      const kind = act.slice('formation:'.length)
+      const sel = this.selectedShips()
+      const members = sel.filter(sh => sh.id !== own.id).sort((a, b) => a.id - b.id)
+      if (kind === 'none') {
+        for (const sh of sel) this.send({ kind: 'clearFormation', shipId: sh.id })
+      } else if ((kind === 'wall' || kind === 'vee' || kind === 'dispersed') && members.length > 0) {
+        this.send({ kind: 'clearFormation', shipId: own.id }) // leader letí normálně
+        members.forEach((sh, i) => this.send({
+          kind: 'setFormation', shipId: sh.id, leaderId: own.id, slot: i + 1, formation: kind,
+        }))
+      }
+      this.refresh()
+      return
+    }
     switch (act) {
       case 'intercept':
-        if (t != null) this.send({ kind: 'intercept', shipId: own.id, targetId: t })
+        if (t != null) {
+          for (const sh of this.selectedShips()) {
+            this.send({ kind: 'intercept', shipId: sh.id, targetId: t })
+          }
+        }
         break
       case 'course':
         this.courseMode = !this.courseMode
@@ -195,19 +249,22 @@ export class UIController {
         }
         break
       case 'autoFire': {
+        // AUTO palba pro celý výběr (zapnutí dle stavu primární lodi)
         const enable = own.fireControl.mode !== 'auto'
         if (enable && t == null) break
-        this.send({
-          kind: 'setFireControl', shipId: own.id,
-          fc: enable
-            ? {
-                mode: 'auto', targetId: t,
-                salvoSize: SHIP_CLASSES[own.classId]?.tubesPerBroadside ?? 4,
-                driveMode: this.salvoMode,
-                autonomous: this.autonomousMode,
-              }
-            : { mode: 'hold' },
-        })
+        for (const sh of this.selectedShips()) {
+          this.send({
+            kind: 'setFireControl', shipId: sh.id,
+            fc: enable
+              ? {
+                  mode: 'auto', targetId: t,
+                  salvoSize: SHIP_CLASSES[sh.classId]?.tubesPerBroadside ?? 4,
+                  driveMode: this.salvoMode,
+                  autonomous: this.autonomousMode,
+                }
+              : { mode: 'hold' },
+          })
+        }
         break
       }
       case 'mode':
@@ -249,19 +306,32 @@ export class UIController {
         if (t != null) this.send({ kind: 'demandSurrender', shipId: own.id, targetId: t })
         break
       case 'rollThreat': {
-        const dir = this.threatDir(own)
-        if (dir != null) this.send({ kind: 'roll', shipId: own.id, towards: dir })
+        // směr hrozby per loď (každá se odvalí ke SVÉ nejbližší hrozbě/cíli)
+        for (const sh of this.selectedShips()) {
+          const dir = this.threatDir(sh)
+          if (dir != null) this.send({ kind: 'roll', shipId: sh.id, towards: dir })
+        }
         break
       }
       case 'rollBack':
-        this.send({ kind: 'roll', shipId: own.id, towards: null })
+        for (const sh of this.selectedShips()) {
+          this.send({ kind: 'roll', shipId: sh.id, towards: null })
+        }
         break
-      case 'wedge':
-        this.send({ kind: 'setWedge', shipId: own.id, on: !own.wedgeOn })
+      case 'wedge': {
+        const on = !own.wedgeOn // sjednoceno dle primární lodi
+        for (const sh of this.selectedShips()) {
+          this.send({ kind: 'setWedge', shipId: sh.id, on })
+        }
         break
-      case 'sensors':
-        this.send({ kind: 'setActiveSensors', shipId: own.id, on: !own.activeSensors })
+      }
+      case 'sensors': {
+        const on = !own.activeSensors // sjednoceno dle primární lodi
+        for (const sh of this.selectedShips()) {
+          this.send({ kind: 'setActiveSensors', shipId: sh.id, on })
+        }
         break
+      }
     }
     this.refresh()
   }
@@ -282,6 +352,7 @@ export class UIController {
     const ship = s.ships.find(sh => sh.id === id)
     if (!ship || ship.side !== 'player' || ship.doctrine !== 'player' || ship.destroyed) return
     this.ownShipId = id
+    this.selectedShipIds = [id] // obyčejné přepnutí = jediný výběr
     this.plot.recenter()
     this.refresh()
   }
@@ -313,19 +384,23 @@ export class UIController {
 
   // ---------- klik do plotu ----------
 
-  private onPlotClick(id: number | null, world: Vec2): void {
-    // režim „klik = kurz"
+  private onPlotClick(id: number | null, world: Vec2, shift: boolean): void {
+    // režim „klik = kurz" — kurz dostanou VŠECHNY vybrané lodě
     if (this.courseMode && this.ownShipId != null) {
       this.courseMode = false
       this.plot.setCourseCursor(false)
-      this.send({ kind: 'setCourse', shipId: this.ownShipId, dest: world, arriveAtRest: false })
+      for (const sh of this.selectedShips()) {
+        this.send({ kind: 'setCourse', shipId: sh.id, dest: world, arriveAtRest: false })
+      }
       this.refresh()
       return
     }
     if (id == null) {
-      this.targetId = null
-      this.selectedSalvoId = null
-      this.refresh()
+      if (!shift) {
+        this.targetId = null
+        this.selectedSalvoId = null
+        this.refresh()
+      }
       return
     }
     // klik na vlastní raketu → výběr celé salvy (panel SALVA + zvýraznění)
@@ -337,14 +412,35 @@ export class UIController {
     }
     const ship = this.state?.ships.find(sh => sh.id === id)
     if (ship && ship.side === 'player' && ship.doctrine === 'player') {
-      // převzít lze jen OVLADATELNOU vlastní loď (AI spojenci ne)
-      this.ownShipId = id
-      this.plot.recenter()
+      if (shift && this.state) {
+        // Shift-klik: přidat/odebrat ovladatelnou loď z hromadného výběru
+        this.selectedShipIds =
+          toggleShipSelection(this.state, this.selectedShipIds, this.ownShipId, id)
+      } else {
+        // převzít lze jen OVLADATELNOU vlastní loď (AI spojenci ne)
+        this.ownShipId = id
+        this.selectedShipIds = [id]
+        this.plot.recenter()
+      }
     } else if (ship && ship.side === 'player') {
       // AI spojenec: převzít nejde, výběr cíle se nemění
     } else {
       this.targetId = id
     }
+    this.refresh()
+  }
+
+  /** Shift-tažení na plotu: obdélníkový výběr vlastních ovladatelných lodí */
+  private onBoxSelect(a: Vec2, b: Vec2): void {
+    const s = this.state
+    if (!s) return
+    const ids = boxSelectShips(s, a, b)
+    if (ids.length === 0) return // prázdný rám — výběr se nemění
+    const primary = this.ownShipId != null && ids.includes(this.ownShipId)
+      ? this.ownShipId
+      : ids[0]
+    this.ownShipId = primary
+    this.selectedShipIds = normalizeSelection(s, ids, primary)
     this.refresh()
   }
 
@@ -415,6 +511,8 @@ export class UIController {
         <b>H nebo ?</b><span>tato nápověda</span>
         <b>kolečko</b><span>zoom plotu, tažení = posun kamery</span>
         <b>klik</b><span>výběr lodi/kontaktu; vlastní loď = převzetí</span>
+        <b>Shift-klik</b><span>přidá/odebere vlastní ovladatelnou loď z hromadného výběru (plot i panel FLOTILA)</span>
+        <b>Shift-tažení</b><span>obdélníkový výběr vlastních lodí na plotu (čárkovaný rám); bez Shiftu posun kamery</span>
       </div>
       <h4>Rozkazy</h4>
       <div class="help-grid">
@@ -431,6 +529,23 @@ export class UIController {
         <b>+rušička</b><span>salva obětuje 1 raketu jako eskortní rušičku — zbytek má proti bodové obraně cíle Pk ×0,75 (min. 3 rakety)</span>
         <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočníků</span>
         <b>Akt. senzory</b><span>plná identifikace zblízka + lepší zámek našich raket; pozor — vyzařování zlepšuje řešení nepříteli o 15 %</span>
+      </div>
+      <h4>Výkon pohonu</h4>
+      <div class="help-grid">
+        <b>tah 20–120 %</b><span>stupňovitý přepínač v liště rozkazů; 80 % je standard s bezpečnostní rezervou kompenzátoru</span>
+        <b>100 %</b><span>plný projektovaný výkon — bez rizika, ale bez rezervy</span>
+        <b>120 % (červeně)</b><span>NOUZOVÝ výkon „za červenou čarou": +20 % akcelerace, ale se zapnutým klínem hrozí poškození impelerového prstence (v průměru ~1× za 33 minut) — inženýr varuje</span>
+        <b>Hromadně</b><span>přepínač platí pro celý hromadný výběr — „(×N)" u tlačítka</span>
+      </div>
+      <h4>Eskadra a formace</h4>
+      <div class="help-grid">
+        <b>Hromadný výběr</b><span>Shift-klik / Shift-tažení; rozkazy s „(×N)" (kurz, intercept, tah, klín, senzory, AUTO, roll) platí všem vybraným</span>
+        <b>Palba výběru</b><span>salvy pálí jen aktivní loď — hromadná palba jde přes AUTO palbu na vybraný cíl</span>
+        <b>FORMACE</b><span>při výběru ≥ 2 lodí: aktivní loď = leader, ostatní dostanou sloty a drží je samy (vlastní kurz ignorují); rozpad při ztrátě leadera</span>
+        <b>Stěna Σ</b><span>kolmá řada (400 tis. km): disciplinovaná palebná síť — protirakety Pk ×1,15, příchozí rakety −5 % zámku</span>
+        <b>Šíp V</b><span>šíp za leaderem (60°): sdílený senzorový obraz — +5 % palebného řešení členů</span>
+        <b>Rozptyl ◦</b><span>mřížka 1,5 M km: útočník nesaturuje eskadru jako celek, členové +3 % efektivního ECM</span>
+        <b>Plot</b><span>členové mají tenkou čáru k leaderovi; v panelu FLOTILA značky Σ / V / ◦</span>
       </div>
       <h4>Senzorový duel (EMCON)</h4>
       <div class="help-grid">
@@ -491,6 +606,7 @@ export class UIController {
   private ui(): UiState {
     return {
       ownShipId: this.ownShipId,
+      selectedShipIds: [...this.selectedShipIds],
       targetId: this.targetId,
       courseMode: this.courseMode,
       salvoMode: this.salvoMode,
@@ -507,6 +623,7 @@ export class UIController {
   private refresh(): void {
     this.plot.followId = this.ownShipId
     this.plot.selectedId = this.targetId ?? this.ownShipId
+    this.plot.selectedShipIds = this.selectedShipIds
     this.plot.selectedSalvoId = this.selectedSalvoId
     if (this.state) this.panels.update(this.state, this.ui(), true)
   }

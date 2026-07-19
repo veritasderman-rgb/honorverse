@@ -8,14 +8,16 @@
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
 import {
   ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
-  CONTROL_RANGE, DECOY_SEDUCE_BASE, LOCK_FLOOR, LOCK_FLOOR_GUIDED,
+  CONTROL_RANGE, DECOY_SEDUCE_BASE, DISPERSED_ECM_BONUS,
+  LOCK_FLOOR, LOCK_FLOOR_GUIDED,
   LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_PK, PDLC_ROLLED_FACTOR, PDLC_SATURATION,
-  SATURATION_WINDOW,
+  SATURATION_WINDOW, WALL_CM_PK_FACTOR, WALL_TERMINAL_LOCK_MALUS,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { angleDiff, angleOf, dist, len, sub } from './vec'
 import { rand } from './rng'
 import { applyBeamDamage, type Aspect } from './damage'
+import { inDispersedFormation, wallDiscipline } from './formation'
 import { voiceEnemyHit } from './voice'
 
 /**
@@ -124,8 +126,11 @@ export function updateDefenses(state: SimState, dt: number): void {
           ecmFactor = ACTIVE_GUIDANCE_ECM_FACTOR
         }
       }
-      // eroze se dnem: řízené/naváděné rakety ECM nikdy nevymaže úplně
-      erodeLock(state, m, tDef.ecm * target.subsystems.ecm * 0.01 * ecmFactor * dt)
+      // eroze se dnem: řízené/naváděné rakety ECM nikdy nevymaže úplně;
+      // člen rozptýlené formace: +DISPERSED_ECM_BONUS efektivního ECM
+      const ecmEff = tDef.ecm * target.subsystems.ecm
+        + (inDispersedFormation(state, target) ? DISPERSED_ECM_BONUS : 0)
+      erodeLock(state, m, ecmEff * 0.01 * ecmFactor * dt)
       if (m.lock < LOCK_LOST) {
         m.phase = 'dead'
         state.events.push({
@@ -165,10 +170,12 @@ export function updateDefenses(state: SimState, dt: number): void {
     if (rand(state.rng) < budget - n) n++
     n = Math.min(n, ship.cms, incoming.length)
 
+    // stěna: disciplinovaná palebná síť — Pk protiraket ×WALL_CM_PK_FACTOR
+    const cmPk = Math.min(1, CM_PK * (wallDiscipline(state, ship) ? WALL_CM_PK_FACTOR : 1))
     for (let i = 0; i < n; i++) {
       ship.cms--
       const threat = incoming[i].m
-      if (rand(state.rng) < CM_PK) {
+      if (rand(state.rng) < cmPk) {
         threat.phase = 'dead'
         state.events.push({
           // side = strana RAKETY (statistika), shipId = bránící se loď
@@ -239,6 +246,10 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   }
 
   // --- vrstva 5: detonace laserové hlavice ve standoff vzdálenosti ---
+  // stěna: koordinované ECM palebné sítě — příchozí raketa ztrácí kus zámku
+  if (wallDiscipline(state, target)) {
+    missile.lock = Math.max(0, missile.lock - WALL_TERMINAL_LOCK_MALUS)
+  }
   const aspect = attackAspect(target, missile.pos)
   let hits = 0
   for (let i = 0; i < mDef.laserRods; i++) {

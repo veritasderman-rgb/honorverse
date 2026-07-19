@@ -75,6 +75,11 @@
     .fleet-row:hover { background: #14301662; }
     .fleet-row.sel { background: #1c3a1e; color: #eaffea; }
     .fleet-row.dim { cursor: default; opacity: 0.6; }
+    /* hromadný výběr: vybrané neaktivní lodě flotily */
+    .fleet-row.msel { background: #12281a; }
+    /* nouzový výkon 120 %: červené tlačítko */
+    button.bad { color: #e06c5a; border-color: #7a2a1f; }
+    button.bad.active { background: #7a2a1f; color: #ffd9d0; }
     .btnrow { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
     .obj { padding: 1px 0; }
     .obj.open { color: #d8b34f; } .obj.done { color: #9fd8a0; } .obj.failed { color: #e06c5a; }

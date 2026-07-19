@@ -15,6 +15,35 @@ export const MISSILE_MAX_SPEED = 0.8 * C
 /** standardní provozní výkon kompenzátoru */
 export const STANDARD_THROTTLE = 0.8
 
+/** ---------- nouzový výkon pohonu ---------- */
+/** maximální rozkazový výkon kompenzátoru (1.2 = 120 % — „za červenou čarou") */
+export const EMERGENCY_THROTTLE_MAX = 1.2
+/**
+ * Riziko nouzového výkonu (throttle > 1.0 se zapnutým klínem): šance za sekundu
+ * na poškození náhodného impelerového prstence o 0.08–0.15
+ * (0.0005/s ≈ jednou za ~33 minut).
+ */
+export const EMERGENCY_DAMAGE_RATE = 0.0005
+/** rozsah poškození prstence při selhání pod nouzovým výkonem */
+export const EMERGENCY_DAMAGE_MIN = 0.08
+export const EMERGENCY_DAMAGE_MAX = 0.15
+
+/** ---------- formace eskadry ---------- */
+/** stěna (wall): rozestup lodí v kolmé řadě (km) */
+export const FORMATION_SPACING = 400_000
+/** šíp (vee): rozestup podél křídel za leaderem (km) */
+export const FORMATION_VEE_SPACING = 600_000
+/** rozptyl (dispersed): rozestup mřížky (km) */
+export const FORMATION_DISPERSED_SPACING = 1_500_000
+/** stěna: násobič Pk protiraket člena s jiným členem do FORMATION_SPACING×1.5 */
+export const WALL_CM_PK_FACTOR = 1.15
+/** stěna: koordinované ECM — příchozí raketa ztrácí při terminále tolik zámku */
+export const WALL_TERMINAL_LOCK_MALUS = 0.05
+/** rozptyl: efektivní bonus ECM člena (přičítá se k ecm třídy) */
+export const DISPERSED_ECM_BONUS = 0.03
+/** šíp: sdílený senzorový obraz — bonus palebného řešení člena */
+export const VEE_SOLUTION_BONUS = 0.05
+
 /** fixní krok simulace (s) — komprese času = víc kroků na snímek */
 export const SIM_DT = 0.5
 
