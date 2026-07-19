@@ -8,6 +8,7 @@ import type { DriveMode, Order, ShipState, SimEvent, SimState, Vec2 } from '../s
 import type { SimBridge } from '../worker/bridge'
 import type { TacticalPlot } from './plot'
 import { contactEstPos, type PanelAction, type Panels, type UiState } from './panels'
+import { resolveOwnShipId, rosterPick } from './roster'
 
 const COMP_LADDER = [0, 1, 10, 100, 1000, 10000]
 
@@ -31,6 +32,8 @@ export class UIController {
   private selectedSalvoId: number | null = null
   /** další odpaly jako autonomní salvy (fire-and-forget) */
   private autonomousMode = false
+  /** další salvy s eskortní rušičkou (+rušička) */
+  private escortJammerMode = false
   /** auto-zpomalování času (⚠ toggle v topbaru, persistentní, default ZAP) */
   private autoSlow = true
   /** čas poslední RUČNÍ změny komprese (grace pro auto-zpomalení) */
@@ -56,12 +59,8 @@ export class UIController {
     this.state = state
     this.compression = compression
 
-    // výchozí vlastní loď (nebo náhrada za zničenou)
-    const ownValid = state.ships.some(s => s.id === this.ownShipId && s.side === 'player' && !s.destroyed)
-    if (!ownValid) {
-      const own = state.ships.find(s => s.side === 'player' && !s.destroyed)
-      if (own) this.ownShipId = own.id
-    }
+    // výchozí vlastní loď (nebo náhrada za zničenou) — preferuj ovladatelné
+    this.ownShipId = resolveOwnShipId(state, this.ownShipId)
 
     // auto-slowdown: jen důležité události (filtr eventSlows) → komprese na 1×;
     // při vypnutém přepínači (⚠ VYP) jen indikátor/blik; grace po ruční změně
@@ -161,6 +160,11 @@ export class UIController {
       this.refresh()
       return
     }
+    // roster FLOTILA: převzetí jiné ovladatelné lodi (funguje i bez živé vlastní)
+    if (act.startsWith('ownShip:')) {
+      this.switchOwnShip(Number(act.slice('ownShip:'.length)))
+      return
+    }
     const own = s.ships.find(sh => sh.id === this.ownShipId)
     if (!own || own.destroyed) return
     const t = this.targetId
@@ -213,6 +217,13 @@ export class UIController {
         // režim dalších odpalů: řízené / autonomní salvy (fire-and-forget)
         this.autonomousMode = !this.autonomousMode
         break
+      case 'escortJammer':
+        // +rušička: salva obětuje 1 raketu, zbytek má proti PDLC cíle Pk ×0.75
+        this.escortJammerMode = !this.escortJammerMode
+        break
+      case 'deployDecoy':
+        this.send({ kind: 'deployDecoy', shipId: own.id })
+        break
       case 'retargetSalvo':
         if (t != null && this.selectedSalvoId != null) {
           this.send({
@@ -254,7 +265,19 @@ export class UIController {
     this.send({
       kind: 'launchSalvo', shipId: own.id, targetId: this.targetId,
       count, mode: this.salvoMode, autonomous: this.autonomousMode,
+      escortJammer: this.escortJammerMode,
     })
+  }
+
+  /** přepnutí aktivní lodi (roster / klávesy 1–9) — jen ovladatelné lodě */
+  private switchOwnShip(id: number): void {
+    const s = this.state
+    if (!s) return
+    const ship = s.ships.find(sh => sh.id === id)
+    if (!ship || ship.side !== 'player' || ship.doctrine !== 'player' || ship.destroyed) return
+    this.ownShipId = id
+    this.plot.recenter()
+    this.refresh()
   }
 
   /** směr k hrozbě: vybraný cíl, jinak nejbližší kontakt */
@@ -307,9 +330,12 @@ export class UIController {
       return
     }
     const ship = this.state?.ships.find(sh => sh.id === id)
-    if (ship && ship.side === 'player') {
+    if (ship && ship.side === 'player' && ship.doctrine === 'player') {
+      // převzít lze jen OVLADATELNOU vlastní loď (AI spojenci ne)
       this.ownShipId = id
       this.plot.recenter()
+    } else if (ship && ship.side === 'player') {
+      // AI spojenec: převzít nejde, výběr cíle se nemění
     } else {
       this.targetId = id
     }
@@ -344,6 +370,14 @@ export class UIController {
       case 'h': case 'H':
         this.toggleHelp()
         break
+      case '1': case '2': case '3': case '4': case '5':
+      case '6': case '7': case '8': case '9': {
+        // roster FLOTILA: přepnutí na n-tou ovladatelnou loď
+        if (!this.state) break
+        const id = rosterPick(this.state, Number(e.key))
+        if (id != null) this.switchOwnShip(id)
+        break
+      }
       case 'Escape':
         this.helpEl?.remove()
         this.helpEl = null
@@ -371,6 +405,7 @@ export class UIController {
         <b>+ / −</b><span>komprese času (1× až 10 000×)</span>
         <b>R</b><span>rolování lodi (klín k hrozbě / zpět)</span>
         <b>A</b><span>AUTO palba na vybraný cíl</span>
+        <b>1–9</b><span>přepnutí aktivní lodi flotily (panel FLOTILA)</span>
         <b>H nebo ?</b><span>tato nápověda</span>
         <b>kolečko</b><span>zoom plotu, tažení = posun kamery</span>
         <b>klik</b><span>výběr lodi/kontaktu; vlastní loď = převzetí</span>
@@ -384,7 +419,9 @@ export class UIController {
         <b>Salva X+Y</b><span>vrstvená salva: LO vlna + zpožděná HI vlna dorazí spolu a saturují bodovou obranu</span>
         <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce</span>
         <b>Energie</b><span>lasery/grasery — drtivé pod 100 tis. km, max. 500 tis. km</span>
-        <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu; loď ale nemanévruje</span>
+        <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu — ale ODVALENÝ NESTŘÍLÍ (klín maskuje boky) a PDLC je oslabená; protirakety fungují dál</span>
+        <b>Návnada</b><span>tažená návnada (120 s): příchozí rakety na ni ~25% šancí přeskočí (víc při slabém zámku); omezená zásoba, nedoplňuje se</span>
+        <b>+rušička</b><span>salva obětuje 1 raketu jako eskortní rušičku — zbytek má proti bodové obraně cíle Pk ×0,75 (min. 3 rakety)</span>
         <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočníků</span>
         <b>Akt. senzory</b><span>plná identifikace zblízka + lepší zámek našich raket; pozor — vyzařování zlepšuje řešení nepříteli o 15 %</span>
       </div>
@@ -401,6 +438,8 @@ export class UIController {
         <b>Výběr salvy</b><span>klikni na vlastní raketu v plotu — panel SALVA ukáže počet, zámek, fázi a čas do cíle</span>
         <b>Přesměrování</b><span>letící salvu lze poslat na jiný klasifikovaný cíl (zámek ×0,75) — jen do 10 M km od lodi</span>
         <b>Řízená salva</b><span>loď ji vede: při ztrátě kontaktu na cíl nebo za dosahem řízení zámek eroduje</span>
+        <b>Dno zámku</b><span>posádky se ECM propálí: řízená salva s aktivními senzory neklesne pod 40 % zámku, raketa s vlastním seekerem pod 30 %; jen balistický dojezd bez vedení eroduje dál</span>
+        <b>Odhad průniku</b><span>detail cíle ukazuje očekávaný průnik plné salvy (CM · PDLC · ECM) — odhad, ne slib</span>
         <b>Autonomní salva</b><span>zámek ×0,85 při odpalu, ale letí sama — „vystřel a zhasni" s vypnutým klínem</span>
         <b>⚠ v topbaru</b><span>auto-zpomalování času u důležitých událostí — přepínač ZAP/VYP (odpaly už nezpomalují)</span>
       </div>
@@ -452,6 +491,7 @@ export class UIController {
       slowdownText: this.slowdownText,
       selectedSalvoId: this.selectedSalvoId,
       autonomousMode: this.autonomousMode,
+      escortJammerMode: this.escortJammerMode,
       autoSlowEnabled: this.autoSlow,
     }
   }

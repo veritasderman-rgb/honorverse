@@ -453,6 +453,15 @@ export class TacticalPlot {
     ctx.lineWidth = 1.5
     ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
     this.drawHullIcon(ctx, hull)
+    // aktivně ovládaná loď flotily: dvojitý obrys (zvětšená kopie ikony)
+    if (ship.id === this.followId) {
+      ctx.save()
+      ctx.scale(1.6, 1.6)
+      ctx.lineWidth = 1
+      ctx.globalAlpha = 0.8
+      this.drawHullIcon(ctx, hull)
+      ctx.restore()
+    }
     if (ship.wedgeOn) this.drawWedge(ctx)
     ctx.restore()
 

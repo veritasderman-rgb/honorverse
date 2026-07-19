@@ -24,7 +24,7 @@ const DEFAULT_MISSILE = 'std-shipkiller'
  * řešení, dřívějších 0.01/s by dlouhé balistické dojezdy — HI vlna vrstvené
  * salvy — zabíjelo ještě před příletem.)
  */
-const BALLISTIC_LOCK_DECAY = 0.005
+export const BALLISTIC_LOCK_DECAY = 0.005
 
 /** formát mil. km s českou čárkou („7,2") */
 const fmtMkm = (km: number): string => (km / 1e6).toFixed(1).replace('.', ',')

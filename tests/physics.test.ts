@@ -38,6 +38,8 @@ function makeShip(over: Partial<ShipState> = {}): ShipState {
     hull: 60,
     missiles: 90,
     cms: 120,
+    decoys: 4,
+    decoyActiveUntil: 0,
     tubeCooldown: 0,
     energyCooldown: 0,
     destroyed: false,

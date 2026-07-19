@@ -247,13 +247,20 @@ describe('mise 3 — Q-ship (E2E)', () => {
       } else if (d > 4_500_000 && !(p.nav?.kind === 'intercept')) {
         sim.applyOrder(state, { kind: 'intercept', shipId: 1, targetId: 2 })
       }
-      if (p.tubeCooldown <= 0 && p.missiles > 0 && d < 5_500_000) {
+      // roll ↔ palba sekvenčně: odvalená loď nestřílí, takže palba má přednost
+      // — když jsou šachty nabité a cíl v dosahu, vrať se do normální polohy,
+      // vystřel a teprve pak zase kryj klínem
+      const wantFire = p.tubeCooldown <= 0 && p.missiles > 0 && d < 5_500_000
+      if (wantFire) {
+        if (p.rolledTo !== null) {
+          sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: null })
+        }
         sim.applyOrder(state, { kind: 'launchSalvo', shipId: 1, targetId: 2, count: 6, mode: d < 1_500_000 ? 1 : 0 })
       }
-      if (p.energyCooldown <= 0 && d < 350_000) {
+      if (p.energyCooldown <= 0 && d < 350_000 && p.rolledTo === null) {
         sim.applyOrder(state, { kind: 'fireEnergy', shipId: 1, targetId: 2 })
       }
-      // rolování: klín proti nejbližší příchozí raketě
+      // rolování: klín proti nejbližší příchozí raketě (jen když zrovna nepálíme)
       let threat: number | null = null
       let threatD = Infinity
       for (const m of state.missiles) {
@@ -261,11 +268,11 @@ describe('mise 3 — Q-ship (E2E)', () => {
         const md = dist(m.pos, p.pos)
         if (md < 500_000 && md < threatD) { threatD = md; threat = angleOf(sub(m.pos, p.pos)) }
       }
-      if (threat !== null) {
+      if (threat !== null && !wantFire) {
         if (p.rolledTo === null || Math.abs(angleDiff(threat, p.rolledTo)) > 0.2) {
           sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: threat })
         }
-      } else if (p.rolledTo !== null) {
+      } else if (threat === null && p.rolledTo !== null) {
         sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: null })
       }
     }
