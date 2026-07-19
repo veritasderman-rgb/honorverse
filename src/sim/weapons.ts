@@ -72,6 +72,11 @@ interface LaunchOpts {
   ignoreCooldown?: boolean
   /** autonomní salva (fire-and-forget): počáteční zámek ×0.85, ale bez řídicího spoje */
   autonomous?: boolean
+  /**
+   * odpal z raketových podů (zvrat mise 7): obchází kapacitu šachet
+   * i zásobníky lodi (munice se NEodečítá) a nenabíjí cooldown šachet
+   */
+  podLaunch?: boolean
 }
 
 /**
@@ -116,7 +121,8 @@ export function launchSalvo(
     crewSay(state, ship, `Šachty přebíjejí — další salva za ${Math.ceil(ship.tubeCooldown)} s.`)
     return
   }
-  const n = Math.min(count, effectiveTubes(ship), ship.missiles)
+  // pody: vlastní odpalovače mimo šachty — kapacita ani munice lodi neomezují
+  const n = opts.podLaunch ? count : Math.min(count, effectiveTubes(ship), ship.missiles)
   if (n <= 0) {
     crewSay(state, ship, ship.missiles <= 0
       ? 'Prázdné zásobníky raket!'
@@ -161,14 +167,22 @@ export function launchSalvo(
     }
     state.missiles.push(m)
   }
-  ship.missiles -= n
-  ship.tubeCooldown = TUBE_COOLDOWN
-  // odpaly NEzpomalují čas (slowdown false) — UI jen loguje
-  state.events.push({
-    t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, salvoId,
-    text: `${ship.name}: odpálena salva ${n} raket`
-      + `${opts.ignoreCooldown ? ' (druhá vlna)' : ''}${autonomous ? ' (autonomní)' : ''}`,
-  })
+  if (!opts.podLaunch) {
+    ship.missiles -= n
+    ship.tubeCooldown = TUBE_COOLDOWN
+  }
+  // odpaly NEzpomalují čas (slowdown false) — UI jen loguje;
+  // výjimka: saturační salva z podů je dramatická událost (slowdown true)
+  state.events.push(opts.podLaunch
+    ? {
+      t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, salvoId,
+      slowdown: true, text: `${ship.name}: raketové pody! Salva ${n} raket`,
+    }
+    : {
+      t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, salvoId,
+      text: `${ship.name}: odpálena salva ${n} raket`
+        + `${opts.ignoreCooldown ? ' (druhá vlna)' : ''}${autonomous ? ' (autonomní)' : ''}`,
+    })
 }
 
 /**

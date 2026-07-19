@@ -284,14 +284,14 @@ export type LossCause =
 
 export interface TriggerCondition {
   kind: 'time' | 'distanceBelow' | 'distanceAbove' | 'shipDestroyed' | 'flag'
-    | 'wedgeOn' | 'shipsDestroyedCount' | 'shipSurrendered'
+    | 'wedgeOn' | 'shipsDestroyedCount' | 'shipSurrendered' | 'classified'
   t?: number
   shipA?: number
   shipB?: number
   distance?: number
   shipId?: number
   flag?: string
-  /** shipsDestroyedCount: strana, jejíž ztráty se počítají */
+  /** shipsDestroyedCount: strana, jejíž ztráty se počítají; classified: pozorující strana (default 'player') */
   side?: Side
   /** shipsDestroyedCount: splněno při počtu zničených lodí strany >= count */
   count?: number
@@ -300,7 +300,7 @@ export interface TriggerCondition {
 export interface TriggerAction {
   kind: 'message' | 'setDoctrine' | 'spawnShip' | 'revealClass' | 'setFlag'
     | 'objectiveComplete' | 'objectiveFail' | 'winMission' | 'loseMission'
-    | 'addObjective' | 'comm'
+    | 'addObjective' | 'comm' | 'setSide' | 'podSalvo'
   text?: string
   shipId?: number
   doctrine?: string
@@ -309,6 +309,11 @@ export interface TriggerAction {
   objectiveId?: string
   /** kind 'comm': mluvčí komunikace */
   speaker?: Speaker
+  /** kind 'setSide': nová strana lodi (převlečené lodě — zvraty misí) */
+  side?: Side
+  /** kind 'podSalvo': cíl a počet raket salvy z raketových podů */
+  targetId?: number
+  count?: number
 }
 
 export interface Trigger {

@@ -8,6 +8,7 @@ import type {
 import { STANDARD_THROTTLE } from './constants'
 import { dist } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
+import { launchSalvo } from './weapons'
 
 type ShipSpec = Scenario['ships'][0]
 
@@ -23,13 +24,17 @@ const fullSubsystems = (): Subsystems => ({
  * Vytvoří kompletní ShipState z definice třídy, přidělí id = state.nextId++
  * a vloží do state.ships. Lodě scénáře dostávají id v pořadí pole ships od 1
  * — triggery misí na to smí spoléhat.
+ * Lodě spawnuté triggery ZA BĚHU smí nést pevné spec.id (mise 5–8: nextId
+ * mezitím rostl o id raket/salv, takže by nebylo predikovatelné) — volí se
+ * vysoká id (9000+), aby nekolidovala s průběžně přidělovanými.
  */
 export function spawnShip(state: SimState, spec: ShipSpec): ShipState {
   const def = SHIP_CLASSES[spec.classId]
   if (!def) throw new Error(`Neznámá třída lodi: ${spec.classId}`)
+  if (spec.id !== undefined) state.nextId = Math.max(state.nextId, spec.id + 1)
 
   const ship: ShipState = {
-    id: state.nextId++,
+    id: spec.id ?? state.nextId++,
     side: spec.side,
     classId: spec.classId,
     name: spec.name,
@@ -96,6 +101,12 @@ function evalCondition(state: SimState, c: TriggerCondition): boolean {
       // splněno, když počet zničených lodí dané strany >= count
       if (c.side === undefined || c.count === undefined) return false
       return state.ships.filter(s => s.side === c.side && s.destroyed).length >= c.count
+    case 'classified':
+      // splněno, když pozorující strana (default hráč) drží plnou identifikaci
+      // kontaktu (idQuality 2 — aktivní zaměření zblízka); základ zvratu mise 5
+      if (c.shipId === undefined) return false
+      return state.contacts[c.side ?? 'player']
+        .some(ct => ct.shipId === c.shipId && ct.idQuality === 2)
   }
 }
 
@@ -165,6 +176,36 @@ function applyAction(state: SimState, a: TriggerAction): void {
         })
       }
       break
+    case 'setSide': {
+      // převlečená loď mění stranu (zvrat mise 6 — „záchranná" eskadra je léčka).
+      // Kontakty přestaví přirozeně nejbližší updateSensors; tady jen vyčistíme
+      // zámky AUTO palby, které by po přepnutí mířily na vlastní stranu.
+      const ship = byId(state, a.shipId)
+      if (!ship || a.side === undefined) break
+      ship.side = a.side
+      for (const s of state.ships) {
+        if (s.fireControl.targetId === null) continue
+        const target = byId(state, s.fireControl.targetId)
+        if (target && target.side === s.side) {
+          s.fireControl.targetId = null
+          s.fireControl.mode = 'hold'
+          s.fireControl.engaged = false
+        }
+      }
+      break
+    }
+    case 'podSalvo': {
+      // saturační salva z raketových podů (zvrat mise 7): obchází kapacitu
+      // šachet i cooldown a neodečítá munici ze zásobníků lodi
+      const ship = byId(state, a.shipId)
+      const target = byId(state, a.targetId)
+      if (ship && !ship.destroyed && target && !target.destroyed
+        && a.targetId !== undefined && a.count !== undefined && a.count > 0) {
+        launchSalvo(state, ship, a.targetId, a.count, 0,
+          { podLaunch: true, ignoreCooldown: true })
+      }
+      break
+    }
     case 'winMission':
     case 'loseMission':
       if (state.outcome === 'running') {

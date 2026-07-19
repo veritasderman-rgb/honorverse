@@ -52,6 +52,24 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 0, magazineCMs: 30,
     wedgeDetectionRange: 80_000_000, activeSensorRange: 3_000_000, ecm: 0.25,
   },
+  /** bitevní křižník — údernou silou převyšuje CA, mise 7 (hráč útočí) */
+  'bc-praporec': {
+    id: 'bc-praporec', name: 'třída Praporec', hullCode: 'BC', tonnage: 900_000,
+    maxAccelG: 475, sidewallStrength: 26, hullPoints: 220,
+    tubesPerBroadside: 10, cmLaunchers: 14, pdlcClusters: 14,
+    energyMountsPerBroadside: 5, energyDamage: 45,
+    magazineMissiles: 400, magazineCMs: 400,
+    wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5,
+  },
+  /** orbitální stanice — nehybný opěrný bod se štítovými generátory, mise 5 */
+  'station-zeta': {
+    id: 'station-zeta', name: 'orbitální stanice', hullCode: 'STN', tonnage: 8_000_000,
+    maxAccelG: 0, sidewallStrength: 30, hullPoints: 400,
+    tubesPerBroadside: 6, cmLaunchers: 20, pdlcClusters: 20,
+    energyMountsPerBroadside: 6, energyDamage: 40,
+    magazineMissiles: 300, magazineCMs: 600,
+    wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.3,
+  },
   /** „obchodník" s vojenským kompenzátorem — mise 1 (zvrat) */
   'merch-runner': {
     id: 'merch-runner', name: 'nákladní loď (?)', hullCode: 'MERCH', tonnage: 2_000_000,

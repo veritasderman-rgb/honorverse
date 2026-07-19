@@ -149,10 +149,23 @@ function pirateOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
   rollOrders(state, ship, orders)
 }
 
-/** hunter: intercept nejbližší nepřátelské lodi JAKÉHOKOLI typu + standardní palba */
+/** hystereze držení cíle huntera: nepustí pronásledovaný cíl, dokud není 3× dál než nejbližší */
+const HUNTER_STICKINESS = 3
+
+/** hunter: intercept nepřátelské lodi JAKÉHOKOLI typu + standardní palba.
+ * Cíl drží s hysterezí — nepřeskakuje na jiný kontakt jen proto, že je
+ * momentálně o kus blíž (jinak by se honička dala rozbít návnadou stranou). */
 function hunterOrders(state: SimState, ship: ShipState, hostiles: Contact[], orders: Order[]): void {
-  const near = nearest(ship, hostiles)
+  let near = nearest(ship, hostiles)
   if (near) {
+    if (ship.nav?.kind === 'intercept') {
+      const curId = ship.nav.targetId
+      const cur = hostiles.find(c => c.shipId === curId)
+      if (cur) {
+        const d = dist(ship.pos, estPos(cur))
+        if (d < HUNTER_STICKINESS * near.d) near = { c: cur, d }
+      }
+    }
     if (!(ship.nav?.kind === 'intercept' && ship.nav.targetId === near.c.shipId)) {
       orders.push({ kind: 'intercept', shipId: ship.id, targetId: near.c.shipId })
     }
