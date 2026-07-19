@@ -265,6 +265,12 @@ export class TacticalPlot {
     }
     for (const m of s.missiles) this.drawMissile(ctx, m)
     for (const ship of s.ships) {
+      // navigační bóje jsou veřejné majáky — vysílají polohu, kreslí se vždy
+      if (ship.side === 'neutral' && ship.doctrine === 'buoy' && !ship.destroyed) {
+        this.drawBuoy(ctx, ship)
+      }
+    }
+    for (const ship of s.ships) {
       if (ship.side === 'player' && !ship.destroyed) this.drawOwnShip(ctx, ship)
     }
     for (const c of s.contacts.player) this.drawContact(ctx, c)
@@ -497,6 +503,30 @@ export class TacticalPlot {
     ctx.beginPath()
     ctx.arc(0, 6, 10, 0.64, 2.5)
     ctx.stroke()
+  }
+
+  /** navigační bóje/maják: šedý kosočtverec s křížkem a popiskem — vždy viditelná */
+  private drawBuoy(ctx: CanvasRenderingContext2D, ship: ShipState): void {
+    const p = this.worldToScreen(ship.pos)
+    const r = 5
+    ctx.strokeStyle = CLR.surrendered
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y - r)
+    ctx.lineTo(p.x + r, p.y)
+    ctx.lineTo(p.x, p.y + r)
+    ctx.lineTo(p.x - r, p.y)
+    ctx.closePath()
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(p.x - r - 3, p.y)
+    ctx.lineTo(p.x + r + 3, p.y)
+    ctx.moveTo(p.x, p.y - r - 3)
+    ctx.lineTo(p.x, p.y + r + 3)
+    ctx.stroke()
+    ctx.fillStyle = CLR.label
+    ctx.fillText(ship.name, p.x + r + 5, p.y + 3)
+    this.pickables.push({ id: ship.id, x: p.x, y: p.y })
   }
 
   private drawOwnShip(ctx: CanvasRenderingContext2D, ship: ShipState): void {

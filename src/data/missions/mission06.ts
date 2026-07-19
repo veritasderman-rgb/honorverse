@@ -148,7 +148,8 @@ export const mission06: Scenario = {
     {
       // výhra: poškozená loď za hyperlimitem (u bóje)
       id: 'trg-escape', once: true,
-      conditions: [{ kind: 'distanceBelow', shipA: RESOLUTE, shipB: BUOY, distance: 5_000_000 }],
+      // velkorysý poloměr: hráč po vyhýbacím oblouku nemusí trefit přesný bod
+      conditions: [{ kind: 'distanceBelow', shipA: RESOLUTE, shipB: BUOY, distance: 15_000_000 }],
       actions: [
         { kind: 'objectiveComplete', objectiveId: 'obj-escape' },
         { kind: 'winMission', text: 'ANS Resolute přešla hyperlimit a zmizela v hyperprostoru. Tharsis si necháme na jindy.' },
