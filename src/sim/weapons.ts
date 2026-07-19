@@ -8,7 +8,7 @@ import type { DriveMode, MissileState, ShipState, SimState, Vec2 } from './types
 import {
   AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
   ENERGY_MAX_RANGE, G, JAMMER_MIN_SALVO, LINK_LOCK_DECAY, LOCK_LOST,
-  MISSILE_QUALITY_LOCK_CAP, RETARGET_LOCK_PENALTY, ROLL_TIME,
+  MISSILE_MAX_FLIGHT, MISSILE_QUALITY_LOCK_CAP, RETARGET_LOCK_PENALTY, ROLL_TIME,
   SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
   VEE_SOLUTION_BONUS,
 } from './constants'
@@ -367,6 +367,18 @@ export function updateMissiles(state: SimState, dt: number): void {
         t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
         cause: 'lost', salvoId: m.salvoId,
         text: 'raketa ztratila cíl (zničen)',
+      })
+      continue
+    }
+
+    // konec doletu: sebedestrukce (balistické dno zámku by jinak nechalo
+    // rakety v marném tail-chase letět navěky)
+    if (m.launchedAt !== undefined && state.t - m.launchedAt > MISSILE_MAX_FLIGHT) {
+      m.phase = 'dead'
+      state.events.push({
+        t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
+        cause: 'expired', salvoId: m.salvoId,
+        text: 'raketa na konci doletu — sebedestrukce',
       })
       continue
     }

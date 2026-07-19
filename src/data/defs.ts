@@ -56,8 +56,10 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
       + 'a velký senzorový obraz, který se špatně skrývá.',
   },
   'merch-freighter': {
+    // hullPoints 120 (dřív 160): civilní trup bez pancíře a vnitřních
+    // přepážek — velký cíl, ale pár salv těžkého křižníku ho rozebere
     id: 'merch-freighter', name: 'nákladní loď', hullCode: 'MERCH', tonnage: 4_000_000,
-    maxAccelG: 200, sidewallStrength: 4, hullPoints: 160,
+    maxAccelG: 200, sidewallStrength: 4, hullPoints: 120,
     tubesPerBroadside: 0, cmLaunchers: 0, pdlcClusters: 1,
     energyMountsPerBroadside: 0, energyDamage: 0,
     magazineMissiles: 0, magazineCMs: 10,

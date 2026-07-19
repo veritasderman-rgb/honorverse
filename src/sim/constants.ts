@@ -136,6 +136,23 @@ export const LOCK_FLOOR_GUIDED = 0.4
  * pomalu až pod LOCK_LOST.
  */
 export const LOCK_FLOOR = 0.3
+/**
+ * Dno eroze BALISTICKÉHO dojezdu (pohon vyhořel): seeker degradovaný, ale
+ * ŽIVÝ — raketa doletí s mizerným zámkem, místo aby cestou „zmizela".
+ * Dřívější dno 0 znamenalo, že KAŽDÁ raketa za poháněnou obálkou umřela na
+ * ztrátu zámku („200 raket na konvoj a žádný efekt") — masová palba na
+ * dálku teď má malý, ale NENULOVÝ účinek; proti válečným lodím ji dál
+ * trestá CM/PDLC/ECM, proti civilistům funguje. Životnost omezuje
+ * MISSILE_MAX_FLIGHT.
+ */
+export const LOCK_FLOOR_BALLISTIC = 0.25
+/**
+ * Maximální doba letu rakety od odpalu (s): pak sebedestrukce (cause
+ * 'expired'). LO: 180 s pohon + 420 s dojezd ≈ 10+ mil. km celkové dráhy.
+ * Nutné od zavedení balistického dna zámku — jinak by rakety v marném
+ * tail-chase letěly (a počítaly se) navěky.
+ */
+export const MISSILE_MAX_FLIGHT = 600
 
 /** ---------- rolování a palba ---------- */
 /** PDLC odvalené lodi: klín cloní i části clusterů (násobič počtu clusterů) */

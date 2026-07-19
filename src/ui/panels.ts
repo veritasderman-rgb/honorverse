@@ -149,7 +149,8 @@ const emptyStats = (): CombatStats => ({
 /** české popisky příčin zániku rakety */
 const LOSS_LABELS: Record<string, string> = {
   cm: 'protirakety', pdlc: 'PDLC', wedge: 'klín', ecm: 'ECM/decoye',
-  decoy: 'návnada', link: 'ztráta zámku', dud: 'hlavice mimo', lost: 'cíl zanikl',
+  decoy: 'návnada', link: 'ztráta zámku', dud: 'hlavice mimo',
+  expired: 'konec doletu', lost: 'cíl zanikl',
 }
 
 /** „protirakety 4 · PDLC 2 · …" z mapy příčin (stabilní pořadí dle LOSS_LABELS) */

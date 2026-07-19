@@ -10,7 +10,7 @@ import {
   ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
   CM_REACTION_TIME, CM_SHOTS_PER_MISSILE,
   CONTROL_RANGE, DECOY_SEDUCE_BASE, DISPERSED_ECM_BONUS, G,
-  LOCK_FLOOR, LOCK_FLOOR_GUIDED,
+  LOCK_FLOOR, LOCK_FLOOR_BALLISTIC, LOCK_FLOOR_GUIDED,
   LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_PK, PDLC_ROLLED_FACTOR, PDLC_SATURATION,
   SATURATION_WINDOW, WALL_CM_PK_FACTOR, WALL_TERMINAL_LOCK_MALUS,
 } from './constants'
@@ -26,7 +26,9 @@ import { voiceEnemyHit } from './voice'
  *   LOCK_FLOOR_GUIDED (0.4) s aktivním řídicím spojem (řízená salva, střelec
  *       žije, v CONTROL_RANGE, střelec svítí aktivními senzory),
  *   LOCK_FLOOR (0.3) s funkčním vlastním seekerem (fáze boost/terminal),
- *   0 = balistický dojezd bez spoje — eroduje dál (pomalu) až k LOCK_LOST.
+ *   LOCK_FLOOR_BALLISTIC (0.25) balistický dojezd — seeker degradovaný,
+ *       ale živý: raketa DOLETÍ s mizerným zámkem (životnost stříhá
+ *       MISSILE_MAX_FLIGHT v updateMissiles).
  * Dno erozi jen zastavuje — zámek už pod dnem se nikdy NEzvedá.
  */
 export function lockFloor(state: SimState, m: MissileState): number {
@@ -37,7 +39,7 @@ export function lockFloor(state: SimState, m: MissileState): number {
     }
   }
   if (m.phase === 'boost' || m.phase === 'terminal') return LOCK_FLOOR
-  return 0
+  return LOCK_FLOOR_BALLISTIC
 }
 
 /** aplikuje erozi zámku se dnem: neklesne pod floor, ale ani se k němu nezvedá */

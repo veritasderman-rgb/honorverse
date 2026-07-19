@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest'
 import type { MissileState, Scenario, ShipState, SimState, Subsystems } from '../src/sim/types'
 import { sim } from '../src/sim/engine'
 import {
-  CM_INTERCEPT_RANGE, LOCK_FLOOR, LOCK_FLOOR_GUIDED, ROLL_TIME,
+  CM_INTERCEPT_RANGE, LOCK_FLOOR, LOCK_FLOOR_BALLISTIC, LOCK_FLOOR_GUIDED,
+  MISSILE_MAX_FLIGHT, ROLL_TIME,
   SENSOR_UPDATE_INTERVAL, SIM_DT, TUBE_COOLDOWN,
 } from '../src/sim/constants'
 import { SHIP_CLASSES } from '../src/data/defs'
@@ -252,17 +253,33 @@ describe('dno eroze zámku („posádky se ECM propálí")', () => {
     expect(state.missiles[0].lock).toBeLessThanOrEqual(0.25)
   })
 
-  it('balistický dojezd bez vedení eroduje dál až ke ztrátě zámku', () => {
+  it('balistický dojezd drží dno LOCK_FLOOR_BALLISTIC — raketa DOLETÍ s mizerným zámkem', () => {
     const state = makeState(22)
     const target = makeShip(2, 'ca-bastion', { side: 'enemy', pos: vec(50_000_000, 0) })
     state.ships.push(target)
-    // autonomní balistická raketa bez spoje, zámek těsně nad prahem
+    // autonomní balistická raketa bez spoje — dřív by dlouhá balistika zámek
+    // smazala („200 raket na konvoj a žádný efekt"); teď seeker drží dno
     state.missiles.push(makeMissile(100, 2, {
       side: 'player', autonomous: true, phase: 'ballistic', driveRemaining: 0,
-      lock: 0.24, pos: vec(0, 0), vel: vec(10, 0),
+      lock: 0.5, pos: vec(0, 0), vel: vec(10, 0),
     }))
-    for (let i = 0; i < 30; i++) updateMissiles(state, 0.5) // 15 s · 0.005/s
-    expect(state.missiles.length).toBe(0) // zámek klesl pod LOCK_LOST → mrtvá
+    for (let i = 0; i < 800; i++) updateMissiles(state, 0.5) // 400 s balistiky
+    expect(state.missiles.length).toBe(1)
+    expect(state.missiles[0].lock).toBeCloseTo(LOCK_FLOOR_BALLISTIC, 5)
+  })
+
+  it('konec doletu: po MISSILE_MAX_FLIGHT sebedestrukce (cause expired)', () => {
+    const state = makeState(23)
+    const target = makeShip(2, 'ca-bastion', { side: 'enemy', pos: vec(50_000_000, 0) })
+    state.ships.push(target)
+    state.missiles.push(makeMissile(100, 2, {
+      side: 'player', autonomous: true, phase: 'ballistic', driveRemaining: 0,
+      lock: 0.5, pos: vec(0, 0), vel: vec(10, 0),
+      launchedAt: -(MISSILE_MAX_FLIGHT + 1), // odpal dávno za horizontem doletu
+    }))
+    updateMissiles(state, 0.5)
+    expect(state.missiles.length).toBe(0)
+    expect(state.events.some(e => e.kind === 'missileMiss' && e.cause === 'expired')).toBe(true)
   })
 })
 

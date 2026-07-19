@@ -406,3 +406,44 @@ describe('komunikační triggery (kind comm)', () => {
     expect(comms.some(e => e.text.includes('zastavte'))).toBe(true)
   })
 })
+
+// ---------- nájezd na obchodníky (víc salv nesmí být potřeba) ----------
+
+describe('nájezd na obchodníky', () => {
+  it('CA zničí prchajícího obchodníka disciplinovanou palbou na ≤ 4 salvy (10 seedů)', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const scenario = makeScenario({
+        seed,
+        ships: [
+          {
+            classId: 'ca-bastion', side: 'player', name: 'CA',
+            pos: { x: 8_000_000, y: 0 }, vel: { x: -1_000, y: 0 },
+            doctrine: 'player', activeSensors: true,
+          },
+          {
+            // prchající obchodník v tail-chase — dřív rakety cestou „mizely"
+            classId: 'merch-freighter', side: 'enemy', name: 'OBCH',
+            pos: { x: 0, y: 0 }, vel: { x: -300, y: 0 },
+            doctrine: 'player', throttle: 0.8,
+          },
+        ],
+      })
+      const state = sim.create(scenario)
+      const [ca, m] = state.ships
+      sim.applyOrder(state, { kind: 'setCourse', shipId: m.id, dest: { x: -5e8, y: 0 }, arriveAtRest: false })
+      sim.applyOrder(state, { kind: 'intercept', shipId: ca.id, targetId: m.id })
+      let salvos = 0
+      for (let t = 0; t < 3000 && !m.destroyed; t += SIM_DT) {
+        const inFlight = state.missiles.some(x => x.side === 'player')
+        if (!inFlight && ca.tubeCooldown <= 0 && ca.missiles > 0) {
+          launchSalvo(state, ca, m.id, 8, 0)
+          salvos++
+        }
+        sim.tick(state, SIM_DT)
+        state.events.length = 0
+      }
+      expect(m.destroyed).toBe(true)
+      expect(salvos).toBeLessThanOrEqual(4)
+    }
+  })
+})

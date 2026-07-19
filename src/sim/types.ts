@@ -335,6 +335,7 @@ export type LossCause =
   | 'ecm'     // svedena ECM/decoyi obránce
   | 'decoy'   // přeskočila na taženou návnadu obránce
   | 'link'    // ztráta zámku za letu (bez vedení / eroze)
+  | 'expired' // konec doletu — sebedestrukce po MISSILE_MAX_FLIGHT
   | 'dud'     // detonace bez jediného zásahu paprsku
   | 'lost'    // cíl zanikl dřív (zničen/kapituloval)
 
