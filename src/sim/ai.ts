@@ -102,9 +102,12 @@ function rollOrders(state: SimState, ship: ShipState, orders: Order[]): void {
 /** práh nasazení tažené návnady AI: příchozí salva aspoň N raket */
 const AI_DECOY_SALVO = 6
 
-/** návnada: salva ≥ 6 raket na tuto loď v CM pásmu, máme náboj a žádná neběží */
+/**
+ * Návnada: salva ≥ 6 raket na tuto loď v CM pásmu, máme zásobu a žádná
+ * neběží — tedy i ZNOVU, když o návnadu přijde a salva stále letí.
+ */
 function decoyOrders(state: SimState, ship: ShipState, orders: Order[]): void {
-  if (ship.decoys <= 0 || state.t < ship.decoyActiveUntil) return
+  if (ship.decoys <= 0 || ship.decoyActive) return
   let incoming = 0
   let nearest = Infinity
   for (const m of state.missiles) {

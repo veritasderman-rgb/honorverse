@@ -8,11 +8,11 @@ import type { DriveMode, MissileState, ShipState, SimState, Vec2 } from './types
 import {
   AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
   ENERGY_MAX_RANGE, G, JAMMER_MIN_SALVO, LINK_LOCK_DECAY, LOCK_LOST,
-  RETARGET_LOCK_PENALTY,
+  RETARGET_LOCK_PENALTY, ROLL_TIME,
   SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
-import { add, clampLen, dist, dot, len, norm, scale, sub } from './vec'
+import { add, angleOf, clampLen, dist, dot, len, norm, scale, sub } from './vec'
 import { applyBeamDamage, effectiveTubes } from './damage'
 import { attackAspect, erodeLock, resolveTerminal } from './defense'
 
@@ -85,6 +85,18 @@ interface LaunchOpts {
    * Vyžaduje salvu aspoň JAMMER_MIN_SALVO raket.
    */
   escortJammer?: boolean
+  /**
+   * odpal jen z konkrétního boku (dvojitá boční salva): kapacita se počítá
+   * POUZE ze šachet daného boku (tubesPort/tubesStbd), ne z lepšího z obou
+   */
+  side?: 'port' | 'stbd'
+}
+
+/** funkční šachty JEDNOHO boku (floor) */
+function sideTubes(ship: ShipState, side: 'port' | 'stbd'): number {
+  const def = SHIP_CLASSES[ship.classId]
+  const sub = side === 'port' ? ship.subsystems.tubesPort : ship.subsystems.tubesStbd
+  return Math.floor(def.tubesPerBroadside * sub)
 }
 
 
@@ -136,8 +148,10 @@ export function launchSalvo(
     crewSay(state, ship, `Šachty přebíjejí — další salva za ${Math.ceil(ship.tubeCooldown)} s.`)
     return
   }
-  // pody: vlastní odpalovače mimo šachty — kapacita ani munice lodi neomezují
-  const n = opts.podLaunch ? count : Math.min(count, effectiveTubes(ship), ship.missiles)
+  // pody: vlastní odpalovače mimo šachty — kapacita ani munice lodi neomezují;
+  // opts.side: kapacita jen z jednoho boku (dvojitá boční salva)
+  const capacity = opts.side ? sideTubes(ship, opts.side) : effectiveTubes(ship)
+  const n = opts.podLaunch ? count : Math.min(count, capacity, ship.missiles)
   if (n <= 0) {
     crewSay(state, ship, ship.missiles <= 0
       ? 'Prázdné zásobníky raket!'
@@ -212,6 +226,76 @@ export function launchSalvo(
         + `${opts.ignoreCooldown ? ' (druhá vlna)' : ''}${autonomous ? ' (autonomní)' : ''}`
         + `${jammer ? ' (+rušička)' : ''}`,
     })
+}
+
+/**
+ * Dvojitá boční salva (roll-and-fire):
+ *   fáze A — plná salva z LEVOBOKU v režimu LO hned,
+ *   otočka  — loď se odvalí (rolledTo kolmo k cíli) na ROLL_TIME; odvalená
+ *             podle pravidel nemůže pálit,
+ *   fáze B — po otočce plná salva z PRAVOBOKU v režimu HI, časovaná přes
+ *            missileFlightTime na SPOLEČNÝ PŘÍLET s vlnou A (když to
+ *            geometrie nedovolí, odpal hned po otočce + hláška o zpoždění),
+ *   návrat — s vlnou B se loď vrátí z odvalu; obě strany šachet pak nesou
+ *            TUBE_COOLDOWN (fáze B ho nabíjí přes launchSalvo).
+ */
+export function launchDouble(state: SimState, ship: ShipState, targetId: number): void {
+  if (ship.destroyed) return
+  const def = SHIP_CLASSES[ship.classId]
+  const target = state.ships.find(s => s.id === targetId && !s.destroyed)
+  if (!def || !target) return
+  if (target.surrendered) {
+    crewSay(state, ship, 'Cíl kapituloval — nestřílíme na něj.')
+    return
+  }
+  const contact = state.contacts[ship.side]?.find(c => c.shipId === targetId)
+  if (!contact || contact.idQuality < 1) {
+    crewSay(state, ship, 'Dvojitá salva zamítnuta — cíl není klasifikovaný kontakt.')
+    return
+  }
+  const nPort = sideTubes(ship, 'port')
+  const nStbd = sideTubes(ship, 'stbd')
+  if (nPort < 1 || nStbd < 1) {
+    crewSay(state, ship, 'Dvojitá salva vyžaduje aspoň jednu funkční šachtu na KAŽDÉM boku.')
+    return
+  }
+  if (ship.missiles < nPort + nStbd) {
+    crewSay(state, ship,
+      `Málo raket pro obě salvy — potřeba ${nPort + nStbd}, v zásobnících ${ship.missiles}.`)
+    return
+  }
+  if (ship.pendingWave) {
+    crewSay(state, ship, 'Druhá vlna už čeká — dvojitou salvu teď nelze zahájit.')
+    return
+  }
+
+  // fáze A: levobok, LO, hned (rolled/cooldown řeší launchSalvo vlastní hláškou)
+  const before = state.missiles.length
+  launchSalvo(state, ship, targetId, nPort, 0, { side: 'port' })
+  if (state.missiles.length === before) return
+
+  // otočka: klín kolmo ke směru na cíl — během ní loď nemůže pálit
+  const perp = angleOf(sub(target.pos, ship.pos)) + Math.PI / 2
+  ship.rolledTo = Math.atan2(Math.sin(perp), Math.cos(perp))
+
+  // fáze B: pravobok, HI, časovaná na společný přílet s vlnou A
+  const d = dist(ship.pos, target.pos)
+  const closing = dot(sub(ship.vel, target.vel), norm(sub(target.pos, ship.pos)))
+  const tLo = missileFlightTime(d, closing, 0)
+  const tHi = missileFlightTime(d, closing, 1)
+  const idealDelay = Number.isFinite(tLo) && Number.isFinite(tHi) ? tLo - tHi : 0
+  const delay = Math.max(ROLL_TIME, idealDelay)
+  if (idealDelay < ROLL_TIME) {
+    crewSay(state, ship, `Společný dopad nevyjde — druhá vlna (pravobok) dorazí `
+      + `o ~${Math.max(1, Math.round(ROLL_TIME - idealDelay))} s později.`)
+  } else {
+    crewSay(state, ship,
+      `Boční otočka — druhá salva z pravoboku za ${Math.round(delay)} s (společný dopad).`)
+  }
+  ship.pendingWave = {
+    targetId, count: nStbd, mode: 1, launchAt: state.t + delay,
+    sourceSide: 'stbd', unrollAfter: true,
+  }
 }
 
 /**

@@ -8,12 +8,12 @@ import { describe, expect, it } from 'vitest'
 import type { MissileState, Scenario, ShipState, SimState, Subsystems } from '../src/sim/types'
 import { sim } from '../src/sim/engine'
 import {
-  CM_INTERCEPT_RANGE, DECOY_DURATION, LOCK_FLOOR, LOCK_FLOOR_GUIDED,
-  SENSOR_UPDATE_INTERVAL, SIM_DT,
+  CM_INTERCEPT_RANGE, LOCK_FLOOR, LOCK_FLOOR_GUIDED, ROLL_TIME,
+  SENSOR_UPDATE_INTERVAL, SIM_DT, TUBE_COOLDOWN,
 } from '../src/sim/constants'
 import { SHIP_CLASSES } from '../src/data/defs'
 import { vec } from '../src/sim/vec'
-import { fireEnergy, launchSalvo, updateMissiles } from '../src/sim/weapons'
+import { fireEnergy, launchDouble, launchSalvo, updateMissiles } from '../src/sim/weapons'
 import { deployDecoy, updateDefenses } from '../src/sim/defense'
 import { collectAIOrders } from '../src/sim/ai'
 import { estimatePenetration } from '../src/sim/estimate'
@@ -47,7 +47,7 @@ function makeShip(id: number, classId: string, over: Partial<ShipState> = {}): S
     wedgeOn: true, activeSensors: true, rolledTo: null,
     subsystems: fullSubsystems(),
     hull: def.hullPoints, missiles: def.magazineMissiles, cms: def.magazineCMs,
-    decoys: def.decoyCount, decoyActiveUntil: 0,
+    decoys: def.decoyCount, decoyActive: false,
     tubeCooldown: 0, energyCooldown: 0, destroyed: false, doctrine: 'player',
     surrendered: false, lastSurrenderDemandAt: -1e9,
     fireControl: { mode: 'hold', targetId: null, salvoSize: def.tubesPerBroadside, driveMode: 0, engaged: false },
@@ -315,81 +315,122 @@ describe('estimatePenetration — deterministický odhad', () => {
 
 // ---------- tažené návnady ----------
 
-describe('tažené návnady (decoye)', () => {
-  it('deployDecoy spotřebuje náboj, aktivuje na DECOY_DURATION a nedubluje', () => {
+describe('tažené návnady (decoye) — spotřeba raketou', () => {
+  it('deployDecoy aktivuje BEZ spotřeby zásoby; dubl a prázdný zásobník jsou no-op', () => {
     const state = makeState(41)
     const cl = makeShip(1, 'cl-sokol')
     state.ships.push(cl)
     state.t = 50
     sim.applyOrder(state, { kind: 'deployDecoy', shipId: 1 })
-    expect(cl.decoys).toBe(SHIP_CLASSES['cl-sokol'].decoyCount - 1)
-    expect(cl.decoyActiveUntil).toBe(50 + DECOY_DURATION)
+    expect(cl.decoyActive).toBe(true)
+    expect(cl.decoys).toBe(SHIP_CLASSES['cl-sokol'].decoyCount) // odečet až zničením
     // druhá návnada během aktivity je no-op s hláškou
     sim.applyOrder(state, { kind: 'deployDecoy', shipId: 1 })
-    expect(cl.decoys).toBe(SHIP_CLASSES['cl-sokol'].decoyCount - 1)
     expect(state.events.some(e => e.text.includes('už je za lodí'))).toBe(true)
-    // bez nábojů taky no-op
+    // bez zásoby taky no-op
     cl.decoys = 0
-    cl.decoyActiveUntil = 0
+    cl.decoyActive = false
     state.events.length = 0
     deployDecoy(state, cl)
+    expect(cl.decoyActive).toBe(false)
     expect(state.events.some(e => e.text.includes('prázdný'))).toBe(true)
   })
 
-  it('odláká ~očekávaný podíl raket (statisticky nad seedy, P≈0.125 při zámku 1.0)', () => {
-    // izolace svedení: cíl bez CM a bez ECM — jediná ztráta je 'decoy'
-    let decoyed = 0
-    let total = 0
-    const SEEDS = 120
-    for (let seed = 1; seed <= SEEDS; seed++) {
+  it('jedna návnada pohltí právě JEDNU svedenou raketu a zanikne (decoys--)', () => {
+    let absorbedStates = 0
+    for (let seed = 1; seed <= 20; seed++) {
       const state = makeState(seed)
-      const ca = makeShip(1, 'ca-bastion', { hull: 1e9, cms: 0 })
+      const ca = makeShip(1, 'ca-bastion', { hull: 1e9, cms: 0, decoyActive: true })
       ca.subsystems.ecm = 0
-      ca.decoyActiveUntil = 1e9
+      const stock0 = ca.decoys
       state.ships.push(ca)
       for (let i = 0; i < 10; i++) {
+        state.missiles.push(makeMissile(100 + i, 1, {
+          lock: 0.3, pos: vec(CM_INTERCEPT_RANGE - 1000, 0),
+        }))
+      }
+      updateDefenses(state, 0.5)
+      const n = state.events.filter(e => e.cause === 'decoy').length
+      expect(n).toBeLessThanOrEqual(1) // víc než jednu raketu jedna návnada nepohltí
+      if (n === 1) {
+        absorbedStates++
+        expect(ca.decoyActive).toBe(false)   // návnada zničena
+        expect(ca.decoys).toBe(stock0 - 1)   // zásoba odečtena až teď
+        expect(state.events.some(e => e.text.includes('návnada zničena'))).toBe(true)
+      } else {
+        expect(ca.decoyActive).toBe(true)
+        expect(ca.decoys).toBe(stock0)
+      }
+    }
+    expect(absorbedStates).toBeGreaterThan(0) // svedení reálně nastává
+  })
+
+  it('redeploy: nová návnada dá už prověřeným raketám nový test svedení', () => {
+    let done = false
+    for (let seed = 1; seed <= 30 && !done; seed++) {
+      const state = makeState(seed)
+      const ca = makeShip(1, 'ca-bastion', { hull: 1e9, cms: 0, decoyActive: true })
+      ca.subsystems.ecm = 0
+      state.ships.push(ca)
+      state.missiles.push(makeMissile(100, 1, { pos: vec(CM_INTERCEPT_RANGE - 1000, 0), vel: vec(0, 0) }))
+      updateDefenses(state, 0.5)
+      if (state.missiles.length === 0) continue // raketa svedena — zkus jiný seed
+      expect(state.missiles[0].decoyChecked).toBe(true) // test proběhl, raketa přežila
+      ca.decoyActive = false // simuluj ztrátu návnady
+      deployDecoy(state, ca) // redeploy — žádný cooldown
+      expect(ca.decoyActive).toBe(true)
+      expect(state.missiles[0].decoyChecked).toBe(false) // čerstvý test pro novou návnadu
+      done = true
+    }
+    expect(done).toBe(true)
+  })
+
+  it('šance škáluje kvalitou elektroniky: pirát (ecm 0.15) < Albion (ecm 0.45)', () => {
+    // za seed 8 raket a jedna návnada: počítáme stavy, kde návnada pohltila raketu
+    const run = (seed: number, classId: string): number => {
+      const state = makeState(seed)
+      const ship = makeShip(1, classId, { hull: 1e9, cms: 0, decoyActive: true, decoys: 4 })
+      ship.subsystems.ecm = 0
+      state.ships.push(ship)
+      for (let i = 0; i < 8; i++) {
         state.missiles.push(makeMissile(100 + i, 1, { pos: vec(CM_INTERCEPT_RANGE - 1000, 0) }))
       }
-      total += 10
-      updateDefenses(state, 0.5) // jediný průchod: každá raketa jeden test
-      decoyed += state.events.filter(e => e.cause === 'decoy').length
-      // test proběhl u všech (flag decoyChecked) — další průchod nic nepřidá
-      state.events.length = 0
       updateDefenses(state, 0.5)
-      expect(state.events.filter(e => e.cause === 'decoy').length).toBe(0)
+      return state.events.filter(e => e.cause === 'decoy').length
     }
-    const frac = decoyed / total
-    // P = 0.25 · (1 − 1.0/2) = 0.125; tolerance ±0.05 na 1200 vzorcích
-    expect(frac).toBeGreaterThan(0.075)
-    expect(frac).toBeLessThan(0.175)
-  })
-
-  it('slabší zámek se svede snáz (P roste s klesajícím lockem)', () => {
-    let weakDecoyed = 0
-    let strongDecoyed = 0
-    const SEEDS = 150
+    const SEEDS = 400
+    let albion = 0
+    let pirate = 0
     for (let seed = 1; seed <= SEEDS; seed++) {
-      for (const [lock, bucket] of [[1.0, 'strong'], [0.3, 'weak']] as const) {
-        const state = makeState(seed * 7 + (bucket === 'weak' ? 1 : 0))
-        const ca = makeShip(1, 'ca-bastion', { hull: 1e9, cms: 0 })
-        ca.subsystems.ecm = 0
-        ca.decoyActiveUntil = 1e9
-        state.ships.push(ca)
-        for (let i = 0; i < 8; i++) {
-          state.missiles.push(makeMissile(100 + i, 1, {
-            lock, pos: vec(CM_INTERCEPT_RANGE - 1000, 0),
-          }))
-        }
-        updateDefenses(state, 0.5)
-        const n = state.events.filter(e => e.cause === 'decoy').length
-        if (bucket === 'weak') weakDecoyed += n
-        else strongDecoyed += n
-      }
+      albion += run(seed, 'ca-bastion')       // ecm 0.45
+      pirate += run(seed + 50_000, 'dd-korzar') // ecm 0.15
     }
-    expect(weakDecoyed).toBeGreaterThan(strongDecoyed)
+    expect(pirate).toBeLessThan(albion)
+    expect(pirate).toBeGreaterThan(0) // i pirátská návnada občas funguje
   })
 
-  it('AI nasadí návnadu proti salvě ≥ 6 raket v CM pásmu (a jen jednou)', () => {
+  it('zásoba se vyčerpá: každá pohlcená raketa = jedna návnada, pak konec', () => {
+    const state = makeState(45)
+    const ca = makeShip(1, 'ca-bastion', { hull: 1e9, cms: 0, decoys: 2 })
+    ca.subsystems.ecm = 0
+    state.ships.push(ca)
+    let absorbed = 0
+    let mid = 100
+    for (let step = 0; step < 400 && (ca.decoys > 0 || ca.decoyActive); step++) {
+      if (!ca.decoyActive && ca.decoys > 0) deployDecoy(state, ca)
+      state.missiles = [makeMissile(mid++, 1, { lock: 0, pos: vec(CM_INTERCEPT_RANGE - 1000, 0), vel: vec(0, 0) })]
+      updateDefenses(state, 0.5)
+      absorbed += state.events.filter(e => e.cause === 'decoy').length
+      state.events.length = 0
+    }
+    expect(absorbed).toBe(2)      // dvě návnady ≈ dvě pohlcené rakety
+    expect(ca.decoys).toBe(0)
+    expect(ca.decoyActive).toBe(false)
+    deployDecoy(state, ca)
+    expect(state.events.some(e => e.text.includes('prázdný'))).toBe(true)
+  })
+
+  it('AI nasadí návnadu proti salvě ≥ 6 raket a ZNOVU po její ztrátě', () => {
     const state = makeState(43)
     const hunter = makeShip(1, 'cl-sokol', { side: 'enemy', doctrine: 'hunter' })
     state.ships.push(hunter)
@@ -402,9 +443,13 @@ describe('tažené návnady (decoye)', () => {
     const orders = collectAIOrders(state)
     expect(orders.some(o => o.kind === 'deployDecoy')).toBe(true)
     for (const o of orders) sim.applyOrder(state, o)
-    expect(hunter.decoys).toBe(SHIP_CLASSES['cl-sokol'].decoyCount - 1)
+    expect(hunter.decoyActive).toBe(true)
     // návnada běží → další rozkaz nepadne
     expect(collectAIOrders(state).some(o => o.kind === 'deployDecoy')).toBe(false)
+    // ztráta návnady, salva stále letí → AI nasadí další
+    hunter.decoyActive = false
+    hunter.decoys--
+    expect(collectAIOrders(state).some(o => o.kind === 'deployDecoy')).toBe(true)
 
     // 5 raket nestačí
     const state2 = makeState(44)
@@ -475,6 +520,133 @@ describe('ECM doprovod salvy (+rušička)', () => {
     }
     // 7 raket s Pk ×0.75 pronikne víc než 8 bez rušičky
     expect(escorted).toBeGreaterThan(plain)
+  })
+})
+
+// ---------- dvojitá boční salva ----------
+
+describe('dvojitá boční salva (launchDouble)', () => {
+  /** hráčova CL s poškozeným levobokem + bezbranný cíl na dané vzdálenosti */
+  const doubleScenario = (targetX: number): Scenario => makeScenario({
+    ships: [
+      {
+        classId: 'cl-sokol', side: 'player', name: 'CL',
+        pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 },
+        subsystems: { ...fullSubsystems(), tubesPort: 0.5 }, // levobok floor(5·0.5)=2
+      },
+      {
+        classId: 'merch-freighter', side: 'enemy', name: 'M', doctrine: 'freighter',
+        pos: { x: targetX, y: 0 }, vel: { x: 0, y: 0 },
+        subsystems: fullSubsystems(0), cms: 0, hull: 1e9,
+      },
+    ],
+  })
+
+  it('obě vlny odejdou (počty dle boků), otočka blokuje palbu, společný přílet, cooldown', () => {
+    const state = sim.create(doubleScenario(5_000_000))
+    const ammo0 = state.ships[0].missiles
+    sim.applyOrder(state, { kind: 'launchDouble', shipId: 1, targetId: 2 })
+
+    // fáze A: 2 rakety LO z levoboku, loď v otočce (odvalená), vlna B čeká
+    expect(state.missiles.length).toBe(2)
+    expect(state.missiles.every(m => m.mode === 0)).toBe(true)
+    expect(state.ships[0].rolledTo).not.toBeNull()
+    const wave = state.ships[0].pendingWave
+    expect(wave).not.toBeNull()
+    expect(wave!.count).toBe(5)             // pravobok zdravý: 5 šachet
+    expect(wave!.mode).toBe(1)
+    expect(wave!.sourceSide).toBe('stbd')
+    expect(wave!.unrollAfter).toBe(true)
+    expect(wave!.launchAt).toBeGreaterThan(ROLL_TIME) // společný dopad > otočka
+
+    // během otočky nelze pálit (roll blokuje) — no-op s hláškou
+    state.ships[0].tubeCooldown = 0
+    state.events.length = 0
+    sim.applyOrder(state, { kind: 'launchSalvo', shipId: 1, targetId: 2, count: 2, mode: 0 })
+    expect(state.missiles.length).toBe(2)
+    expect(state.events.some(e => e.text.includes('Jsme odvalení'))).toBe(true)
+
+    // tick do odpalu vlny B: pravobok HI, loď zpět z odvalu, cooldown obou stran
+    const arrivals: number[] = []
+    let waveLaunched = false
+    for (let i = 0; i < 2000 && arrivals.length < 7; i++) {
+      sim.tick(state, SIM_DT)
+      for (const ev of state.events) {
+        if (ev.kind === 'launch') {
+          waveLaunched = true
+          expect(state.ships[0].rolledTo).toBeNull()               // návrat z odvalu
+          expect(state.ships[0].tubeCooldown).toBe(TUBE_COOLDOWN)  // obě strany nabíjejí
+        }
+        if (ev.kind === 'missileHit' || ev.kind === 'missileMiss') arrivals.push(ev.t)
+      }
+      state.events.length = 0
+    }
+    expect(waveLaunched).toBe(true)
+    expect(state.ships[0].missiles).toBe(ammo0 - 7) // 2 + 5, munice normálně
+    expect(arrivals.length).toBe(7)
+    // společný přílet obou vln do ±15 s
+    expect(Math.max(...arrivals) - Math.min(...arrivals)).toBeLessThanOrEqual(15)
+  })
+
+  it('moc blízko na společný dopad: vlna B hned po otočce + hláška o zpoždění', () => {
+    const state = makeState(71)
+    const cl = makeShip(1, 'cl-sokol')
+    const tgt = makeShip(2, 'merch-freighter', { side: 'enemy', pos: vec(100_000, 0) })
+    state.ships.push(cl, tgt)
+    state.contacts.player.push({
+      shipId: 2, pos: vec(100_000, 0), vel: vec(0, 0), age: 0,
+      idQuality: 1, classGuess: 'neznámá', wedgeDetected: true,
+    })
+    state.t = 10
+    launchDouble(state, cl, 2)
+    expect(state.ships[0].pendingWave?.launchAt).toBeCloseTo(10 + ROLL_TIME, 5)
+    expect(state.events.some(e => e.kind === 'message'
+      && e.text.includes('dorazí') && e.text.includes('později'))).toBe(true)
+  })
+
+  it('validace: neklasifikovaný cíl, mrtvý bok a málo munice odmítnou s hláškou', () => {
+    const state = makeState(72)
+    const cl = makeShip(1, 'cl-sokol')
+    const tgt = makeShip(2, 'merch-freighter', { side: 'enemy', pos: vec(3_000_000, 0) })
+    state.ships.push(cl, tgt)
+
+    // bez klasifikovaného kontaktu
+    launchDouble(state, cl, 2)
+    expect(state.missiles.length).toBe(0)
+    expect(state.events.some(e => e.text.includes('klasifikovaný'))).toBe(true)
+
+    state.contacts.player.push({
+      shipId: 2, pos: vec(3_000_000, 0), vel: vec(0, 0), age: 0,
+      idQuality: 1, classGuess: 'neznámá', wedgeDetected: true,
+    })
+    // mrtvý levobok
+    cl.subsystems.tubesPort = 0.1 // floor(5·0.1)=0
+    state.events.length = 0
+    launchDouble(state, cl, 2)
+    expect(state.missiles.length).toBe(0)
+    expect(state.events.some(e => e.text.includes('KAŽDÉM boku'))).toBe(true)
+
+    // málo munice pro obě salvy
+    cl.subsystems.tubesPort = 1
+    cl.missiles = 7 // potřeba 5 + 5
+    state.events.length = 0
+    launchDouble(state, cl, 2)
+    expect(state.missiles.length).toBe(0)
+    expect(state.events.some(e => e.text.includes('Málo raket'))).toBe(true)
+    expect(cl.rolledTo).toBeNull() // odmítnutí nesmí loď nechat v otočce
+  })
+
+  it('determinismus: dva běhy dvojité salvy jsou bitově identické', () => {
+    const run = (): SimState => {
+      const state = sim.create(doubleScenario(5_000_000))
+      sim.applyOrder(state, { kind: 'launchDouble', shipId: 1, targetId: 2 })
+      for (let i = 0; i < 800; i++) sim.tick(state, SIM_DT)
+      return state
+    }
+    const a = run()
+    const b = run()
+    expect(a.missiles.length).toBe(0) // salvy dolétly
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b))
   })
 })
 

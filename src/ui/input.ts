@@ -188,6 +188,12 @@ export class UIController {
         this.send({ kind: 'launchLayered', shipId: own.id, targetId: t, countLo: lo, countHi: hi })
         break
       }
+      case 'salvoDouble':
+        // dvojitá boční salva: LO z levoboku, otočka, HI z pravoboku
+        if (t != null && own.missiles > 0) {
+          this.send({ kind: 'launchDouble', shipId: own.id, targetId: t })
+        }
+        break
       case 'autoFire': {
         const enable = own.fireControl.mode !== 'auto'
         if (enable && t == null) break
@@ -417,10 +423,11 @@ export class UIController {
         <b>Salva 2/4/plná</b><span>odpal raket na vybraný cíl</span>
         <b>Pohon LO/HI</b><span>LO = 46k g / 180 s (dostřel ~7 M km), HI = 92k g / 60 s (rychlost, ~1,6 M km)</span>
         <b>Salva X+Y</b><span>vrstvená salva: LO vlna + zpožděná HI vlna dorazí spolu a saturují bodovou obranu</span>
+        <b>Obě salvy</b><span>dvojitá boční salva: levobok LO, otočka (8 s, bez palby), pravobok HI na společný dopad — dvojnásobná vlna</span>
         <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce</span>
         <b>Energie</b><span>lasery/grasery — drtivé pod 100 tis. km, max. 500 tis. km</span>
         <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu — ale ODVALENÝ NESTŘÍLÍ (klín maskuje boky) a PDLC je oslabená; protirakety fungují dál</span>
-        <b>Návnada</b><span>tažená návnada (120 s): příchozí rakety na ni ~25% šancí přeskočí (víc při slabém zámku); omezená zásoba, nedoplňuje se</span>
+        <b>Návnada</b><span>tažená návnada: příchozí raketa na ni může přeskočit (šance dle kvality ECM lodi, víc při slabém zámku) a návnadu ZNIČÍ — jedna návnada ≈ jedna raketa, další lze vypustit hned; omezená zásoba</span>
         <b>+rušička</b><span>salva obětuje 1 raketu jako eskortní rušičku — zbytek má proti bodové obraně cíle Pk ×0,75 (min. 3 rakety)</span>
         <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočníků</span>
         <b>Akt. senzory</b><span>plná identifikace zblízka + lepší zámek našich raket; pozor — vyzařování zlepšuje řešení nepříteli o 15 %</span>

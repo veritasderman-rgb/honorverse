@@ -10,8 +10,8 @@
  */
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import {
-  CONTROL_RANGE, DECOY_DURATION, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
-  ENERGY_MAX_RANGE, G, SURRENDER_COOLDOWN, TUBE_COOLDOWN,
+  CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
+  ENERGY_MAX_RANGE, G, ROLL_TIME, SURRENDER_COOLDOWN, TUBE_COOLDOWN,
 } from '../sim/constants'
 import { effectiveTubes } from '../sim/damage'
 import { estimatePenetration } from '../sim/estimate'
@@ -559,8 +559,8 @@ export class Panels {
       + `<div class="row"><span>trup: <b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></span>`
       + `<span>rychlost ${Math.round(speed).toLocaleString('cs-CZ')} km/s · akcel. ${Math.round(accG)} g</span></div>`
       + `<div class="row"><span>rakety ${own.missiles} · CM ${own.cms}</span>`
-      + `<span>návnady ${own.decoys}${state.t < own.decoyActiveUntil
-        ? ` · <b class="amber">aktivní ${Math.ceil(own.decoyActiveUntil - state.t)} s</b>` : ''}</span></div>`
+      + `<span>návnada: ${own.decoyActive ? '<b class="ok">AKTIVNÍ</b>' : '—'}`
+      + ` · zásoba ${own.decoys}</span></div>`
       + tubesRow
       + status
       + cdRow
@@ -866,8 +866,12 @@ export class Panels {
       rollBack: 'Vrátí loď do normální polohy — boky (šachty, energetika) jsou zase v akci. R',
       jammer: `+rušička: salva obětuje 1 raketu jako eskortní rušičku — zbytek salvy má proti `
         + `bodové obraně cíle Pk ×0,75. Vyžaduje salvu aspoň 3 raket.`,
-      decoy: `Vypustí taženou návnadu (${DECOY_DURATION} s): útočné rakety v obranném pásmu na ni `
-        + `s pravděpodobností ~25 % (víc při slabém zámku) přeskočí. Omezená zásoba.`,
+      decoy: 'Vypustí taženou návnadu: příchozí raketa na ni může přeskočit (šance dle kvality '
+        + 'ECM lodi, víc při slabém zámku raket). Svedená raketa návnadu ZNIČÍ — jedna návnada '
+        + '≈ jedna pohlcená raketa; další lze vypustit hned. Omezená zásoba.',
+      double: `Plná salva z obou boků s otočkou: levobok LO hned, otočka ${ROLL_TIME} s, pravobok `
+        + 'HI časovaný na společný dopad — dvojnásobná vlna saturuje obranu. Loď se během '
+        + 'otočky nemůže bránit palbou.',
       wedge: 'Vypnutý klín = EMCON: loď je téměř neviditelná (jen aktivní senzory zblízka), '
         + 'bez bočníků; k dispozici jen manévrovací trysky ~5 g na korekce driftu.',
       sensors: `Plná identifikace cílů do ${sensM} mil. km + lepší zámek našich raket (plné palebné `
@@ -892,6 +896,7 @@ export class Panels {
       + `<button data-act="salvo4" title="${esc(tip.salvo('4'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 4</button>`
       + `<button data-act="salvoFull" title="${esc(tip.salvo(`všechny (${tubes})`))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Plná</button>`
       + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva ${loC}+${hiC}</button>`
+      + `<button data-act="salvoDouble" title="${esc(tip.double)}"${dis(canFire && (own?.missiles ?? 0) > 0 && !rolled)}>Obě salvy</button>`
       + `<span title="${esc(tip.mode)}">`
       + `<button data-act="modeLo" class="${ui.salvoMode === 0 ? 'active' : ''}">LO</button>`
       + `<button data-act="modeHi" class="${ui.salvoMode === 1 ? 'active' : ''}">HI</button></span>`

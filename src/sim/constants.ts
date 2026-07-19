@@ -66,10 +66,14 @@ export const LOCK_FLOOR = 0.3
 export const PDLC_ROLLED_FACTOR = 0.6
 
 /** ---------- tažené návnady (decoye) ---------- */
-/** doba aktivity vypuštěné návnady (s) */
-export const DECOY_DURATION = 120
-/** základ šance svedení útočné rakety návnadou: P = DECOY_SEDUCE · (1 − lock/2) */
-export const DECOY_SEDUCE = 0.25
+/**
+ * Základ šance svedení útočné rakety návnadou:
+ *   P = DECOY_SEDUCE_BASE · (0.5 + ecm třídy) · (1 − lock/2)
+ * — kvalitní albionská elektronika (ecm 0.35–0.5) svádí výrazně líp než
+ * pirátská (0.15–0.2). Svedená raketa návnadu ZNIČÍ (jedna návnada ≈ jedna
+ * pohlcená raketa); zásoba se odečítá až zničením.
+ */
+export const DECOY_SEDUCE_BASE = 0.28
 
 /** ---------- ECM doprovod salvy (eskortní rušička) ---------- */
 /** rušička oslepuje bodovou obranu: Pk PDLC cíle ×0.75 proti doprovázené salvě */

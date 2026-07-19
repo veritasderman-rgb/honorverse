@@ -8,7 +8,7 @@
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
 import {
   ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
-  CONTROL_RANGE, DECOY_DURATION, DECOY_SEDUCE, LOCK_FLOOR, LOCK_FLOOR_GUIDED,
+  CONTROL_RANGE, DECOY_SEDUCE_BASE, LOCK_FLOOR, LOCK_FLOOR_GUIDED,
   LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_PK, PDLC_ROLLED_FACTOR, PDLC_SATURATION,
   SATURATION_WINDOW,
 } from './constants'
@@ -50,7 +50,11 @@ export function attackAspect(target: ShipState, fromPos: Vec2): Aspect {
   return rel > 0 ? 'port' : 'stbd' // y nahoru: kladný úhel od přídě = levobok
 }
 
-/** Vypuštění tažené návnady: aktivní DECOY_DURATION s, svádí útočné rakety. */
+/**
+ * Vypuštění tažené návnady: aktivní, DOKUD ji svedená raketa nezničí
+ * (jedna návnada ≈ jedna pohlcená raketa). Zásoba se odečítá až zničením;
+ * po ztrátě lze hned vypustit další — žádný cooldown.
+ */
 export function deployDecoy(state: SimState, ship: ShipState): void {
   if (ship.destroyed || ship.surrendered) return
   const say = (text: string): void => {
@@ -64,13 +68,16 @@ export function deployDecoy(state: SimState, ship: ShipState): void {
     say('Zásobník návnad prázdný!')
     return
   }
-  if (state.t < ship.decoyActiveUntil) {
-    say('Návnada už je za lodí — další až po dohoření téhle.')
+  if (ship.decoyActive) {
+    say('Návnada už je za lodí.')
     return
   }
-  ship.decoys--
-  ship.decoyActiveUntil = state.t + DECOY_DURATION
-  say(`Návnada vypuštěna — táhne se za lodí (${DECOY_DURATION} s, zbývá ${ship.decoys}).`)
+  ship.decoyActive = true
+  // nová návnada = nový pokus o svedení i pro rakety, které už testem prošly
+  for (const m of state.missiles) {
+    if (m.targetId === ship.id && m.decoyChecked === true) m.decoyChecked = false
+  }
+  say(`Návnada vypuštěna — táhne se za lodí (zásoba ${ship.decoys}).`)
 }
 
 /** Průběžné vrstvy obrany: ECM/decoye a odpaly protiraket. */
@@ -83,18 +90,22 @@ export function updateDefenses(state: SimState, dt: number): void {
     const tDef = SHIP_CLASSES[target.classId]
 
     // tažená návnada: raketa v CM pásmu s aktivní návnadou cíle projde
-    // JEDNÍM testem svedení — P = DECOY_SEDUCE · (1 − lock/2); slabší zámek
-    // se svede snáz. Svedená raketa detonuje na návnadě (missileMiss 'decoy').
-    if (state.t < target.decoyActiveUntil && m.decoyChecked !== true
+    // JEDNÍM testem svedení — P = DECOY_SEDUCE_BASE · (0.5 + ecm třídy)
+    // · (1 − lock/2); kvalitní elektronika a slabý zámek svádějí líp.
+    // Svedená raketa se odkloní NA návnadu a ZNIČÍ ji (decoys--).
+    if (target.decoyActive && m.decoyChecked !== true
       && dist(m.pos, target.pos) < CM_INTERCEPT_RANGE) {
       m.decoyChecked = true
-      const p = DECOY_SEDUCE * (1 - Math.min(1, Math.max(0, m.lock)) / 2)
+      const p = DECOY_SEDUCE_BASE * (0.5 + tDef.ecm)
+        * (1 - Math.min(1, Math.max(0, m.lock)) / 2)
       if (rand(state.rng) < p) {
         m.phase = 'dead'
+        target.decoys = Math.max(0, target.decoys - 1)
+        target.decoyActive = false
         state.events.push({
           t: state.t, kind: 'missileMiss', side: m.side, shipId: target.id,
           cause: 'decoy', salvoId: m.salvoId,
-          text: `${target.name}: raketa přeskočila na taženou návnadu`,
+          text: `${target.name}: raketa svedena — návnada zničena`,
         })
         continue
       }

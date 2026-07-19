@@ -25,14 +25,18 @@ export function updateFireControl(state: SimState): void {
   for (const ship of state.ships) {
     if (ship.destroyed) continue
 
-    // --- druhá vlna vrstvené salvy ---
-    // (odvalená loď nemůže pálit — vlna se NEspotřebuje, čeká na návrat)
-    if (ship.pendingWave && state.t >= ship.pendingWave.launchAt && ship.rolledTo === null) {
+    // --- druhá vlna vrstvené/dvojité salvy ---
+    // (odvalená loď nemůže pálit — vlna se NEspotřebuje, čeká na návrat;
+    // výjimka: vlna dvojité boční salvy sama otočku ukončuje — unrollAfter)
+    if (ship.pendingWave && state.t >= ship.pendingWave.launchAt
+      && (ship.rolledTo === null || ship.pendingWave.unrollAfter === true)) {
       const w = ship.pendingWave
       ship.pendingWave = null
+      if (w.unrollAfter === true) ship.rolledTo = null // konec boční otočky
       const target = state.ships.find(s => s.id === w.targetId && !s.destroyed && !s.surrendered)
       if (target) {
-        launchSalvo(state, ship, w.targetId, w.count, w.mode, { ignoreCooldown: true })
+        launchSalvo(state, ship, w.targetId, w.count, w.mode,
+          { ignoreCooldown: true, side: w.sourceSide })
       } else {
         say(state, ship, 'Druhá vlna zrušena — cíl už neexistuje.')
       }

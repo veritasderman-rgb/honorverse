@@ -98,6 +98,10 @@ export interface PendingWave {
   mode: DriveMode
   /** sim čas odpalu druhé vlny */
   launchAt: number
+  /** dvojitá boční salva: odpal jen z daného boku (kapacita dle jeho šachet) */
+  sourceSide?: 'port' | 'stbd'
+  /** dvojitá boční salva: před odpalem vlny ukončit otočku (rolledTo = null) */
+  unrollAfter?: boolean
 }
 
 /** Dočasné bonusy posádky (náhodné události — taktik/inženýr). */
@@ -186,10 +190,10 @@ export interface ShipState {
   hull: number           // zbývající hullPoints
   missiles: number       // zásoba útočných raket
   cms: number            // zásoba protiraket
-  /** zásoba tažených návnad (decoyů) */
+  /** zásoba tažených návnad (decoyů) — odečítá se až ZNIČENÍM návnady */
   decoys: number
-  /** sim čas konce aktivity vypuštěné návnady (0 = žádná aktivní) */
-  decoyActiveUntil: number
+  /** tažená návnada je za lodí (aktivní, dokud ji svedená raketa nezničí) */
+  decoyActive: boolean
   /** cooldowny odpalů (s do další salvy / energetické salvy) */
   tubeCooldown: number
   energyCooldown: number
@@ -249,8 +253,10 @@ export type Order =
   | { kind: 'setActiveSensors'; shipId: number; on: boolean }
   | { kind: 'roll'; shipId: number; towards: number | null }
   | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveMode; autonomous?: boolean; escortJammer?: boolean }
-  /** vypuštění tažené návnady (aktivní DECOY_DURATION s, svádí útočné rakety) */
+  /** vypuštění tažené návnady (aktivní, dokud ji svedená raketa nezničí) */
   | { kind: 'deployDecoy'; shipId: number }
+  /** dvojitá boční salva: LO z levoboku, otočka, HI z pravoboku na společný dopad */
+  | { kind: 'launchDouble'; shipId: number; targetId: number }
   /** vrstvená salva: hlavní vlna LO hned + follow-up HI časovaný na společný přílet */
   | { kind: 'launchLayered'; shipId: number; targetId: number; countLo: number; countHi: number }
   /** přesměrování letící salvy (boost/ballistic) na nový cíl — zámek ×0.75, jen v dosahu řízení */

@@ -40,7 +40,7 @@ function makeShip(id: number, classId: string, over: Partial<ShipState> = {}): S
     wedgeOn: true, activeSensors: false, rolledTo: null,
     subsystems: fullSubsystems(),
     hull: def.hullPoints, missiles: def.magazineMissiles, cms: def.magazineCMs,
-    decoys: def.decoyCount, decoyActiveUntil: 0,
+    decoys: def.decoyCount, decoyActive: false,
     tubeCooldown: 0, energyCooldown: 0, destroyed: false, doctrine: 'player',
     surrendered: false, lastSurrenderDemandAt: -1e9,
     fireControl: { mode: 'hold', targetId: null, salvoSize: def.tubesPerBroadside, driveMode: 0, engaged: false },

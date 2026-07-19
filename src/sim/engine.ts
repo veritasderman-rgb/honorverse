@@ -5,7 +5,7 @@
  */
 import type { Order, Scenario, ShipState, SimApi, SimState } from './types'
 import { updateShipPhysics } from './physics'
-import { fireEnergy, launchSalvo, missileFlightTime, retargetSalvo, updateMissiles } from './weapons'
+import { fireEnergy, launchDouble, launchSalvo, missileFlightTime, retargetSalvo, updateMissiles } from './weapons'
 import { deployDecoy, updateDefenses } from './defense'
 import { updateSensors } from './sensors'
 import { updateFireControl } from './firecontrol'
@@ -81,6 +81,10 @@ function applyOrder(state: SimState, order: Order): void {
       break
     case 'deployDecoy':
       deployDecoy(state, ship)
+      break
+    case 'launchDouble':
+      // dvojitá boční salva: LO z levoboku, otočka, HI z pravoboku
+      launchDouble(state, ship, order.targetId)
       break
     case 'retargetSalvo':
       retargetSalvo(state, ship, order.salvoId, order.newTargetId)
