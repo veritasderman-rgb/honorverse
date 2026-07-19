@@ -3,121 +3,136 @@
 Kanonický zdroj příběhu hry. Texty odsud se propisují do úvodní obrazovky
 kampaně, příběhových sekcí briefingů a epilogů misí.
 
+Historická paralela: alžbětinská Anglie proti habsburskému Španělsku —
+ostrovní královna s parlamentem a kaperskými listy proti kontinentálnímu
+impériu žijícímu ze zlatých flotil. Armáda pluje na konci.
+
 ---
 
 ## 1. Svět
 
-### Hvězdné království Albion
-Konstituční monarchie tří obydlených světů. Bohatství Albionu nestojí na
-velikosti — na to je proti sousedům trpaslík — ale na poloze: v soustavě leží
-**Albionská křižovatka**, jediný známý svazek stabilních červích děr v celém
-sektoru. Kdo veze náklad mezi jádrem a periferií, platí mýto Albionu. Z mýta
-se platí Královské námořnictvo: malé, ale technologicky nejlepší v sektoru.
-Albion válku nechce — válka je špatná pro obchod. Právě proto se jí nakonec
-nevyhne.
+### Hvězdné království Avalon
+Tři obydlené světy, trůn a Parlament. Na trůnu **královna Eleanor III.** —
+mladá, tvrdohlavá a oblíbená; vládne, ale nerozkazuje: rozpočet drží
+Parlament a admiralita se zodpovídá oběma. Bohatství Avalonu stojí na
+**Avalonské křižovatce**, jediném známém svazku stabilních červích děr
+v sektoru: kdo veze náklad mezi jádrem a periferií, platí mýto koruně.
+A pak je tu druhý, tišší příjem: **kaperské listy**. Parlament je oficiálně
+nikdy neschválil, admiralita je oficiálně nevydává — a doradské zlaté
+konvoje přesto v Pomezí mizí s pozoruhodnou pravidelností. Královské
+námořnictvo je malé a technologicky nejlepší v sektoru; loď za lodí,
+posádka za posádkou. Bude to potřebovat.
 
-### Vegský direktoriát
-Kdysi revoluční republika, dnes zkostnatělý stát dvaceti soustav řízený
-Direktoriátem — výborem, který nikdo nevolil a který se bojí vlastních občanů
-víc než nepřátel. Plánovaná ekonomika desetiletí dotuje základní příděly
-(„občanský podíl") a flotilu; obojí najednou už rozpočet neunese. Pro
-Direktoriát je expanze účetní nutnost: každá anektovaná soustava zaplatí
-příděly na pár let dopředu. Vojenská doktrína: tonáž nadevše — čtyřnásobná
-přesila hrubé síly proti albionské kvalitě.
+### Doradské impérium
+Dvacet soustav, jeden muž. **Caudillo Ferrante Salazar** převzal moc po
+nástupnické krizi „na jedno volební období" — před devatenácti lety.
+Impérium zbohatlo na **zlatých flotilách**: konvojích palivových izotopů
+z hlubinných rafinerií u modrých obrů, které dvakrát ročně táhnou do
+metropole a platí všechno — dvůr, flotilu, příděly, mlčení. Jenže rafinerie
+stárnou, konvoje řídnou, kapeři je škubou a impérium žije z podstaty.
+Salazar počítá stejně jako každý diktátor před ním: vnější nepřítel drží
+vnitřní klid, a mýto z Avalonské křižovatky by sanovalo říši na generaci.
+Doktrína: tonáž nadevše, poslušnost nade všechno.
 
 ### Pomezí
-Pás soustav mezi oběma mocnostmi, trosky rozpadlé konfederace. Slabé vlády,
-silní piráti. Pro Albion nárazník a obchodní trasa, pro Direktoriát nástroj:
-pirátské „svobodné flotily" dostávají direktoriátní palivo, munici a seznamy
-konvojů — destabilizované Pomezí je Pomezí připravené k anexi.
+Pás soustav mezi mocnostmi, trosky rozpadlé konfederace. Slabé vlády,
+silní piráti — a nikdy nevíš, kdo je co: polovina „pirátů" jsou avalonští
+kapeři s listem v trezoru, druhá polovina imperiální provokatéři s úkolem
+udělat z Pomezí důvod k anexi. Zlaté konvoje tudy musí. Všichni to vědí.
 
 ### Kaledonský pakt
 Chudý, hrdý a nábožensky přísný svět na jižním křídle. Generacemi zvyklý
-bránit se sám; spojenectví s Albionem je pro Kaledon hořká, ale racionální
-volba — Direktoriát je na seznamu „k anexi" hned za Pomezím. Kaledonští
-kapitáni jsou stateční až za hranici rozumu; rozkazy chápou jako doporučení.
+bránit se sám; spojenectví s Avalonem je pro Kaledon hořká, ale racionální
+volba — na Salazarově seznamu je hned za Pomezím. Kaledonští kapitáni jsou
+stateční až za hranici rozumu; rozkazy chápou jako doporučení.
 
 ### Proč válka
-Direktoriát potřebuje Albionskou křižovatku — mýto z ní by sanovalo státní
-rozpočet na generaci. Otevřená válka proti nejlepšímu námořnictvu sektoru je
-ale i pro čtyřnásobnou přesilu riziko. Plán Direktoriátu má tři fáze:
-**rozvrátit Pomezí** (piráti v zastoupení), **vyprovokovat incident**, který
-z Albionu udělá agresora v očích neutrálů, a **udeřit první** z předsunuté
-základny dřív, než se Albion stihne zmobilizovat. Tou základnou je tajně
-budovaná kotviště v soustavě **Kastor**.
+Impérium krvácí ze zlatých konvojů a Salazar potřebuje vítězství dřív, než
+si dvůr spočítá, že rafinerie nevydrží dekádu. Plán má tři fáze:
+**rozvrátit Pomezí** (piráti v zastoupení — ať si neutrálové myslí, že
+sektor hoří sám), **vyprovokovat incident**, který z Avalonu udělá agresora,
+a nakonec **Velká armáda** — úder na Křižovatku z předsunutého kotviště,
+které Impérium tajně buduje v soustavě **Cádiz**. Avalon válku nechce;
+válka je špatná pro obchod. Právě proto se jí nakonec nevyhne.
 
 ---
 
 ## 2. Hráč
 
-Poručík, později kapitán **Alex Rowan**, Královské námořnictvo Albionu.
+Poručík, později kapitán **Alex Rowan**, Královské námořnictvo Avalonu.
 Kampaň sleduje Rowanovu službu od celní hlídky po velení útočné eskadře —
-a zároveň cestu Albionu od míru k válce. Rowanovy mise nejsou epizody:
+a zároveň cestu Avalonu od míru k válce. Rowanovy mise nejsou epizody:
 každá z nich posouvá válku, často aniž to Rowan v tu chvíli ví.
 
 ---
 
 ## 3. Příběhový oblouk misí
 
-**M1 — Hlídka u Strážné brány.** Rutinní celní služba u Křižovatky. Nákladní
-loď Cygnus odmítne kontrolu a prchá s vojenským kompenzátorem pod palubou.
-*Význam:* v zajetém nákladu jsou impelerové komponenty pro direktoriátní
-program přestavby obchodních lodí — první hmatatelný důkaz, že se Direktoriát
-chystá na něco velkého. Admiralita začne poslouchat.
+**M1 — Hlídka u Strážné brány.** Rutinní celní služba u Křižovatky.
+Nákladní loď Cygnus odmítne kontrolu a prchá s vojenským kompenzátorem pod
+palubou. *Význam:* v zajetém nákladu jsou impelerové komponenty pro
+imperiální program přestavby obchodních lodí — první hmatatelný důkaz, že
+se Impérium chystá na něco velkého. Admiralita začne poslouchat.
 
-**M2 — Konvoj Pomezím.** Albion posiluje pohraniční stanice; Rowan eskortuje
-konvoj s municí a náhradními díly. Piráti znají složení konvoje předem.
-*Význam:* ukořistěné trosky pirátské šalupy nesou direktoriátní munici
-z aktuální výrobní série. Piráti nejsou jen piráti — jsou to zástupci.
+**M2 — Konvoj Pomezím.** Avalon posiluje pohraniční stanice; Rowan
+eskortuje konvoj s municí a náhradními díly. Piráti znají složení konvoje
+předem. *Význam:* ukořistěné trosky pirátské šalupy nesou imperiální munici
+z aktuální výrobní série. Tihle piráti nejsou kapeři ani zoufalci —
+jsou to zástupci.
 
 **M3 — Q-ship.** „Poškozený obchodník" Mercator žádá o doprovod ke stanici
-Sázava — a je to direktoriátní pomocný křižník, který má za úkol zabít
-albionskou eskortu a incident svést na piráty. *Význam:* zajatý (nebo
-zničený) Mercator vydá navigační data: souřadnice zásobovacích tras do
-soustavy, kde Direktoriát nemá co pohledávat — do Kastoru.
+Sázava — a je to imperiální pomocný křižník, který má za úkol zabít
+avalonskou eskortu a incident svést na kapery. *Význam:* zajatý (nebo
+zničený) Mercator vydá navigační data: zásobovací trasy do soustavy, kde
+Impérium nemá co pohledávat — do Cádizu.
 
 **M4 — Tichý pozorovatel.** Rowan s ANS Aurora balisticky proklouzne
-Kastorem. Hlídkové rozestavění, kotviště, rozestavěná základna — všechno
-skončí v záznamech. *Význam:* Albion teď ví, odkud první úder přijde.
-Kastorská data se stanou základem válečného plánu — a mise 10.
+Cádizem. Hlídkové rozestavění, kotviště, rozestavěná základna Velké
+armády — všechno skončí v záznamech. *Význam:* Avalon teď ví, odkud první
+úder přijde. Cádizská data se stanou základem válečného plánu — a mise 10.
 
-**M5 — Stanice Zeta.** „Pirátská" flotila (direktoriátní lodě bez vlajky)
+**M5 — Stanice Zeta.** „Pirátská" flotila (imperiální lodě bez vlajky)
 udeří na stanici Zeta. Mezi útočníky letí unesený obchodník s civilisty —
-past na titulky: „albionské námořnictvo střílí do civilistů". *Význam:*
+past na titulky: „avalonské námořnictvo střílí do civilistů". *Význam:*
 provokace selže, ale oběma stranám je jasné, že diplomacie skončila.
 
-**M6 — Ústup od Tharsis.** Válka začíná bez vyhlášení: direktoriátní úder
-rozpráší albionskou eskadru u Tharsis. Rowanova poškozená loď nese domů
+**M6 — Ústup od Tharsis.** Válka začíná bez vyhlášení: imperiální úder
+rozpráší avalonskou eskadru u Tharsis. Rowanova poškozená loď nese domů
 jediné, co z bitvy zbylo — senzorové záznamy dokazující, kdo vystřelil
-první. „Záchranná eskadra" na půli cesty je direktoriátní léčka, která má
+první. „Záchranná eskadra" na půli cesty je imperiální léčka, která má
 záznamy zachytit. *Význam:* záznamy dorazí; neutrálové zůstanou neutrální,
-Kaledon podepíše pakt.
+Kaledon podepíše pakt — a Parlament odhlasuje válečné rozpočty jednomyslně.
 
-**M7 — Nájezd na konvoj.** Albion nemůže vyhrát opotřebovací válku — může
-ale podříznout logistiku. Rowan s bitevním křižníkem Praporec napadne
-zásobovací konvoj pro Kastor. *Význam:* dokončení kastorské základny se
-zpozdí o měsíce. Čas, který Albion zoufale potřebuje.
+**M7 — Zlatá flotila.** Avalon nemůže vyhrát opotřebovací válku — může ale
+podříznout pokladnu. Rowan s bitevním křižníkem Praporec napadne zlatý
+konvoj mířící do Cádizu. *Význam:* dostavba kotviště Armády se zpozdí
+o měsíce a imperiální dvůr poprvé ucítí, že válka něco stojí. Čas, který
+Avalon zoufale potřebuje.
 
-**M8 — Kaledonská hvězda.** Direktoriát zkouší vyrazit Kaledon z války
-demonstrací síly. Společná albionsko-kaledonská hlídka se střetne
-s direktoriátní stěnou; kaledonský kapitán Claymore poruší sestavu.
+**M8 — Kaledonská hvězda.** Salazar zkouší vyrazit Kaledon z války
+demonstrací síly. Společná avalonsko-kaledonská hlídka se střetne
+s imperiální stěnou; kaledonský kapitán Claymore poruší sestavu.
 *Význam:* aliance přežije křest ohněm — a Rowan se naučí, že velet
 spojencům je těžší než velet lodím.
 
-**M9 — Obrana Albionu.** *(připraveno)* Direktoriát vsadí vše na přímý
-úder na Křižovatku dřív, než nájezdy podlomí logistiku úplně. Bitva,
-na kterou se obě strany celou kampaň chystaly.
+**M9 — Velká armáda.** Salazar vsadí všechno: Armáda pluje na Křižovatku
+dřív, než nájezdy podlomí pokladnu úplně. Invaze přistává na hyperlimitu
+ve dvou sledech a Rowan velí obraně domoviny z paluby dreadnoughtu.
+Bitva, na kterou se obě strany celou kampaň chystaly.
 
-**M10 — Kastor.** *(finále, připraveno)* Kruh se uzavírá: s daty z mise 4
-a časem vykoupeným misí 7 vede Rowan útok na nedostavěnou kastorskou
-základnu. Dva konce — doslovné splnění rozkazu, nebo jeho duch.
+**M10 — Cádiz.** Kruh se uzavírá: s daty z mise 4 a časem vykoupeným
+misí 7 vede Rowan protiúder na nedostavěné kotviště v Cádizu — opálit
+caudillovi vousy. Uprostřed útoku dorazí zpráva o podepsaném příměří.
+Dva možné konce: litera rozkazu, nebo jeho duch.
 
 ---
 
 ## 4. Tón hlášek a komunikace
 
-Posádka: věcná, suchá, občas černý humor („Ta plechovka od námořnictva vás
-nezachrání" si zaslouží odpověď). Direktoriát: formální, studený, fráze
-o „historické nutnosti". Piráti: vulgární sebevědomí, rychle se drolí.
-Kaledon: biblický patos, zkratkovitá čest. Albionská admiralita: understatement
-(„Basilisk Control děkuje. Dobrá práce." je nejvyšší pochvala).
+Posádka: věcná, suchá, občas černý humor. Impérium: formální, nabubřelé,
+fráze o „předurčení" a „historickém právu"; důstojníci se bojí vlastních
+politických komisařů víc než nepřítele. Piráti: vulgární sebevědomí, rychle
+se drolí. Kapeři: ironický gentlemanský švih. Kaledon: biblický patos,
+zkratkovitá čest. Avalonská admiralita: understatement („Kontrola Brány
+děkuje. Dobrá práce." je nejvyšší pochvala). Královna se cituje, nikdy
+nemluví přímo; caudillo mluví přímo — a rád.
