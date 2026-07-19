@@ -654,7 +654,7 @@ export class Panels {
       rollThreat: 'Odvalí loď klínem k příchozí salvě — nepropustný štít, ale loď nemanévruje a nepálí boky. R',
       rollBack: 'Vrátí loď do normální polohy — boky (šachty, energetika) jsou zase v akci. R',
       wedge: 'Vypnutý klín = EMCON: loď je téměř neviditelná (jen aktivní senzory zblízka), '
-        + 'ale má nulovou akceleraci a žádné bočníky.',
+        + 'bez bočníků; k dispozici jen manévrovací trysky ~5 g na korekce driftu.',
       sensors: `Plná identifikace cílů do ${sensM} mil. km + lepší zámek našich raket (plné palebné `
         + 'řešení 100 % místo 70 %); pozor — vyzařování zlepšuje řešení nepříteli o 15 %. '
         + 'Pasivní detekce cizího klínu funguje vždy.',

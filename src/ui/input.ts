@@ -404,6 +404,7 @@ export class UIController {
         <b>Vrstvená obrana</b><span>ECM → protirakety → PDLC → klín; z velké salvy projde jen zlomek</span>
         <b>Saturace</b><span>víc raket ve stejném okně = PDLC nestíhá (vrstvená salva!)</span>
         <b>Poškození</b><span>subsystémy po částech; posádka provizorně opravuje do 70 %</span>
+        <b>Trysky</b><span>s vypnutým klínem má loď ~5 g na korekce driftu — neviditelné, ale plánuj hodiny dopředu</span>
         <b>Light-lag</b><span>kontakty jsou staré vzdálenost/c sekund — u 30 M km ~100 s</span>
         <b>Hyperlimit</b><span>jantarová čára — za ní lodě unikají do hyperprostoru</span>
       </div>
