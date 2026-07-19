@@ -3,7 +3,7 @@
  * integrace pohybu. Jednotky: km, s, km/s, km/s². Úhly rad.
  */
 import type { ShipState, SimState } from './types'
-import { G, SHIP_MAX_SPEED, TURN_RATE } from './constants'
+import { G, SHIP_MAX_SPEED, THRUSTER_G, TURN_RATE } from './constants'
 import { add, angleDiff, angleOf, clampLen, dot, fromAngle, len, norm, scale, sub } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
 import { interceptSolution } from './intercept'
@@ -58,6 +58,16 @@ export function desiredHeading(ship: ShipState, state: SimState): number | null 
   // dorazili (u arriveAtRest až po vybrzdění)
   if (d < ARRIVE_DIST && (!nav.arriveAtRest || speed < ARRIVE_SPEED)) return null
 
+  // Bez klínu (trysky): intercept solver je pro poměr malá akcelerace ×
+  // velká rychlost špatně podmíněný — místo něj navádění na předpokládaný
+  // bod průletu: burn kolmo na predikovanou odchylku (korekce driftu).
+  if (!ship.wedgeOn && speed > 1) {
+    const tGo = d / speed
+    const predictedMiss = sub(nav.dest, add(ship.pos, scale(ship.vel, tGo)))
+    if (len(predictedMiss) < ARRIVE_DIST) return null // trefíme se — koast
+    return angleOf(predictedMiss)
+  }
+
   if (nav.arriveAtRest && accel > 0) {
     // brachystochrona, 2. půlka: brzdná dráha ≥ zbytek → otočit a brzdit
     const closing = d > 0 ? dot(ship.vel, norm(toDest)) : speed
@@ -96,9 +106,12 @@ export function updateShipPhysics(state: SimState, ship: ShipState, dt: number):
       Math.abs(diff) <= maxTurn ? want : normAngle(ship.heading + Math.sign(diff) * maxTurn)
   }
 
-  // (3) akcelerace po ose heading — jen se zapnutým klínem a headingem
-  // v toleranci od žádaného směru (loď nezrychluje bokem)
-  let a = ship.wedgeOn ? planningAccel(ship) : 0
+  // (3) akcelerace po ose heading — s klínem plný impeler, bez klínu jen
+  // manévrovací trysky (~THRUSTER_G — korekce driftu, ne boj); heading musí
+  // být v toleranci od žádaného směru (loď nezrychluje bokem)
+  let a = ship.wedgeOn
+    ? planningAccel(ship)
+    : THRUSTER_G * G * clamp01(ship.throttle)
   if (want === null || Math.abs(angleDiff(want, ship.heading)) > ACCEL_HEADING_TOLERANCE) {
     a = 0
   }

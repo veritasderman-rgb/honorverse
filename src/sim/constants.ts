@@ -72,6 +72,9 @@ export const SURRENDER_COOLDOWN = 180
 /** kapitulace: bonus šance při vyřazených zbraních / prázdných zásobnících */
 export const SURRENDER_WEAPONS_OUT_BONUS = 0.15
 
+/** manévrovací trysky: akcelerace bez klínu (g) — korekce driftu, ne boj */
+export const THRUSTER_G = 5
+
 /** rolování lodi: doba přechodu (s) */
 export const ROLL_TIME = 8
 

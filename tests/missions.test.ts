@@ -286,7 +286,7 @@ describe('mise 4 — Tichý pozorovatel', () => {
   it('přiblížení pod 4 mil. km k hlídce prozradí i bez klínu', () => {
     const scenario = structuredClone(mission04)
     const state = sim.create(scenario)
-    state.ships[0].pos = { x: 60_000_000, y: 13_500_000 } // 3.5 mil. km od Antaresu
+    state.ships[0].pos = { x: 60_000_000, y: 8_500_000 } // 3.5 mil. km od Antaresu (y=5M)
     updateTriggers(state, scenario)
     expect(state.flags['detected']).toBe(true)
     expect(state.ships[1].doctrine).toBe('hunter')
@@ -324,8 +324,8 @@ describe('mise 4 — Tichý pozorovatel', () => {
     expect(objState(state, 'obj-rescue')).toBe('done')
     expect(state.events.some(e => e.text.includes('na palubě'))).toBe(true)
 
-    // (d) únik za hyperlimit se zmapovanými silami ⇒ vítězství
-    state.ships[0].pos = { x: -198_000_000, y: 0 }
+    // (d) únik za protější hyperlimit se zmapovanými silami ⇒ vítězství
+    state.ships[0].pos = { x: 258_000_000, y: 0 }
     updateTriggers(state, scenario)
     expect(state.outcome).toBe('win')
     expect(objState(state, 'obj-escape')).toBe('done')
@@ -334,8 +334,59 @@ describe('mise 4 — Tichý pozorovatel', () => {
   it('únik k bóji bez zmapování nevyhrává (AND s flagem mapped)', () => {
     const scenario = structuredClone(mission04)
     const state = sim.create(scenario)
-    state.ships[0].pos = { x: -198_000_000, y: 0 }
+    state.ships[0].pos = { x: 258_000_000, y: 0 }
     updateTriggers(state, scenario)
     expect(state.outcome).toBe('running')
+  })
+
+  it('trysky: bez klínu loď zrychluje ~THRUSTER_G (korekce driftu)', () => {
+    const state = sim.create(mission04)
+    const aurora = state.ships[0]
+    expect(aurora.wedgeOn).toBe(false)
+    sim.applyOrder(state, { kind: 'setThrottle', shipId: 1, throttle: 1 })
+    // cíl stranou od dráhy driftu ⇒ navádění burnuje kolmo (korekce k +y)
+    sim.applyOrder(state, { kind: 'setCourse', shipId: 1, dest: { x: 500_000_000, y: 10_000_000 }, arriveAtRest: false })
+    for (let i = 0; i < 120; i++) sim.tick(state, 0.5) // 60 s (z toho ~10 s otočka k +y)
+    // a = THRUSTER_G · G = 5 · 0.00981 ≈ 0.049 km/s² → Δvy ≈ 2,4 km/s za ~50 s burnu
+    expect(aurora.vel.y).toBeGreaterThan(1.8)
+    expect(aurora.vel.y).toBeLessThan(3.2)
+  })
+
+  /**
+   * DŮKAZ HRATELNOSTI: celá mise 4 deterministicky vyhraná rozumnou hrou —
+   * korekce dráhy tryskami do koridoru 4–6 mil. km u každé hlídky (bez
+   * prozrazení), pak klín až s odstupem od poslední hlídky a únik vpřed.
+   */
+  it('mise 4 je hratelná: trysky → zmapování bez prozrazení → únik (E2E)', () => {
+    const state = sim.create(mission04)
+    const order = (o: Parameters<typeof sim.applyOrder>[1]): void => sim.applyOrder(state, o)
+    const tickUntil = (cond: () => boolean, maxT: number): void => {
+      while (!cond() && state.t < maxT && state.outcome === 'running') sim.tick(state, 0.5)
+    }
+
+    order({ kind: 'setThrottle', shipId: 1, throttle: 1 })
+    // hlídka A (60M, +5M): čistý drift ji mine na ~5 mil. km — žádný manévr
+    // (kurz vpřed by loď zbytečně zrychlil a zkrátil čas na další korekce)
+    tickUntil(() => !!state.flags['scouted-2'], 40_000)
+    expect(state.flags['scouted-2']).toBe(true)
+
+    // hlídka B (95M, −7,5M): korekce k −y, průlet koridorem 4–6 mil. km
+    order({ kind: 'setCourse', shipId: 1, dest: { x: 95_000_000, y: -3_000_000 }, arriveAtRest: false })
+    tickUntil(() => !!state.flags['scouted-3'], 60_000)
+    expect(state.flags['scouted-3']).toBe(true)
+
+    // hlídka C (130M, +5,5M): korekce zpět k +y
+    order({ kind: 'setCourse', shipId: 1, dest: { x: 130_000_000, y: 1_000_000 }, arriveAtRest: false })
+    tickUntil(() => !!state.flags['scouted-4'], 80_000)
+    expect(state.flags['scouted-4']).toBe(true)
+    expect(state.flags['mapped']).toBe(true)
+    expect(state.flags['detected']).toBeUndefined() // celé mapování potichu!
+
+    // únik: dál balisticky, klín až s bezpečným odstupem od Altairu
+    tickUntil(() => state.ships[0].pos.x > 150_000_000, 100_000)
+    order({ kind: 'setWedge', shipId: 1, on: true })
+    order({ kind: 'setCourse', shipId: 1, dest: { x: 258_000_000, y: 0 }, arriveAtRest: false })
+    tickUntil(() => state.outcome !== 'running', 130_000)
+    expect(state.outcome).toBe('win') // hlídky loví, ale náskok + rychlost stačí
   })
 })

@@ -349,7 +349,7 @@ describe('hyperlimit ve scénářích', () => {
     expect(mission01.hyperlimit).toEqual({ kind: 'lineX', x: 250_000_000 })
     expect(mission02.hyperlimit?.kind).toBe('lineX')
     expect(mission03.hyperlimit?.kind).toBe('circle')
-    expect(mission04.hyperlimit).toEqual({ kind: 'lineX', x: -200_000_000 })
+    expect(mission04.hyperlimit).toEqual({ kind: 'lineX', x: 250_000_000 })
   })
 })
 

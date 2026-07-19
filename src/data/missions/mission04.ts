@@ -23,42 +23,45 @@ export const mission04: Scenario = {
   id: 'mission04',
   title: 'Tichý pozorovatel',
   briefing:
-    'ANS Aurora driftuje s vypnutým klínem do direktoriátní soustavy Kastor. '
-    + 'Úkol: jen na pasivních senzorech zmapovat rozmístění hlídek '
-    + '(přiblížit se ke každé na 6 mil. km) a vrátit se za hyperlimit. '
-    + 'Zapnutí impeleru tě okamžitě prozradí na celou soustavu — bez klínu '
-    + 'ale nelze manévrovat. Volba okamžiku je na tobě.',
+    'ANS Aurora vklouzla do direktoriátní soustavy Kastor rychlým průletem '
+    + 'a zhasla klín — dál letí balisticky 2 000 km/s. Úkol: jen na pasivech '
+    + 'zmapovat hlídky (ke každé na 6 mil. km, ale POZOR — pod 4 mil. km tě '
+    + 'zaměří i potichu) a uniknout za protější hyperlimit. Bez klínu máš '
+    + 'jen manévrovací trysky (~5 g) — korekce dráhy plánuj hodiny dopředu. '
+    + 'Zapnutí impeleru tě prozradí na celou soustavu.',
   seed: 19940829, // pevný seed — determinismus
 
-  // hyperlimit soustavy Kastor — úniková čára na −x (za ní lze do hyperu)
-  hyperlimit: { kind: 'lineX', x: -200_000_000 },
+  // hyperlimit soustavy Kastor — úniková čára na +x (průlet soustavou)
+  hyperlimit: { kind: 'lineX', x: 250_000_000 },
 
   ships: [
     {
-      // hráčův lehký křižník — balistický drift, klín VYPNUT
+      // hráčův lehký křižník — balistický drift 2000 km/s, klín VYPNUT;
+      // hlídky leží 5–7,5 mil. km od dráhy: mapovací koridor 4–6 mil. km
+      // vyžaduje korekce tryskami s hodinovým předstihem (jádro mise)
       classId: 'cl-sokol', side: 'player', name: 'ANS Aurora',
-      pos: { x: 0, y: 0 }, vel: { x: 80, y: 0 },
+      pos: { x: 0, y: 0 }, vel: { x: 2_000, y: 0 },
       doctrine: 'player', wedgeOn: false,
     },
     {
-      // direktoriátní hlídka A — drží pozici nad driftovou trasou
+      // direktoriátní hlídka A — kousek nad driftovou trasou (v koridoru)
       classId: 'cl-sokol', side: 'enemy', name: 'VDS Antares',
-      pos: { x: 60_000_000, y: 10_000_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
+      pos: { x: 60_000_000, y: 5_000_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
-      // direktoriátní hlídka B — těžký křižník pod trasou
+      // direktoriátní hlídka B — těžký křižník pod trasou (nutná korekce k −y)
       classId: 'ca-bastion', side: 'enemy', name: 'VDS Rigel',
-      pos: { x: 90_000_000, y: -12_000_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
+      pos: { x: 95_000_000, y: -7_500_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
-      // direktoriátní hlídka C — nejhlouběji v soustavě
+      // direktoriátní hlídka C — nejhlouběji, zpět nad trasou (korekce k +y)
       classId: 'cl-sokol', side: 'enemy', name: 'VDS Altair',
-      pos: { x: 120_000_000, y: 9_000_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
+      pos: { x: 130_000_000, y: 5_500_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
-      // úniková bóje za hyperlimitem — zpět za startem hráče
+      // úniková bóje za protějším hyperlimitem — po směru driftu
       classId: 'merch-freighter', side: 'neutral', name: 'Hyperlimit',
-      pos: { x: -200_000_000, y: 0 }, vel: { x: 0, y: 0 },
+      pos: { x: 260_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
     },
   ],
@@ -102,7 +105,7 @@ export const mission04: Scenario = {
           kind: 'spawnShip',
           ship: {
             classId: 'disp-courier', side: 'player', name: 'Hermes',
-            pos: { x: 100_000_000, y: 30_000_000 }, vel: { x: 30, y: 0 },
+            pos: { x: 165_000_000, y: -15_000_000 }, vel: { x: 30, y: 0 },
             doctrine: 'freighter', wedgeOn: false,
           },
         },
