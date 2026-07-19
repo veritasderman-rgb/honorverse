@@ -48,6 +48,7 @@ export function updateDefenses(state: SimState, dt: number): void {
         m.phase = 'dead'
         state.events.push({
           t: state.t, kind: 'missileMiss', side: m.side, shipId: target.id,
+          cause: 'ecm', salvoId: m.salvoId,
           text: 'raketa svedena ECM/decoyi — ztráta zámku',
         })
       }
@@ -84,6 +85,7 @@ export function updateDefenses(state: SimState, dt: number): void {
         state.events.push({
           // side = strana RAKETY (statistika), shipId = bránící se loď
           t: state.t, kind: 'missileKilled', shipId: ship.id, side: threat.side,
+          cause: 'cm', salvoId: threat.salvoId,
           text: `${ship.name}: protiraketa zničila útočnou raketu`,
         })
       }
@@ -121,6 +123,7 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
       state.events.push({
         // side = strana RAKETY (statistika), shipId = bránící se loď
         t: state.t, kind: 'missileKilled', shipId: target.id, side: missile.side,
+        cause: 'pdlc', salvoId: missile.salvoId,
         text: `${target.name}: bodová obrana sestřelila raketu`,
       })
       return
@@ -134,6 +137,7 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
       if (rand(state.rng) < 0.7) {
         state.events.push({
           t: state.t, kind: 'missileKilled', shipId: target.id, side: missile.side,
+          cause: 'wedge', salvoId: missile.salvoId,
           text: `${target.name}: raketa se roztříštila o klín`,
         })
         return
@@ -151,13 +155,14 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   if (hits <= 0) {
     state.events.push({
       t: state.t, kind: 'missileMiss', side: missile.side, shipId: target.id,
+      cause: 'dud', salvoId: missile.salvoId,
       text: 'laserová hlavice detonovala mimo — žádný zásah',
     })
     return
   }
   state.events.push({
     // side = strana RAKETY (statistika i SFX), shipId = zasažená loď
-    t: state.t, kind: 'missileHit', shipId: target.id, side: missile.side,
+    t: state.t, kind: 'missileHit', shipId: target.id, side: missile.side, salvoId: missile.salvoId,
     // zásah do lodi hráče je důležitá událost (UI auto-zpomalení)
     slowdown: target.side === 'player',
     text: `${target.name}: zásah laserovou hlavicí (${hits}× paprsek, ${aspect})`,

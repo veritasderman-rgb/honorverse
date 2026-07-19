@@ -165,7 +165,7 @@ export function launchSalvo(
   ship.tubeCooldown = TUBE_COOLDOWN
   // odpaly NEzpomalují čas (slowdown false) — UI jen loguje
   state.events.push({
-    t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n,
+    t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, salvoId,
     text: `${ship.name}: odpálena salva ${n} raket`
       + `${opts.ignoreCooldown ? ' (druhá vlna)' : ''}${autonomous ? ' (autonomní)' : ''}`,
   })
@@ -225,6 +225,7 @@ export function updateMissiles(state: SimState, dt: number): void {
       m.phase = 'dead'
       state.events.push({
         t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
+        cause: 'lost', salvoId: m.salvoId,
         text: 'raketa ztratila cíl (zničen)',
       })
       continue
@@ -266,6 +267,7 @@ export function updateMissiles(state: SimState, dt: number): void {
       m.phase = 'dead'
       state.events.push({
         t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
+        cause: 'link', salvoId: m.salvoId,
         text: 'raketa ztratila zámek',
       })
       continue

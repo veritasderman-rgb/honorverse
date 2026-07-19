@@ -12,7 +12,9 @@ const ZOOM_MIN = 50        // km/px
 const ZOOM_MAX = 500_000   // km/px
 const PICK_PX = 15
 /** přibližná obálka útočných raket (km) — viz GAME_DESIGN kap. 2 */
-const MISSILE_ENVELOPE = 7_000_000
+/** poháněné obálky z klidu: LO (46k g/180 s) a HI (92k g/60 s) */
+const MISSILE_ENVELOPE_LO = 7_300_000
+const MISSILE_ENVELOPE_HI = 1_600_000
 
 const CLR = {
   bg: '#05080a',
@@ -353,7 +355,8 @@ export class TacticalPlot {
     const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
     const sensorRange = SHIP_CLASSES[ship.classId]?.activeSensorRange ?? 0
     const rings: { r: number; label: string; color?: string }[] = [
-      { r: MISSILE_ENVELOPE, label: 'rakety ~7M km' },
+      { r: MISSILE_ENVELOPE_LO, label: 'rakety LO ~7,3M km' },
+      { r: MISSILE_ENVELOPE_HI, label: 'rakety HI ~1,6M km' },
       { r: CM_INTERCEPT_RANGE, label: 'CM 2,5M km' },
       { r: ENERGY_MAX_RANGE, label: 'energie 500k km' },
     ]

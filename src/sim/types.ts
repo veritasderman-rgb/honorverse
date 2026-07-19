@@ -264,7 +264,21 @@ export interface SimEvent {
   slowdown?: boolean
   /** mluvčí hlášky/komunikace (id avataru z docs/ART_PROMPTS.md) */
   speaker?: Speaker
+  /** missileKilled/Miss: PŘÍČINA zániku rakety (rozpad bojové statistiky) */
+  cause?: LossCause
+  /** launch/missileKilled/Hit/Miss: id salvy (souhrn osudu salvy v UI) */
+  salvoId?: number
 }
+
+/** Příčina zániku rakety (missileKilled/missileMiss). */
+export type LossCause =
+  | 'cm'      // protiraketa obránce
+  | 'pdlc'    // bodová obrana obránce
+  | 'wedge'   // roztříštění o interponovaný klín
+  | 'ecm'     // svedena ECM/decoyi obránce
+  | 'link'    // ztráta zámku za letu (bez vedení / eroze)
+  | 'dud'     // detonace bez jediného zásahu paprsku
+  | 'lost'    // cíl zanikl dřív (zničen/kapituloval)
 
 // ---------- scénář / mise ----------
 

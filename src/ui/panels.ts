@@ -122,10 +122,33 @@ const avatarHtml = (speaker: string): string => {
 interface CombatStats {
   ourLaunched: number; ourKilled: number; ourHits: number
   incLaunched: number; incKilled: number; incHits: number
+  /** rozpad ztrát NAŠICH raket podle příčiny (cause z eventů) */
+  ourLoss: Record<string, number>
+  /** rozpad práce NAŠÍ obrany na příchozích raketách */
+  incLoss: Record<string, number>
 }
 
-const emptyStats = (): CombatStats =>
-  ({ ourLaunched: 0, ourKilled: 0, ourHits: 0, incLaunched: 0, incKilled: 0, incHits: 0 })
+const emptyStats = (): CombatStats => ({
+  ourLaunched: 0, ourKilled: 0, ourHits: 0,
+  incLaunched: 0, incKilled: 0, incHits: 0,
+  ourLoss: {}, incLoss: {},
+})
+
+/** české popisky příčin zániku rakety */
+const LOSS_LABELS: Record<string, string> = {
+  cm: 'protirakety', pdlc: 'PDLC', wedge: 'klín', ecm: 'ECM/decoye',
+  link: 'ztráta zámku', dud: 'hlavice mimo', lost: 'cíl zanikl',
+}
+
+/** „protirakety 4 · PDLC 2 · …" z mapy příčin (stabilní pořadí dle LOSS_LABELS) */
+const lossBreakdown = (loss: Record<string, number>): string =>
+  Object.keys(LOSS_LABELS)
+    .filter(k => loss[k])
+    .map(k => `${LOSS_LABELS[k]} ${loss[k]}`)
+    .join(' · ')
+
+/** rozpracovaný souhrn osudu jedné naší salvy (kompletace → řádek do logu) */
+interface SalvoTally { launched: number; resolved: number; hits: number; loss: Record<string, number> }
 
 export class Panels {
   private log: { t: number; text: string; warn: boolean }[] = []
@@ -187,6 +210,7 @@ export class Panels {
   /** reset bojové statistiky a logů — volat při startu nové mise */
   resetStats(): void {
     this.stats = emptyStats()
+    this.salvoTallies.clear()
     this.log = []
     this.commLog = []
   }
@@ -198,12 +222,48 @@ export class Panels {
       const n = ev.count ?? 0
       if (ev.side === 'player') s.ourLaunched += n
       else if (ev.side === 'enemy') s.incLaunched += n
-    } else if (ev.kind === 'missileKilled') {
-      if (ev.side === 'player') s.ourKilled++
-      else if (ev.side === 'enemy') s.incKilled++
+    } else if (ev.kind === 'missileKilled' || ev.kind === 'missileMiss') {
+      // rozpad podle příčiny (kill i miss — hráče zajímá osud každé rakety)
+      const cause = ev.cause ?? 'link'
+      if (ev.side === 'player') s.ourLoss[cause] = (s.ourLoss[cause] ?? 0) + 1
+      else if (ev.side === 'enemy') s.incLoss[cause] = (s.incLoss[cause] ?? 0) + 1
+      if (ev.kind === 'missileKilled') {
+        if (ev.side === 'player') s.ourKilled++
+        else if (ev.side === 'enemy') s.incKilled++
+      }
     } else if (ev.kind === 'missileHit') {
       if (ev.side === 'player') s.ourHits++
       else if (ev.side === 'enemy') s.incHits++
+    }
+    this.tallySalvo(ev)
+  }
+
+  /** sleduje osud NAŠICH salv; po dostřílení celé salvy shrne výsledek do logu */
+  private salvoTallies = new Map<number, SalvoTally>()
+
+  private tallySalvo(ev: SimEvent): void {
+    if (ev.side !== 'player' || ev.salvoId === undefined) return
+    if (ev.kind === 'launch') {
+      this.salvoTallies.set(ev.salvoId, { launched: ev.count ?? 0, resolved: 0, hits: 0, loss: {} })
+      return
+    }
+    const t = this.salvoTallies.get(ev.salvoId)
+    if (!t) return
+    if (ev.kind === 'missileHit') { t.hits++; t.resolved++ }
+    else if (ev.kind === 'missileKilled' || ev.kind === 'missileMiss') {
+      const cause = ev.cause ?? 'link'
+      t.loss[cause] = (t.loss[cause] ?? 0) + 1
+      t.resolved++
+    } else return
+    if (t.resolved >= t.launched) {
+      const parts = lossBreakdown(t.loss)
+      this.log.unshift({
+        t: ev.t,
+        text: `Taktický důstojník: salva dostřílena — ${t.hits}/${t.launched} zásahů`
+          + (parts ? ` (${parts})` : ''),
+        warn: false,
+      })
+      this.salvoTallies.delete(ev.salvoId)
     }
   }
 
@@ -299,13 +359,17 @@ export class Panels {
     const s = this.stats
     if (s.ourLaunched === 0 && s.incLaunched === 0) return ''
     const pct = s.ourLaunched > 0 ? Math.round((100 * s.ourHits) / s.ourLaunched) : 0
+    const ourParts = lossBreakdown(s.ourLoss)
+    const incParts = lossBreakdown(s.incLoss)
     return `<div class="panel"><h3>Bojová statistika</h3>`
       + `<div class="row"><b>NAŠE PALBA</b><span>odpáleno ${s.ourLaunched}</span></div>`
-      + `<div class="row dim"><span>sestřeleno ${s.ourKilled} · zásahy ${s.ourHits}</span>`
+      + `<div class="row dim"><span>zásahy ${s.ourHits}</span>`
       + `<span>úspěšnost ${pct} %</span></div>`
+      + (ourParts ? `<div class="row dim"><span>ztráty: ${ourParts}</span></div>` : '')
       + `<div class="row"><b>PŘÍCHOZÍ</b><span>odpáleno na nás ${s.incLaunched}</span></div>`
       + `<div class="row dim"><span>pobráno obranou ${s.incKilled}</span>`
       + `<span class="${s.incHits > 0 ? 'bad' : ''}">zásahy do nás ${s.incHits}</span></div>`
+      + (incParts ? `<div class="row dim"><span>naše obrana: ${incParts}</span></div>` : '')
       + `</div>`
   }
 
