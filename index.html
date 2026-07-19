@@ -7,14 +7,40 @@
   <title>Wall of Battle</title>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #05080a; color: #9fd8a0; font-family: "Consolas", "Menlo", monospace; overflow: hidden; }
-    #app { display: flex; height: 100vh; }
-    #plot-container { flex: 1; position: relative; min-width: 0; }
+    #app { position: relative; height: 100vh; }
+    #plot-container { position: absolute; inset: 0; }
     #plot { position: absolute; inset: 0; width: 100%; height: 100%; }
-    #sidebar { width: 320px; border-left: 1px solid #1c3a1e; padding: 8px; overflow-y: auto; font-size: 12px; }
-    #topbar { position: absolute; top: 0; left: 0; right: 0; padding: 4px 8px; font-size: 12px; pointer-events: none; z-index: 5; }
+    #topbar { position: absolute; top: 0; left: 0; right: 0; padding: 4px 8px; font-size: 12px; pointer-events: none; z-index: 8; }
     #topbar > * { pointer-events: auto; }
-    .panel { border: 1px solid #1c3a1e; margin-bottom: 8px; padding: 6px; }
-    .panel h3 { margin: 0 0 4px 0; font-size: 12px; color: #d8b34f; text-transform: uppercase; }
+    /* --- HUD vrstvy nad plotem (kontejnery nechytají klik, panely ano) --- */
+    .hud { position: absolute; z-index: 6; display: flex; flex-direction: column; gap: 6px; pointer-events: none; font-size: 11px; }
+    #hud-tl { top: 30px; left: 8px; width: 336px; bottom: 96px; overflow-y: auto; }
+    #hud-tr { top: 30px; right: 8px; width: 340px; bottom: 96px; overflow-y: auto; }
+    #hud-bottom { left: 8px; right: 364px; bottom: 8px; flex-direction: row; align-items: flex-end; }
+    #hud-br { right: 8px; bottom: 8px; width: 340px; max-height: 46vh; overflow-y: auto; justify-content: flex-end; }
+    /* sloupce jen jako fallback scrollují, panely samotné se nesmí roztahovat */
+    .hud > * { flex-shrink: 0; }
+    .panel { border: 1px solid #1c3a1e; padding: 4px 6px; background: #05080ac0; backdrop-filter: blur(2px); pointer-events: auto; }
+    .panel h3 { margin: 0 0 3px 0; font-size: 11px; color: #d8b34f; text-transform: uppercase; cursor: pointer; user-select: none; }
+    .panel h3:last-child { margin-bottom: 0; }
+    .panel h3 .fold-mark { color: #6fae74; }
+    #hud-bottom .panel { max-width: 100%; }
+    /* rozklikávací detail třídy lodi */
+    .cls-row { cursor: pointer; color: #6fae74; padding: 1px 0; user-select: none; }
+    .cls-row:hover { color: #9fd8a0; }
+    .cls-lore { color: #9fd8a0; font-size: 11px; line-height: 1.4; margin: 3px 0; border-left: 2px solid #1c3a1e; padding-left: 6px; }
+    .cls-table { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 3px 0; font-size: 11px; }
+    /* subsystémy ve dvou sloupcích (kompaktní vlastní loď) */
+    .subsys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; margin-top: 4px; }
+    .subsys-grid .subsys .nm { flex: 0 0 72px; font-size: 10px; }
+    .subsys-grid .subsys .pc { flex: 0 0 28px; font-size: 10px; }
+    /* vodorovná lišta rozkazů */
+    .ob { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+    .ob .obg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 8px; border-left: 1px solid #1c3a1e; }
+    .ob .obg:first-child { border-left: none; padding-left: 0; }
+    .ob-cd { height: 3px; margin-top: 4px; background: #0b1a0c; border: 1px solid #1c3a1e; }
+    .ob-cd i { display: block; height: 100%; background: #2a5a2e; }
+    .ob-cd.amber i { background: #8a6a1f; }
     button { background: #0b1a0c; color: #9fd8a0; border: 1px solid #2a5a2e; font-family: inherit; font-size: 12px; cursor: pointer; padding: 2px 8px; }
     button:hover { background: #14301662; }
     button.active { background: #2a5a2e; color: #eaffea; }
@@ -25,7 +51,8 @@
     .tb-time { color: #eaffea; min-width: 110px; }
     .tb-comp button { margin-right: 2px; }
     /* --- audio ovládání (renderuje se jednou, mimo přerender topbaru) --- */
-    .tb-main { display: inline-flex; gap: 12px; align-items: center; }
+    .tb-main { display: inline-flex; gap: 12px; align-items: center; flex-wrap: nowrap; white-space: nowrap; min-width: 0; }
+    .tb-slow { overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
     .tb-audio { display: inline-flex; gap: 8px; align-items: center; margin-left: auto; }
     .tb-audio label { display: inline-flex; gap: 3px; align-items: center; color: #6fae74; font-size: 11px; }
     .tb-audio input[type=range] { width: 64px; height: 12px; margin: 0; accent-color: #2a5a2e; }
@@ -47,7 +74,7 @@
     .btnrow { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
     .obj { padding: 1px 0; }
     .obj.open { color: #d8b34f; } .obj.done { color: #9fd8a0; } .obj.failed { color: #e06c5a; }
-    #log { max-height: 170px; overflow-y: auto; font-size: 11px; line-height: 1.45; color: #6fae74; }
+    #log { max-height: 110px; overflow-y: auto; font-size: 10px; line-height: 1.4; color: #6fae74; }
     #log .ev-warn { color: #d8b34f; }
     .overlay { position: fixed; inset: 0; background: #05080aee; display: flex; align-items: center; justify-content: center; z-index: 30; font-size: 13px; }
     .overlay .box { border: 1px solid #2a5a2e; background: #081008; padding: 20px 26px; max-width: 620px; box-shadow: 0 0 40px #0f5a1430; }
@@ -70,7 +97,7 @@
     .comm-body { flex: 1; min-width: 0; }
     .comm-name { color: #d8b34f; font-size: 11px; }
     .comm-text { color: #9fd8a0; font-size: 11px; line-height: 1.4; }
-    #toasts { position: absolute; left: 12px; bottom: 34px; z-index: 10; display: flex; flex-direction: column; gap: 6px; max-width: 420px; pointer-events: none; }
+    #toasts { position: absolute; left: 12px; bottom: 96px; z-index: 10; display: flex; flex-direction: column; gap: 6px; max-width: 420px; pointer-events: none; }
     .toast { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #2a5a2e; background: #081008ee; padding: 6px 10px; font-size: 12px; box-shadow: 0 0 18px #0f5a1430; transition: opacity .5s; }
     .toast.fade { opacity: 0; }
     .toast-comm { border-color: #8a6a1f; }
@@ -92,8 +119,11 @@
     <div id="plot-container">
       <canvas id="plot"></canvas>
       <div id="topbar"></div>
+      <div id="hud-tl" class="hud"></div>
+      <div id="hud-tr" class="hud"></div>
+      <div id="hud-bottom" class="hud"></div>
+      <div id="hud-br" class="hud"></div>
     </div>
-    <div id="sidebar"></div>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>

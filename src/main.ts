@@ -11,7 +11,7 @@ import { SCENARIOS } from './data/missions'
 import type { Scenario, SimState } from './sim/types'
 
 const canvas = document.getElementById('plot') as HTMLCanvasElement
-const sidebar = document.getElementById('sidebar') as HTMLElement
+const plotContainer = document.getElementById('plot-container') as HTMLElement
 const topbar = document.getElementById('topbar') as HTMLElement
 
 const bridge = new SimBridge()
@@ -20,7 +20,7 @@ const plot = new TacticalPlot(canvas)
 const audio = new AudioManager()
 audio.setMenuMode(true)
 window.addEventListener('pointerdown', () => audio.unlock())
-const panels = new Panels(sidebar, topbar, a => { audio.uiClick(); controller.handleAction(a) }, audio)
+const panels = new Panels(plotContainer, topbar, a => { audio.uiClick(); controller.handleAction(a) }, audio)
 const controller = new UIController(bridge, plot, panels)
 
 let outcomeShown = false
