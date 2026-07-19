@@ -128,7 +128,7 @@ export function launchSalvo(
   ship.missiles -= n
   ship.tubeCooldown = TUBE_COOLDOWN
   state.events.push({
-    t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, slowdown: true,
+    t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, slowdown: true,
     text: `${ship.name}: odpálena salva ${n} raket${opts.ignoreCooldown ? ' (druhá vlna)' : ''}`,
   })
 }
@@ -143,7 +143,7 @@ export function updateMissiles(state: SimState, dt: number): void {
     if (!target || target.destroyed) {
       m.phase = 'dead'
       state.events.push({
-        t: state.t, kind: 'missileMiss', side: m.side,
+        t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
         text: 'raketa ztratila cíl (zničen)',
       })
       continue
@@ -173,7 +173,7 @@ export function updateMissiles(state: SimState, dt: number): void {
     if (m.lock < LOCK_LOST) {
       m.phase = 'dead'
       state.events.push({
-        t: state.t, kind: 'missileMiss', side: m.side,
+        t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
         text: 'raketa ztratila zámek',
       })
       continue

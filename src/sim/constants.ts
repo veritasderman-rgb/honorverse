@@ -47,6 +47,11 @@ export const TUBE_COOLDOWN = 25
 /** pod tuto hodnotu zámku raketa ztrácí cíl */
 export const LOCK_LOST = 0.2
 
+/** kapitulace: cooldown opakované výzvy na tentýž cíl (s) */
+export const SURRENDER_COOLDOWN = 180
+/** kapitulace: bonus šance při vyřazených zbraních / prázdných zásobnících */
+export const SURRENDER_WEAPONS_OUT_BONUS = 0.15
+
 /** rolování lodi: doba přechodu (s) */
 export const ROLL_TIME = 8
 

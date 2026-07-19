@@ -172,7 +172,11 @@ export interface ShipState {
   tubeCooldown: number
   energyCooldown: number
   destroyed: boolean
-  /** AI doktrína ('player' = ovládá hráč) */
+  /** loď kapitulovala (klín vypnut, nebojuje, AI na ni nestřílí) */
+  surrendered: boolean
+  /** sim čas poslední výzvy ke kapitulaci NA tuto loď (cooldown opakování) */
+  lastSurrenderDemandAt: number
+  /** AI doktrína ('player' = ovládá hráč, 'surrendered' = kapitulovala) */
   doctrine: string
   /** řízení palby (AUTO/HOLD, cíl, velikost salvy, režim pohonu) */
   fireControl: FireControl
@@ -199,6 +203,20 @@ export interface Contact {
   wedgeDetected: boolean
 }
 
+/**
+ * Zpráva letící éterem rychlostí světla (výzva ke kapitulaci + odpověď).
+ * Plain data (structured-clone-safe) — součást SimState kvůli determinismu;
+ * engine ji vyhodnotí (roll ze state.rng) až při DORUČENÍ (deliverAt).
+ */
+export interface PendingComm {
+  /** sim čas doručení odpovědi (odeslání + 2·vzdálenost/C) */
+  deliverAt: number
+  /** loď, které byla výzva určena */
+  targetId: number
+  /** loď, která výzvu poslala */
+  demanderId: number
+}
+
 // ---------- rozkazy (UI/AI -> engine) ----------
 
 export type Order =
@@ -212,6 +230,8 @@ export type Order =
   /** vrstvená salva: hlavní vlna LO hned + follow-up HI časovaný na společný přílet */
   | { kind: 'launchLayered'; shipId: number; targetId: number; countLo: number; countHi: number }
   | { kind: 'fireEnergy'; shipId: number; targetId: number }
+  /** výzva ke kapitulaci — odpověď dorazí po 2·vzdálenost/C (pendingComms) */
+  | { kind: 'demandSurrender'; shipId: number; targetId: number }
   | { kind: 'holdFire'; shipId: number }
   /** parciální update řízení palby (engaged spravuje engine) */
   | { kind: 'setFireControl'; shipId: number; fc: Partial<Omit<FireControl, 'engaged'>> }
@@ -226,8 +246,12 @@ export interface SimEvent {
     | 'contactNew' | 'contactClassified' | 'message' | 'objective'
     | 'comm'
   text: string
+  /** u zásahových eventů (missileHit/Miss/Killed) = ZASAŽENÁ/bráněná loď */
   shipId?: number
+  /** u launch/missileKilled/missileHit/missileMiss = strana RAKETY */
   side?: Side
+  /** launch: počet odpálených raket (bojová statistika) */
+  count?: number
   /** UI: událost, u které má komprese času spadnout na 1× */
   slowdown?: boolean
   /** mluvčí hlášky/komunikace (id avataru z docs/ART_PROMPTS.md) */
@@ -238,7 +262,7 @@ export interface SimEvent {
 
 export interface TriggerCondition {
   kind: 'time' | 'distanceBelow' | 'distanceAbove' | 'shipDestroyed' | 'flag'
-    | 'wedgeOn' | 'shipsDestroyedCount'
+    | 'wedgeOn' | 'shipsDestroyedCount' | 'shipSurrendered'
   t?: number
   shipA?: number
   shipB?: number
@@ -303,6 +327,8 @@ export interface SimState {
   /** kontakty podle strany */
   contacts: Record<Side, Contact[]>
   events: SimEvent[]        // události od posledního snapshotu (engine je vyprazdňuje)
+  /** zprávy na cestě (výzvy ke kapitulaci) — vyhodnocují se při doručení */
+  pendingComms: PendingComm[]
   flags: Record<string, boolean>
   objectives: Objective[]
   outcome: 'running' | 'win' | 'lose'

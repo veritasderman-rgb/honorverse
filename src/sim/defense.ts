@@ -36,16 +36,16 @@ export function updateDefenses(state: SimState, dt: number): void {
       if (m.lock < LOCK_LOST) {
         m.phase = 'dead'
         state.events.push({
-          t: state.t, kind: 'missileMiss', side: m.side,
+          t: state.t, kind: 'missileMiss', side: m.side, shipId: target.id,
           text: 'raketa svedena ECM/decoyi — ztráta zámku',
         })
       }
     }
   }
 
-  // --- vrstva 2: protirakety ---
+  // --- vrstva 2: protirakety (kapitulovaná loď se nebrání — složila zbraně) ---
   for (const ship of state.ships) {
-    if (ship.destroyed || ship.cms <= 0) continue
+    if (ship.destroyed || ship.surrendered || ship.cms <= 0) continue
     const def = SHIP_CLASSES[ship.classId]
     const rate = (def.cmLaunchers * ship.subsystems.cm) / CM_COOLDOWN // odpalů/s
     if (rate <= 0) continue
@@ -71,7 +71,8 @@ export function updateDefenses(state: SimState, dt: number): void {
       if (rand(state.rng) < CM_PK) {
         threat.phase = 'dead'
         state.events.push({
-          t: state.t, kind: 'missileKilled', shipId: ship.id, side: ship.side,
+          // side = strana RAKETY (statistika), shipId = bránící se loď
+          t: state.t, kind: 'missileKilled', shipId: ship.id, side: threat.side,
           text: `${ship.name}: protiraketa zničila útočnou raketu`,
         })
       }
@@ -107,7 +108,8 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   for (let i = 0; i < clusters; i++) {
     if (rand(state.rng) < pdlcPk) {
       state.events.push({
-        t: state.t, kind: 'missileKilled', shipId: target.id, side: target.side,
+        // side = strana RAKETY (statistika), shipId = bránící se loď
+        t: state.t, kind: 'missileKilled', shipId: target.id, side: missile.side,
         text: `${target.name}: bodová obrana sestřelila raketu`,
       })
       return
@@ -120,7 +122,7 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
     if (Math.abs(angleDiff(approach, target.rolledTo)) < 1.2) {
       if (rand(state.rng) < 0.7) {
         state.events.push({
-          t: state.t, kind: 'missileKilled', shipId: target.id, side: target.side,
+          t: state.t, kind: 'missileKilled', shipId: target.id, side: missile.side,
           text: `${target.name}: raketa se roztříštila o klín`,
         })
         return
@@ -137,13 +139,14 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   }
   if (hits <= 0) {
     state.events.push({
-      t: state.t, kind: 'missileMiss', side: missile.side,
+      t: state.t, kind: 'missileMiss', side: missile.side, shipId: target.id,
       text: 'laserová hlavice detonovala mimo — žádný zásah',
     })
     return
   }
   state.events.push({
-    t: state.t, kind: 'missileHit', shipId: target.id, side: target.side,
+    // side = strana RAKETY (statistika i SFX), shipId = zasažená loď
+    t: state.t, kind: 'missileHit', shipId: target.id, side: missile.side,
     text: `${target.name}: zásah laserovou hlavicí (${hits}× paprsek, ${aspect})`,
   })
   for (let i = 0; i < hits; i++) {

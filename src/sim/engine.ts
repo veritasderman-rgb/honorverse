@@ -11,6 +11,7 @@ import { updateSensors } from './sensors'
 import { updateFireControl } from './firecontrol'
 import { updateCrew } from './crew'
 import { collectAIOrders } from './ai'
+import { demandSurrender, updatePendingComms } from './surrender'
 import { spawnShip, updateTriggers } from './scenario'
 import { dist, dot, norm, sub } from './vec'
 import { SCENARIOS } from '../data/missions'
@@ -51,7 +52,7 @@ const liveTarget = (state: SimState, id: number): ShipState | undefined => {
 
 function applyOrder(state: SimState, order: Order): void {
   const ship = shipById(state, order.shipId)
-  if (!ship || ship.destroyed) return
+  if (!ship || ship.destroyed || ship.surrendered) return
 
   switch (order.kind) {
     case 'setCourse':
@@ -103,6 +104,9 @@ function applyOrder(state: SimState, order: Order): void {
       if (target) fireEnergy(state, ship, target)
       break
     }
+    case 'demandSurrender':
+      demandSurrender(state, ship, order.targetId)
+      break
     case 'holdFire':
       // zastaví AUTO palbu (nav zůstává)
       ship.fireControl.mode = 'hold'
@@ -130,6 +134,7 @@ export const sim: SimApi = {
       missiles: [],
       contacts: { player: [], enemy: [], neutral: [] },
       events: [],
+      pendingComms: [],
       flags: {},
       objectives: scenario.objectives.map(o => ({ ...o })),
       outcome: 'running',
@@ -166,6 +171,8 @@ export const sim: SimApi = {
     updateFireControl(state)
     // (8) posádka: polní opravy + náhodné události za boje
     updateCrew(state, dt)
+    // (8b) doručení zpráv na cestě (výzvy ke kapitulaci — roll až teď)
+    updatePendingComms(state)
     // (9) triggery scénáře
     const scenario = scenarioFor(state)
     if (scenario) updateTriggers(state, scenario)

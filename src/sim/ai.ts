@@ -162,16 +162,20 @@ function escortOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
 export function collectAIOrders(state: SimState): Order[] {
   const orders: Order[] = []
   for (const ship of state.ships) {
-    if (ship.destroyed) continue
+    if (ship.destroyed || ship.surrendered) continue
     const doctrine = ship.doctrine
-    // 'freighter' jen udržuje stávající nav — žádné rozkazy; 'buoy' je statická kotva
-    if (doctrine === 'player' || doctrine === 'freighter' || doctrine === 'buoy') continue
+    // 'freighter' jen udržuje stávající nav — žádné rozkazy; 'buoy' je statická
+    // kotva; 'surrendered' se vzdala (nemanévruje, nestřílí, negeneruje rozkazy)
+    if (doctrine === 'player' || doctrine === 'freighter' || doctrine === 'buoy'
+      || doctrine === 'surrendered') continue
 
     const contacts = state.contacts[ship.side] ?? []
-    // IFF: cílíme jen na kontakty skutečně nepřátelské strany (transpondér)
+    // IFF: cílíme jen na kontakty skutečně nepřátelské strany (transpondér);
+    // kapitulované lodě jsou z výběru cílů vyřazené — na ně se nestřílí
     const hostiles = contacts.filter(c => {
       const target = state.ships.find(s => s.id === c.shipId)
-      return !!target && !target.destroyed && hostileTo(ship.side, target.side)
+      return !!target && !target.destroyed && !target.surrendered
+        && hostileTo(ship.side, target.side)
     })
 
     if (doctrine === 'runner') runnerOrders(state, ship, hostiles, orders)

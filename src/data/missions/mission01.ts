@@ -112,6 +112,19 @@ export const mission01: Scenario = {
       ],
     },
     {
+      // Cygnus kapituloval ⇒ vítězství (zajetí lodi, nákladu i posádky)
+      id: 'trg-cygnus-surrendered', once: true,
+      conditions: [{ kind: 'shipSurrendered', shipId: CYGNUS }],
+      actions: [
+        {
+          kind: 'comm', speaker: 'station',
+          text: 'Kontrola Brány: „Cygnus kapituloval a vypnul klín. Výsadková četa je na cestě — výborná práce, Dauntless."',
+        },
+        { kind: 'objectiveComplete', objectiveId: 'obj-no-escape' },
+        { kind: 'winMission', text: 'Cygnus se vzdal i s nákladem. Zadrženou loď převezme Kontrola Brány.' },
+      ],
+    },
+    {
       // Cygnus doletěl k hyperlimitní bóji ⇒ únik, prohra
       id: 'trg-cygnus-escaped', once: true,
       conditions: [

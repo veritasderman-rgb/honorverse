@@ -30,6 +30,26 @@ const merchant = (name: string, y: number): Scenario['ships'][0] => ({
 /** flag „obchodník i dorazil k cíli" */
 const arrived = (id: number): string => `arrived-${id}`
 
+/** flag „pirát id vyřazen" — zničen NEBO kapituloval (zažeň = obojí platí) */
+const neutralized = (id: number): string => `neutralized-${id}`
+
+/** dvojice triggerů per pirát: zničení i kapitulace nastaví tentýž flag */
+const pirateNeutralized = (id: number): Scenario['triggers'] => [
+  {
+    id: `trg-pirate-dead-${id}`, once: true,
+    conditions: [{ kind: 'shipDestroyed', shipId: id }],
+    actions: [{ kind: 'setFlag', flag: neutralized(id) }],
+  },
+  {
+    id: `trg-pirate-surrendered-${id}`, once: true,
+    conditions: [{ kind: 'shipSurrendered', shipId: id }],
+    actions: [
+      { kind: 'setFlag', flag: neutralized(id) },
+      { kind: 'message', text: 'Nájezdník kapituloval — hrozba pro konvoj zažehnána.' },
+    ],
+  },
+]
+
 /** vítězný trigger: konkrétní trojice obchodníků dorazila (aspoň 3 ze 4) */
 const winTrio = (trio: number[], n: number): Scenario['triggers'][0] => ({
   id: `trg-win-convoy-${n}`, once: true,
@@ -150,17 +170,21 @@ export const mission02: Scenario = {
     winTrio([2, 4, 5], 3),
     winTrio([3, 4, 5], 4),
 
+    // vyřazení pirátů: zničení NEBO kapitulace nastaví flag neutralized-<id>
+    ...pirateNeutralized(PIRATE1),
+    ...pirateNeutralized(PIRATE2),
+    ...pirateNeutralized(PIRATE3),
     {
-      // výhra bojem: všichni tři piráti zničeni
+      // výhra bojem: všichni tři piráti zničeni nebo kapitulovaní
       id: 'trg-win-pirates', once: true,
       conditions: [
-        { kind: 'shipDestroyed', shipId: PIRATE1 },
-        { kind: 'shipDestroyed', shipId: PIRATE2 },
-        { kind: 'shipDestroyed', shipId: PIRATE3 },
+        { kind: 'flag', flag: neutralized(PIRATE1) },
+        { kind: 'flag', flag: neutralized(PIRATE2) },
+        { kind: 'flag', flag: neutralized(PIRATE3) },
       ],
       actions: [
         { kind: 'objectiveComplete', objectiveId: 'obj-raiders' },
-        { kind: 'winMission', text: 'Všichni nájezdníci zničeni. Konvoj je v bezpečí.' },
+        { kind: 'winMission', text: 'Všichni nájezdníci zničeni nebo zajati. Konvoj je v bezpečí.' },
       ],
     },
     {

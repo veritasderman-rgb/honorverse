@@ -48,6 +48,9 @@ export function spawnShip(state: SimState, spec: ShipSpec): ShipState {
     tubeCooldown: spec.tubeCooldown ?? 0,
     energyCooldown: spec.energyCooldown ?? 0,
     destroyed: spec.destroyed ?? false,
+    surrendered: spec.surrendered ?? false,
+    // -1e9: první výzva ke kapitulaci není blokována cooldownem
+    lastSurrenderDemandAt: spec.lastSurrenderDemandAt ?? -1e9,
     doctrine: spec.doctrine ?? (spec.side === 'player' ? 'player' : 'freighter'),
     fireControl: spec.fireControl
       ? { ...spec.fireControl }
@@ -80,6 +83,8 @@ function evalCondition(state: SimState, c: TriggerCondition): boolean {
     }
     case 'shipDestroyed':
       return byId(state, c.shipId)?.destroyed === true
+    case 'shipSurrendered':
+      return byId(state, c.shipId)?.surrendered === true
     case 'flag':
       return c.flag !== undefined && state.flags[c.flag] === true
     case 'wedgeOn': {

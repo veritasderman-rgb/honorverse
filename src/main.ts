@@ -106,6 +106,7 @@ function showOutcome(state: SimState): void {
 
 bridge.onReady = scenario => {
   currentMissionId = scenario.id
+  panels.resetStats() // bojová statistika se počítá per mise
   plot.setHyperlimit(scenario.hyperlimit ?? null)
   showBriefing(scenario)
   plot.start()

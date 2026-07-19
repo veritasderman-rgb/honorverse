@@ -97,6 +97,21 @@ export const mission03: Scenario = {
       ],
     },
     {
+      // lepší konec: Q-ship kapituloval — zajatá loď je zpravodajská trofej
+      id: 'trg-qship-surrendered', once: true,
+      conditions: [{ kind: 'shipSurrendered', shipId: MERCATOR }],
+      actions: [
+        {
+          kind: 'objectiveComplete', objectiveId: 'obj-destroy',
+          text: 'Úkol splněn: pomocný křižník vyřazen — kapituloval.',
+        },
+        {
+          kind: 'winMission',
+          text: 'Mercator kapituloval — zajali jsme direktoriátní pomocný křižník i s kódy a dokumentací. Zpravodajská trofej první třídy.',
+        },
+      ],
+    },
+    {
       // prohra: zničení hráče
       id: 'trg-player-destroyed', once: true,
       conditions: [{ kind: 'shipDestroyed', shipId: DAUNTLESS }],

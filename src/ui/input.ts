@@ -145,6 +145,10 @@ export class UIController {
       case 'energy':
         if (t != null) this.send({ kind: 'fireEnergy', shipId: own.id, targetId: t })
         break
+      case 'demandSurrender':
+        // výzva ke kapitulaci — odpověď dorazí po 2·vzdálenost/c (sim čas)
+        if (t != null) this.send({ kind: 'demandSurrender', shipId: own.id, targetId: t })
+        break
       case 'rollThreat': {
         const dir = this.threatDir(own)
         if (dir != null) this.send({ kind: 'roll', shipId: own.id, towards: dir })
@@ -299,6 +303,18 @@ export class UIController {
         <b>Poškození</b><span>subsystémy po částech; posádka provizorně opravuje do 70 %</span>
         <b>Light-lag</b><span>kontakty jsou staré vzdálenost/c sekund — u 30 M km ~100 s</span>
         <b>Hyperlimit</b><span>jantarová čára — za ní lodě unikají do hyperprostoru</span>
+      </div>
+      <h4>Kapitulace</h4>
+      <div class="help-grid">
+        <b>Výzva</b><span>v detailu cíle „Vyzvat ke kapitulaci" — jen na klasifikovaný nepřátelský kontakt</span>
+        <b>Šance</b><span>≈ (poškození − 20 %) × morálka posádky; +15 % při vyřazených šachtách či prázdných zásobnících</span>
+        <b>Odpověď</b><span>letí rychlostí světla tam i zpět (2×vzdálenost/c); další výzva na týž cíl až po 180 s</span>
+        <b>Po kapitulaci</b><span>loď vypne klín a přestane bojovat — na plotu šedá se symbolem ▽; nestřílej na ni</span>
+      </div>
+      <h4>Bojová statistika</h4>
+      <div class="help-grid">
+        <b>Panel nad logem</b><span>NAŠE PALBA: odpáleno / sestřeleno / zásahy / úspěšnost; PŘÍCHOZÍ: odpáleno na nás / pobráno obranou / zásahy do nás</span>
+        <b>Šachty</b><span>panel vlastní lodi ukazuje „šachty N/M funkční" — poškozené šachty zmenšují salvu</span>
       </div>
       <div style="margin-top:12px"><button id="btn-help-close">ZAVŘÍT (Esc)</button></div>
     </div>`

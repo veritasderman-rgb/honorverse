@@ -24,6 +24,9 @@ const CLR = {
   wedge: '#8fe08a',
   contactUnknown: '#e0c05a',
   contactHostile: '#e06c5a',
+  /** kapitulovaná loď — šedobílá, s vlajkou ▽ */
+  surrendered: '#cfd8d4',
+  sensorRing: '#3f7f8f',
   missileOwn: '#9fe08a',
   missileFoe: '#ff705c',
   ring: '#2a5a2e',
@@ -346,18 +349,27 @@ export class TacticalPlot {
     if (!ship) ship = s.ships.find(x => x.id === this.followId && !x.destroyed)
     if (!ship) return
     const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
-    const rings: { r: number; label: string }[] = [
+    const sensorRange = SHIP_CLASSES[ship.classId]?.activeSensorRange ?? 0
+    const rings: { r: number; label: string; color?: string }[] = [
       { r: MISSILE_ENVELOPE, label: 'rakety ~7M km' },
       { r: CM_INTERCEPT_RANGE, label: 'CM 2,5M km' },
       { r: ENERGY_MAX_RANGE, label: 'energie 500k km' },
     ]
+    // dosah aktivních senzorů (plná identifikace) — čárkovaně, vlastní barva
+    if (sensorRange > 0) {
+      rings.push({
+        r: sensorRange,
+        label: `senzory ${(sensorRange / 1e6).toFixed(0)} M km`,
+        color: CLR.sensorRing,
+      })
+    }
     ctx.save()
     ctx.setLineDash([4, 6])
-    ctx.strokeStyle = CLR.ring
-    ctx.fillStyle = CLR.ringLabel
     for (const ring of rings) {
       const rPx = ring.r / this.kmPerPx
       if (rPx < 12 || rPx > 6000) continue
+      ctx.strokeStyle = ring.color ?? CLR.ring
+      ctx.fillStyle = ring.color ?? CLR.ringLabel
       ctx.beginPath()
       ctx.arc(p.x, p.y, rPx, 0, Math.PI * 2)
       ctx.stroke()
@@ -448,7 +460,11 @@ export class TacticalPlot {
     const est = this.exPos(c.pos, c.vel, c.age)
     const p = this.worldToScreen(est)
     this.pickables.push({ id: c.shipId, x: p.x, y: p.y })
-    const color = c.idQuality === 0 ? CLR.contactUnknown : CLR.contactHostile
+    // kapitulovaná loď: šedobílá + vlajka ▽ (už není hrozba)
+    const surrendered = this.state?.ships.find(s => s.id === c.shipId)?.surrendered === true
+    const color = surrendered
+      ? CLR.surrendered
+      : c.idQuality === 0 ? CLR.contactUnknown : CLR.contactHostile
 
     // kroužek nejistoty ~ age · |vel|
     const rKm = c.age * Math.hypot(c.vel.x, c.vel.y)
@@ -479,7 +495,13 @@ export class TacticalPlot {
 
     const cls = c.idQuality === 0 ? '???' : (SHIP_CLASSES[c.classGuess]?.hullCode ?? c.classGuess)
     ctx.fillStyle = color
-    ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
+    if (surrendered) {
+      // vlajka kapitulace nad značkou
+      ctx.fillText('▽', p.x - 4, p.y - 10)
+      ctx.fillText(`${cls} · kapituloval`, p.x + 10, p.y + 14)
+    } else {
+      ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
+    }
   }
 
   private drawMissile(ctx: CanvasRenderingContext2D, pos: Vec2, vel: Vec2, own: boolean, phase: string): void {

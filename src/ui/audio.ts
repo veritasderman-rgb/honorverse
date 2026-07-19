@@ -288,8 +288,8 @@ export class AudioManager {
           else if (side === 'enemy') this.sfx('incoming')
           break
         case 'missileHit':
-          // side = strana zasažené lodi
-          if (side === 'player') this.sfx('hitOwn')
+          // side = strana RAKETY: nepřátelská raketa = zásah do nás
+          if (side === 'enemy') this.sfx('hitOwn')
           else this.sfx('hitEnemy')
           break
         case 'missileKilled':

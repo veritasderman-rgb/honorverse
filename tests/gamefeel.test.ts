@@ -31,7 +31,7 @@ function fullSubsystems(v = 1): Subsystems {
 function makeState(seed: number): SimState {
   return {
     t: 0, rng: { s: seed >>> 0 }, nextId: 1000, ships: [], missiles: [],
-    contacts: { player: [], enemy: [], neutral: [] }, events: [], flags: {},
+    contacts: { player: [], enemy: [], neutral: [] }, events: [], pendingComms: [], flags: {},
     objectives: [], outcome: 'running', scenarioId: 'test',
   }
 }
@@ -45,6 +45,7 @@ function makeShip(id: number, classId: string, over: Partial<ShipState> = {}): S
     subsystems: fullSubsystems(),
     hull: def.hullPoints, missiles: def.magazineMissiles, cms: def.magazineCMs,
     tubeCooldown: 0, energyCooldown: 0, destroyed: false, doctrine: 'player',
+    surrendered: false, lastSurrenderDemandAt: -1e9,
     fireControl: { mode: 'hold', targetId: null, salvoSize: def.tubesPerBroadside, driveMode: 0, engaged: false },
     pendingWave: null,
     buffs: { lockBonus: 0, lockUntil: 0, repairBonus: 1, repairUntil: 0 },

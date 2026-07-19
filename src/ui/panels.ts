@@ -5,8 +5,13 @@
  * Nově: komunikační panel (avatary z img/<speaker>.png), detail cíle,
  * stav AUTO palby + progres bar šachet, overlay toasty u plotu.
  */
-import { SHIP_CLASSES } from '../data/defs'
-import { TUBE_COOLDOWN } from '../sim/constants'
+import { MISSILES, SHIP_CLASSES } from '../data/defs'
+import {
+  ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE, ENERGY_MAX_RANGE, G,
+  SURRENDER_COOLDOWN, TUBE_COOLDOWN,
+} from '../sim/constants'
+import { effectiveTubes } from '../sim/damage'
+import { moraleFor, surrenderChance, weaponsOut } from '../sim/surrender'
 import { poweredEnvelope } from '../sim/weapons'
 import type { Contact, DriveMode, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { AudioManager } from './audio'
@@ -107,9 +112,19 @@ const avatarHtml = (speaker: string): string => {
 
 // ---------- panely ----------
 
+/** akumulovaná bojová statistika (z eventů; reset při nové misi) */
+interface CombatStats {
+  ourLaunched: number; ourKilled: number; ourHits: number
+  incLaunched: number; incKilled: number; incHits: number
+}
+
+const emptyStats = (): CombatStats =>
+  ({ ourLaunched: 0, ourKilled: 0, ourHits: 0, incLaunched: 0, incKilled: 0, incHits: 0 })
+
 export class Panels {
   private log: { t: number; text: string; warn: boolean }[] = []
   private commLog: { t: number; speaker: string; text: string }[] = []
+  private stats: CombatStats = emptyStats()
   private lastSidebarAt = 0
   private toasts: HTMLElement | null = null
   /** přerenderovávaná část topbaru (audio ovládání se renderuje jen jednou) */
@@ -163,9 +178,33 @@ export class Panels {
     setTimeout(() => { el.classList.add('fade'); setTimeout(() => el.remove(), 600) }, ms)
   }
 
+  /** reset bojové statistiky a logů — volat při startu nové mise */
+  resetStats(): void {
+    this.stats = emptyStats()
+    this.log = []
+    this.commLog = []
+  }
+
+  /** akumulace bojové statistiky (side u launch/kill/hit = strana RAKETY) */
+  private countStat(ev: SimEvent): void {
+    const s = this.stats
+    if (ev.kind === 'launch') {
+      const n = ev.count ?? 0
+      if (ev.side === 'player') s.ourLaunched += n
+      else if (ev.side === 'enemy') s.incLaunched += n
+    } else if (ev.kind === 'missileKilled') {
+      if (ev.side === 'player') s.ourKilled++
+      else if (ev.side === 'enemy') s.incKilled++
+    } else if (ev.kind === 'missileHit') {
+      if (ev.side === 'player') s.ourHits++
+      else if (ev.side === 'enemy') s.incHits++
+    }
+  }
+
   /** připojí nové události ze snapshotu do logu (worker je po odeslání maže) */
   addEvents(events: SimEvent[]): void {
     for (const ev of events) {
+      this.countStat(ev)
       const speakerName = ev.speaker ? SPEAKERS[ev.speaker]?.name ?? ev.speaker : null
       const logText = speakerName && ev.kind !== 'message' ? `${speakerName}: ${ev.text}` : ev.text
       this.log.unshift({ t: ev.t, text: logText, warn: !!ev.slowdown || ev.kind === 'shipDestroyed' })
@@ -240,7 +279,23 @@ export class Panels {
       + this.panelOrders(own, ui)
       + this.panelObjectives(state)
       + this.panelComms()
+      + this.panelStats()
       + this.panelLog()
+  }
+
+  /** BOJOVÁ STATISTIKA — naše palba vs. příchozí (akumulace z eventů) */
+  private panelStats(): string {
+    const s = this.stats
+    if (s.ourLaunched === 0 && s.incLaunched === 0) return ''
+    const pct = s.ourLaunched > 0 ? Math.round((100 * s.ourHits) / s.ourLaunched) : 0
+    return `<div class="panel"><h3>Bojová statistika</h3>`
+      + `<div class="row"><b>NAŠE PALBA</b><span>odpáleno ${s.ourLaunched}</span></div>`
+      + `<div class="row dim"><span>sestřeleno ${s.ourKilled} · zásahy ${s.ourHits}</span>`
+      + `<span>úspěšnost ${pct} %</span></div>`
+      + `<div class="row"><b>PŘÍCHOZÍ</b><span>odpáleno na nás ${s.incLaunched}</span></div>`
+      + `<div class="row dim"><span>pobráno obranou ${s.incKilled}</span>`
+      + `<span class="${s.incHits > 0 ? 'bad' : ''}">zásahy do nás ${s.incHits}</span></div>`
+      + `</div>`
   }
 
   private panelOwnShip(own: ShipState | null, state: SimState): string {
@@ -263,6 +318,15 @@ export class Panels {
         + `<span>senzory: <b class="${own.activeSensors ? 'amber' : 'ok'}">${own.activeSensors ? 'AKTIVNÍ' : 'PASIVNÍ'}</b></span></div>`
         + `<div class="row"><span>poloha: <b class="${own.rolledTo != null ? 'amber' : 'ok'}">${own.rolledTo != null ? 'ODVALENÁ' : 'normální'}</b></span>`
         + `<span>tah: ${Math.round(own.throttle * 100)} %</span></div>`
+
+    // funkční šachty (vliv poškození subsystémů na palbu — lepší bok)
+    const tubesMax = def?.tubesPerBroadside ?? 0
+    const tubesNow = tubesMax > 0 ? effectiveTubes(own) : 0
+    const tubesRow = tubesMax > 0
+      ? `<div class="row"><span>šachty: <b class="${tubesNow >= tubesMax ? 'ok' : tubesNow > 0 ? 'amber' : 'bad'}">`
+        + `${tubesNow}/${tubesMax} funkční</b></span>`
+        + `<span class="dim">salva max ${tubesNow}</span></div>`
+      : ''
 
     // cooldown šachet jako progres bar (plný = připraveno)
     const ready = 1 - Math.min(1, own.tubeCooldown / TUBE_COOLDOWN)
@@ -294,6 +358,7 @@ export class Panels {
       + `<div class="row"><span>rychlost: ${Math.round(speed).toLocaleString('cs-CZ')} km/s</span><span>akcel.: ${Math.round(accG)} g</span></div>`
       + `<div class="row"><span>trup: <b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></span>`
       + `<span>rakety ${own.missiles} · CM ${own.cms}</span></div>`
+      + tubesRow
       + status
       + cdRow
       + fireRow
@@ -314,8 +379,11 @@ export class Panels {
       const q = ['jen klín', 'třída?', 'ident.'][c.idQuality]
       const speed = Math.hypot(c.vel.x, c.vel.y)
       const sel = c.shipId === ui.targetId ? ' sel' : ''
+      const capitulated = state.ships.find(s => s.id === c.shipId)?.surrendered === true
+      const mark = capitulated ? '▽' : '◆'
+      const clsColor = capitulated ? 'dim' : c.idQuality === 0 ? 'amber' : 'bad'
       return `<div class="contact-row${sel}" data-sel="${c.shipId}">`
-        + `<div class="row"><span class="${c.idQuality === 0 ? 'amber' : 'bad'}">◆ ${esc(cls)} #${c.shipId}</span><span>${fmtKm(range)}</span></div>`
+        + `<div class="row"><span class="${clsColor}">${mark} ${esc(cls)} #${c.shipId}${capitulated ? ' — kapituloval' : ''}</span><span>${fmtKm(range)}</span></div>`
         + `<div class="row dim"><span>${Math.round(speed).toLocaleString('cs-CZ')} km/s · ${q}</span><span>stáří ${Math.round(c.age)} s</span></div>`
         + `</div>`
     }).join('')
@@ -342,12 +410,31 @@ export class Panels {
         ? `vzdaluje se ${Math.round(vr).toLocaleString('cs-CZ')} km/s`
         : 'drží vzdálenost'
     const qLabel = ['jen impelerový klín', 'přibližná klasifikace', 'plná identifikace'][c.idQuality]
+    const tgtShip = state.ships.find(s => s.id === c.shipId) ?? null
 
     let body =
       `<div class="row"><span>vzdálenost:</span><b>${fmtKm(d)}</b></div>`
       + `<div class="row"><span>radiálně:</span><span>${closingTxt}</span></div>`
       + `<div class="row"><span>stáří dat:</span><span>${Math.round(c.age)} s (light-lag)</span></div>`
       + `<div class="row"><span>klasifikace:</span><span>${qLabel}</span></div>`
+
+    // kapitulace — výrazný stav (loď se vzdala, nestřílet)
+    if (tgtShip?.surrendered) {
+      body += `<div class="row surrendered"><b class="ok">▽ KAPITULOVAL</b>`
+        + `<span>klín vypnut, loď se vzdala</span></div>`
+    }
+
+    // odhad poškození: idQuality 1 → kvantování 25 %, idQuality 2 → 10 %
+    let estDamage: number | null = null
+    if (c.idQuality >= 1 && tgtShip) {
+      const realDef = SHIP_CLASSES[tgtShip.classId]
+      const dmg = realDef ? 1 - Math.max(0, tgtShip.hull) / realDef.hullPoints : 0
+      const step = c.idQuality >= 2 ? 0.1 : 0.25
+      estDamage = Math.min(1, Math.round(dmg / step) * step)
+      const label = estDamage >= 0.995 ? 'kritické' : `~${Math.round(estDamage * 100)} %`
+      body += `<div class="row"><span>odhad poškození:</span>`
+        + `<b class="${estDamage >= 0.75 ? 'bad' : estDamage >= 0.25 ? 'amber' : 'ok'}">${label}</b></div>`
+    }
 
     const tDef = SHIP_CLASSES[c.classGuess]
     if (c.idQuality >= 1 && tDef) {
@@ -368,6 +455,13 @@ export class Panels {
       // výzbroj + porovnání raketových obálek (dle aktuální geometrie)
       body += `<div class="row"><span>výzbroj:</span>`
         + `<span>${tDef.tubesPerBroadside}× šachta/bok · ${tDef.energyMountsPerBroadside}× energet.</span></div>`
+      // odhad funkčních šachet (plná identifikace — zaokrouhlený stav subsystémů)
+      if (tDef.tubesPerBroadside > 0 && tgtShip) {
+        const best = Math.max(tgtShip.subsystems.tubesPort, tgtShip.subsystems.tubesStbd)
+        const estTubes = Math.round(tDef.tubesPerBroadside * best)
+        body += `<div class="row"><span>odhad funkčních šachet:</span>`
+          + `<span class="${estTubes < tDef.tubesPerBroadside ? 'amber' : ''}">~${estTubes}/${tDef.tubesPerBroadside}</span></div>`
+      }
       const ourEnv = poweredEnvelope(own.pos, own.vel, est, c.vel, 0)
       const hisEnv = tDef.tubesPerBroadside > 0
         ? poweredEnvelope(est, c.vel, own.pos, own.vel, 0)
@@ -387,7 +481,43 @@ export class Panels {
       body += `<div class="row dim"><span>výzbroj neznámá (ident. vyžaduje aktivní senzory zblízka)</span></div>`
     }
 
+    body += this.surrenderControls(state, own, c, tgtShip, estDamage)
+
     return `<div class="panel"><h3>Detail cíle #${c.shipId}</h3>${body}</div>`
+  }
+
+  /** tlačítko VYZVAT KE KAPITULACI + odhad šance (z KVANTOVANÉHO poškození) */
+  private surrenderControls(
+    state: SimState, own: ShipState | null, c: Contact,
+    tgtShip: ShipState | null, estDamage: number | null,
+  ): string {
+    if (!tgtShip || tgtShip.destroyed || tgtShip.surrendered) return ''
+    if (tgtShip.side !== 'enemy') {
+      // neválečný neutrál — výzva nedává smysl (disabled s vysvětlením)
+      return `<div class="btnrow"><button disabled title="Neutrální plavidlo — výzva ke kapitulaci nemá smysl.">`
+        + `Vyzvat ke kapitulaci</button></div>`
+    }
+    const cdLeft = Math.ceil(SURRENDER_COOLDOWN - (state.t - tgtShip.lastSurrenderDemandAt))
+    const inCooldown = cdLeft > 0
+    const classified = c.idQuality >= 1
+    const enabled = !!own && !own.destroyed && classified && !inCooldown
+    // šance stejným vzorcem, ale z ODHADNUTÉHO kvantovaného poškození;
+    // bonus za vyřazené zbraně vidíme až při plné identifikaci
+    const chance = classified && estDamage != null
+      ? surrenderChance(estDamage, moraleFor(tgtShip.doctrine), c.idQuality >= 2 && weaponsOut(tgtShip))
+      : null
+    const label = chance != null
+      ? `Vyzvat ke kapitulaci (šance ~${Math.round(chance * 100)} %)`
+      : 'Vyzvat ke kapitulaci'
+    const title = !classified
+      ? 'Nejdřív kontakt klasifikuj (přibliž se / aktivní senzory).'
+      : inCooldown
+        ? `Neodpovídá — další výzva za ${cdLeft} s. Mezitím zvyš tlak.`
+        : 'Pošle výzvu ke kapitulaci. Odpověď letí rychlostí světla tam a zpět (2×vzdálenost/c). '
+          + 'Šance roste s poškozením cíle a klesá s morálkou posádky; +15 % při vyřazených zbraních.'
+    return `<div class="btnrow"><button data-act="demandSurrender" title="${esc(title)}"`
+      + `${enabled ? '' : ' disabled'}>${esc(label)}</button></div>`
+      + (inCooldown ? `<div class="row dim"><span>na výzvu neodpovídá — počkej ${cdLeft} s</span></div>` : '')
   }
 
   private panelOrders(own: ShipState | null, ui: UiState): string {
@@ -396,34 +526,63 @@ export class Panels {
     const noShip = !own || own.destroyed
     const canFire = !noShip && hasTarget
     const rolled = own?.rolledTo != null
-    const tubes = SHIP_CLASSES[own?.classId ?? '']?.tubesPerBroadside ?? 4
+    const def = SHIP_CLASSES[own?.classId ?? '']
+    const tubes = def?.tubesPerBroadside ?? 4
     const hiC = Math.max(1, Math.round(tubes / 3))
     const loC = Math.max(1, tubes - hiC)
     const auto = own?.fireControl.mode === 'auto'
+
+    // čísla mechanik do tooltipů (z defs/constants — žádná magie v textech)
+    const fmtM = (km: number): string => (km / 1e6).toFixed(1).replace(/\.0$/, '').replace('.', ',')
+    const mdef = MISSILES['std-shipkiller']
+    const envLo = 0.5 * mdef.accelG[0] * G * mdef.driveTime[0] ** 2
+    const envHi = 0.5 * mdef.accelG[1] * G * mdef.driveTime[1] ** 2
+    const sensM = fmtM(def?.activeSensorRange ?? 5_000_000)
+    const tip = {
+      intercept: 'Autopilot spočítá a drží stíhací kurz na vybraný cíl. Intercepty na miliony km trvají desítky minut.',
+      course: 'Klikni do plotu — autopilot poletí na zvolený bod.',
+      salvo: (n: string): string =>
+        `Odpálí ${n} raket na vybraný cíl v režimu ${ui.salvoMode === 1 ? 'HI' : 'LO'}; přebíjení šachet ${TUBE_COOLDOWN} s.`,
+      mode: `Režim pohonu raket: LO = ${mdef.accelG[0].toLocaleString('cs-CZ')} g / ${mdef.driveTime[0]} s hoření `
+        + `(dostřel ~${fmtM(envLo)} M km), HI = ${mdef.accelG[1].toLocaleString('cs-CZ')} g / ${mdef.driveTime[1]} s `
+        + `(rychlý přílet, dostřel ~${fmtM(envHi)} M km). Dostřel natahuje i vlastní vektor k cíli.`,
+      layered: `Vrstvená salva: ${loC}× LO hned + ${hiC}× HI se zpožděním tak, aby obě vlny dorazily spolu `
+        + `a saturovaly bodovou obranu (víc raket v okně = nižší Pk obrany).`,
+      autoFire: 'AUTO palba: loď sama opakuje plné salvy, dokud je cíl v poháněné obálce. A',
+      energy: `Lasery/grasery: plné poškození pod ${Math.round(ENERGY_DECISIVE_RANGE / 1000)} tis. km, `
+        + `dosah ${Math.round(ENERGY_MAX_RANGE / 1000)} tis. km, nabíjení ${ENERGY_COOLDOWN} s.`,
+      rollThreat: 'Odvalí loď klínem k příchozí salvě — nepropustný štít, ale loď nemanévruje a nepálí boky. R',
+      rollBack: 'Vrátí loď do normální polohy — boky (šachty, energetika) jsou zase v akci. R',
+      wedge: 'Vypnutý klín = EMCON: loď je téměř neviditelná (jen aktivní senzory zblízka), '
+        + 'ale má nulovou akceleraci a žádné bočníky.',
+      sensors: `Plná identifikace cílů do ${sensM} mil. km; výrazně tě ale prozradí. `
+        + 'Pasivní detekce cizího klínu funguje vždy.',
+    }
+
     return `<div class="panel"><h3>Rozkazy</h3>`
       + `<div class="btnrow">`
-      + `<button data-act="intercept"${dis(canFire)}>Intercept</button>`
-      + `<button data-act="course" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? 'Kurz: klikni do plotu…' : 'Kurz sem'}</button>`
+      + `<button data-act="intercept" title="${esc(tip.intercept)}"${dis(canFire)}>Intercept</button>`
+      + `<button data-act="course" title="${esc(tip.course)}" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? 'Kurz: klikni do plotu…' : 'Kurz sem'}</button>`
       + `</div>`
       + `<div class="btnrow">`
-      + `<button data-act="salvo2"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 2</button>`
-      + `<button data-act="salvo4"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 4</button>`
-      + `<button data-act="salvoFull"${dis(canFire && (own?.missiles ?? 0) > 0)}>Plná salva</button>`
-      + `<button data-act="mode" title="režim pohonu raket">Pohon: ${ui.salvoMode === 1 ? 'HI' : 'LO'}</button>`
+      + `<button data-act="salvo2" title="${esc(tip.salvo('2'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 2</button>`
+      + `<button data-act="salvo4" title="${esc(tip.salvo('4'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 4</button>`
+      + `<button data-act="salvoFull" title="${esc(tip.salvo(`všechny (${tubes})`))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Plná salva</button>`
+      + `<button data-act="mode" title="${esc(tip.mode)}">Pohon: ${ui.salvoMode === 1 ? 'HI' : 'LO'}</button>`
       + `</div>`
       + `<div class="btnrow">`
-      + `<button data-act="salvoLayered" title="vrstvená salva: LO vlna + HI follow-up na společný přílet (saturace obrany)"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva ${loC}+${hiC}</button>`
-      + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="AUTO palba na vybraný cíl (A)"${dis(canFire || auto)}>AUTO palba: ${auto ? 'ZAP' : 'VYP'}</button>`
+      + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva ${loC}+${hiC}</button>`
+      + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="${esc(tip.autoFire)}"${dis(canFire || auto)}>AUTO palba: ${auto ? 'ZAP' : 'VYP'}</button>`
       + `</div>`
       + `<div class="btnrow">`
-      + `<button data-act="energy"${dis(canFire)}>Energie</button>`
+      + `<button data-act="energy" title="${esc(tip.energy)}"${dis(canFire)}>Energie</button>`
       + (rolled
-        ? `<button data-act="rollBack" class="active">Roll zpět</button>`
-        : `<button data-act="rollThreat"${dis(!noShip)}>Roll k hrozbě</button>`)
+        ? `<button data-act="rollBack" class="active" title="${esc(tip.rollBack)}">Roll zpět</button>`
+        : `<button data-act="rollThreat" title="${esc(tip.rollThreat)}"${dis(!noShip)}>Roll k hrozbě</button>`)
       + `</div>`
       + `<div class="btnrow">`
-      + `<button data-act="wedge" class="${own?.wedgeOn ? 'active' : ''}"${dis(!noShip)}>Klín: ${own?.wedgeOn ? 'ZAP' : 'VYP'}</button>`
-      + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}"${dis(!noShip)}>Akt. senzory: ${own?.activeSensors ? 'ZAP' : 'VYP'}</button>`
+      + `<button data-act="wedge" class="${own?.wedgeOn ? 'active' : ''}" title="${esc(tip.wedge)}"${dis(!noShip)}>Klín: ${own?.wedgeOn ? 'ZAP' : 'VYP'}</button>`
+      + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}" title="${esc(tip.sensors)}"${dis(!noShip)}>Akt. senzory: ${own?.activeSensors ? 'ZAP' : 'VYP'}</button>`
       + `</div>`
       + `<div class="dim">mezerník pauza · +/− komprese · R roll · A auto · H nápověda</div>`
       + `</div>`

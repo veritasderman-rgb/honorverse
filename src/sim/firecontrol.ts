@@ -29,7 +29,7 @@ export function updateFireControl(state: SimState): void {
     if (ship.pendingWave && state.t >= ship.pendingWave.launchAt) {
       const w = ship.pendingWave
       ship.pendingWave = null
-      const target = state.ships.find(s => s.id === w.targetId && !s.destroyed)
+      const target = state.ships.find(s => s.id === w.targetId && !s.destroyed && !s.surrendered)
       if (target) {
         launchSalvo(state, ship, w.targetId, w.count, w.mode, { ignoreCooldown: true })
       } else {
@@ -41,9 +41,14 @@ export function updateFireControl(state: SimState): void {
     const fc = ship.fireControl
     if (fc.mode !== 'auto' || fc.targetId == null) continue
 
-    const target = state.ships.find(s => s.id === fc.targetId && !s.destroyed)
+    const target = state.ships.find(s => s.id === fc.targetId && !s.destroyed && !s.surrendered)
     if (!target) {
-      if (fc.engaged) say(state, ship, 'Cíl zničen nebo ztracen — auto palba ukončena.')
+      const capitulated = state.ships.find(s => s.id === fc.targetId)?.surrendered === true
+      if (fc.engaged) {
+        say(state, ship, capitulated
+          ? 'Cíl kapituloval — zastavuji palbu.'
+          : 'Cíl zničen nebo ztracen — auto palba ukončena.')
+      }
       fc.mode = 'hold'
       fc.engaged = false
       continue
