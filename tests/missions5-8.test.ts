@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 import type { SimState } from '../src/sim/types'
 import { sim } from '../src/sim/engine'
 import { SENSOR_UPDATE_INTERVAL, SIM_DT } from '../src/sim/constants'
-import { angleDiff, angleOf, dist, sub } from '../src/sim/vec'
+import { angleDiff, angleOf, dist, norm, sub } from '../src/sim/vec'
 import { updateSensors, contactsFor } from '../src/sim/sensors'
 import { updateTriggers } from '../src/sim/scenario'
 import { SCENARIOS } from '../src/data/missions'
@@ -263,33 +263,51 @@ describe('mise 6 — Ústup od Tharsis', () => {
     expect(contactsFor(state, 'enemy').some(c => c.shipId === 9041)).toBe(false)
   })
 
+  it('naivní přímý kurz k bóji vede do léčky (zvrat se v přímé hře opravdu spustí)', () => {
+    const state = sim.create(mission06)
+    sim.applyOrder(state, { kind: 'setThrottle', shipId: 1, throttle: 1 })
+    sim.applyOrder(state, { kind: 'setCourse', shipId: 1, dest: { x: 190_000_000, y: 0 }, arriveAtRest: false })
+    while (!state.flags['trap-sprung'] && state.outcome === 'running' && state.t < 7_000) {
+      sim.tick(state, SIM_DT)
+    }
+    expect(state.flags['trap-sprung']).toBe(true)
+    expect(shipById(state, 9041)?.side).toBe('enemy')
+  })
+
   /**
    * DŮKAZ HRATELNOSTI: poškozená Resolute deterministicky doletí za
-   * hyperlimit — obloukem přes +y se vyhne léčce (clearance > 12 mil. km)
-   * a záď kryje rolováním, když se pronásledovatelé dostanou na dostřel.
+   * hyperlimit — obloukem přes +y se vyhne léčce (clearance > 12 mil. km),
+   * záď kryje rolováním. Pronásledovatelé se drží hráče (sticky hunter),
+   * ale polní opravy zadního prstence náskok udrží.
    */
   it('mise 6 je hratelná: oblouk kolem léčky + rolování ⇒ únik (E2E)', () => {
     const state = sim.create(mission06)
     const order = (o: Parameters<typeof sim.applyOrder>[1]): void => sim.applyOrder(state, o)
 
     order({ kind: 'setThrottle', shipId: 1, throttle: 1 })
-    // fáze 1: oblouk nad trasu „záchranné eskadry" (60M, ±1,5M)
-    order({ kind: 'setCourse', shipId: 1, dest: { x: 60_000_000, y: 20_000_000 }, arriveAtRest: false })
+    // fáze 1: stoupavý oblouk nad únikovou osu (léčka číhá pod ní);
+    // cíl daleko vpředu, ať autopilot nebrzdí u průletového bodu
+    order({ kind: 'setCourse', shipId: 1, dest: { x: 300_000_000, y: 60_000_000 }, arriveAtRest: false })
     let phase = 1
-    while (state.outcome === 'running' && state.t < 15_000) {
+    let minGap = Infinity
+    while (state.outcome === 'running' && state.t < 13_000) {
       sim.tick(state, SIM_DT)
       const p = state.ships[0]
-      if (phase === 1 && p.pos.x > 52_000_000) {
-        phase = 2 // fáze 2: k bóji za hyperlimitem
-        order({ kind: 'setCourse', shipId: 1, dest: { x: 190_000_000, y: 0 }, arriveAtRest: false })
+      if (phase === 1 && p.vel.y > 3_000) {
+        phase = 2 // fáze 2: plochý sestup k bóji (opět průletový cíl daleko za ní)
+        order({ kind: 'setCourse', shipId: 1, dest: { x: 420_000_000, y: -20_000_000 }, arriveAtRest: false })
       }
       playerRollDefense(state)
+      for (const i of [1, 2, 3]) {
+        if (!state.ships[i].destroyed) minGap = Math.min(minGap, dist(p.pos, state.ships[i].pos))
+      }
     }
 
-    expect(state.flags['trap-sprung']).toBeUndefined() // léčce se vyhnul
+    expect(state.flags['trap-sprung']).toBeUndefined() // léčce se vyhnul obloukem
     expect(state.outcome).toBe('win')
     expect(objState(state, 'obj-escape')).toBe('done')
     expect(state.ships[0].destroyed).toBe(false)
+    expect(minGap).toBeLessThan(32_000_000) // pronásledovatelé skutečně doháněli
   })
 })
 
@@ -337,54 +355,109 @@ describe('mise 7 — Nájezd na konvoj', () => {
 
   /**
    * DŮKAZ HRATELNOSTI: Praporec deterministicky přežije saturační salvu
-   * z podů (CM + PDLC + rolování z bezpečné vzdálenosti), zničí tři
-   * obchodníky a unikne za hyperlimit.
+   * z podů, zničí tři obchodníky a unikne za hyperlimit. Taktika: řízené
+   * sbližování s eskortou po brzdné křivce (malá zavírací rychlost = obrana
+   * stíhá), po odpálení podů úhybný oblouk kolem pomalé eskorty na bok
+   * konvoje, nálet na obchodníky zezadu (kilt) a široký únik k bóji.
    */
   it('mise 7 je hratelná: přežití podů + 3 obchodníci + únik (E2E)', () => {
     const state = sim.create(mission07)
     const order = (o: Parameters<typeof sim.applyOrder>[1]): void => sim.applyOrder(state, o)
     const MERCH = [2, 3, 4, 5]
+    const ESCORTS = [6, 7, 8]
+    const alive = (id: number) => {
+      const s = shipById(state, id)
+      return s && !s.destroyed && !s.surrendered ? s : undefined
+    }
     const sunkCount = (): number => MERCH.filter(id => shipById(state, id)?.destroyed).length
+    const nearestEscort = () => {
+      let best: { s: NonNullable<ReturnType<typeof alive>>; d: number } | null = null
+      for (const id of ESCORTS) {
+        const s = alive(id)
+        if (!s) continue
+        const d = dist(state.ships[0].pos, s.pos)
+        if (!best || d < best.d) best = { s, d }
+      }
+      return best
+    }
+    const podsFired = (): boolean =>
+      state.events.some(e => e.kind === 'launch' && e.text.includes('raketové pody'))
 
     order({ kind: 'setThrottle', shipId: 1, throttle: 1 })
     order({ kind: 'setActiveSensors', shipId: 1, on: true })
 
-    let phase: 'attack' | 'escape' = 'attack'
-    while (state.outcome === 'running' && state.t < 40_000) {
+    let phase: 'bait' | 'dogleg' | 'raid' | 'egress1' | 'egress2' = 'bait'
+    let thrustMode = ''
+    let raidTarget = -1
+    let sawPods = false
+    let podsSurvivedHull = 0
+    while (state.outcome === 'running' && state.t < 45_000) {
       sim.tick(state, SIM_DT)
       const p = state.ships[0]
       if (p.destroyed) break
+      const esc = nearestEscort()
 
-      if (phase === 'attack') {
-        if (sunkCount() >= 3) {
-          phase = 'escape'
-          order({ kind: 'setCourse', shipId: 1, dest: { x: 160_000_000, y: 0 }, arriveAtRest: false })
-        } else {
-          // nejbližší živý obchodník jako cíl
-          let target: number | null = null
-          let best = Infinity
-          for (const id of MERCH) {
-            const m = shipById(state, id)
-            if (!m || m.destroyed) continue
-            const d = dist(p.pos, m.pos)
-            if (d < best) { best = d; target = id }
+      if (!sawPods && podsFired()) { sawPods = true; podsSurvivedHull = p.hull }
+      // přechody fází
+      if (phase === 'bait' && sawPods) {
+        phase = 'dogleg'
+        const m = alive(2) ?? alive(3) ?? alive(4) ?? alive(5)
+        order({
+          kind: 'setCourse', shipId: 1,
+          dest: { x: (m ? m.pos.x : -20_000_000) - 5_000_000, y: (m ? m.pos.y : 0) - 30_000_000 },
+          arriveAtRest: false,
+        })
+      }
+      if (phase === 'dogleg' && esc && esc.d > 16_000_000) phase = 'raid'
+      if (phase === 'raid' && sunkCount() >= 3) {
+        phase = 'egress1'
+        order({ kind: 'setCourse', shipId: 1, dest: { x: p.pos.x, y: p.pos.y - 120_000_000 }, arriveAtRest: false })
+      }
+      if (phase === 'egress1' && (!esc || esc.d > 25_000_000)) {
+        phase = 'egress2'
+        order({ kind: 'setCourse', shipId: 1, dest: { x: 160_000_000, y: 0 }, arriveAtRest: true })
+      }
+
+      if (phase === 'bait' && esc) {
+        // brzdná křivka: zavírací rychlost pod odmocninovou mezí k pásmu 6,5M
+        const dir = norm(sub(esc.s.pos, p.pos))
+        const c = (p.vel.x - esc.s.vel.x) * dir.x + (p.vel.y - esc.s.vel.y) * dir.y
+        const cTarget = Math.min(6_000, Math.sqrt(Math.max(0, 2 * 1.6 * (esc.d - 6_500_000))))
+        const want = c > cTarget ? 'away' : 'toward'
+        if (want !== thrustMode) {
+          thrustMode = want
+          const k = want === 'away' ? -400_000_000 : 400_000_000
+          order({
+            kind: 'setCourse', shipId: 1,
+            dest: { x: p.pos.x + dir.x * k, y: p.pos.y + dir.y * k }, arriveAtRest: false,
+          })
+        }
+      } else if (phase === 'raid') {
+        let target: number | null = null
+        let best = Infinity
+        for (const id of MERCH) {
+          const m = alive(id)
+          if (!m) continue
+          const d = dist(p.pos, m.pos)
+          if (d < best) { best = d; target = id }
+        }
+        if (target !== null) {
+          if (target !== raidTarget) {
+            raidTarget = target
+            order({ kind: 'intercept', shipId: 1, targetId: target })
           }
-          if (target !== null) {
-            if (!(p.nav?.kind === 'intercept' && p.nav.targetId === target)) {
-              order({ kind: 'intercept', shipId: 1, targetId: target })
-            }
-            if (p.tubeCooldown <= 0 && best < 7_000_000) {
-              order({ kind: 'launchSalvo', shipId: 1, targetId: target, count: 10, mode: 0 })
-            }
+          const inFlight = state.missiles.some(m => m.side === 'player' && m.targetId === target)
+          if (p.tubeCooldown <= 0 && best < 6_000_000 && !inFlight) {
+            order({ kind: 'launchSalvo', shipId: 1, targetId: target, count: 10, mode: 0 })
           }
         }
       }
       playerRollDefense(state)
     }
 
-    // pody skutečně vyletěly a hráč je přežil
-    expect(state.events.some(e => e.kind === 'launch' && e.text.includes('raketové pody'))
-      || state.flags['__pods'] !== undefined).toBe(true)
+    // pody skutečně vyletěly a hráč saturační salvu přežil
+    expect(sawPods).toBe(true)
+    expect(podsSurvivedHull).toBeGreaterThan(0)
     expect(state.ships[0].destroyed).toBe(false)
     expect(sunkCount()).toBeGreaterThanOrEqual(3)
     expect(state.outcome).toBe('win')
@@ -480,13 +553,29 @@ describe('determinismus nových akcí (setSide, podSalvo, pevná id)', () => {
       const state = sim.create(mission07)
       sim.applyOrder(state, { kind: 'setThrottle', shipId: 1, throttle: 1 })
       sim.applyOrder(state, { kind: 'intercept', shipId: 1, targetId: 8 })
-      // doleť k CL (spustí podSalvo trigger) a nech salvu doletět
-      for (let i = 0; i < 6_000; i++) sim.tick(state, SIM_DT)
+      // doleť k CL (spustí podSalvo trigger) a nech boj chvíli běžet
+      for (let i = 0; i < 7_000; i++) sim.tick(state, SIM_DT)
       return state
     }
     const a = run()
     const b = run()
-    expect(a.missiles.length + a.ships.length).toBeGreaterThan(9) // něco se dělo
+    // pody vyletěly — nové akce se skutečně vykonaly
+    expect(a.events.some(e => e.kind === 'launch' && e.text.includes('raketové pody'))).toBe(true)
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b))
+  })
+
+  it('dva nezávislé běhy léčky mise 6 (setSide) jsou bitově identické', () => {
+    const run = (): SimState => {
+      const state = sim.create(mission06)
+      sim.applyOrder(state, { kind: 'setThrottle', shipId: 1, throttle: 1 })
+      // přímý kurz = do léčky (setSide + hunter na obou stranách)
+      sim.applyOrder(state, { kind: 'setCourse', shipId: 1, dest: { x: 190_000_000, y: 0 }, arriveAtRest: false })
+      for (let i = 0; i < 12_000; i++) sim.tick(state, SIM_DT)
+      return state
+    }
+    const a = run()
+    const b = run()
+    expect(a.flags['trap-sprung']).toBe(true) // léčka opravdu sklapla
     expect(JSON.stringify(a)).toBe(JSON.stringify(b))
   })
 })
