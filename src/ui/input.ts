@@ -170,6 +170,12 @@ export class UIController {
   private doOrder(act: string, shift = false): void {
     const s = this.state
     if (!s) return
+    // režim hromadného výběru (mobil): tap = toggle výběru, tažení = box
+    if (act === 'selectMode') {
+      this.plot.multiSelectMode = !this.plot.multiSelectMode
+      this.refresh()
+      return
+    }
     // přepínač auto-zpomalování funguje i bez vlastní lodi
     if (act === 'autoSlow') {
       this.autoSlow = !this.autoSlow
@@ -627,6 +633,7 @@ export class UIController {
       autonomousMode: this.autonomousMode,
       escortJammerMode: this.escortJammerMode,
       autoSlowEnabled: this.autoSlow,
+      selectMode: this.plot.multiSelectMode,
     }
   }
 

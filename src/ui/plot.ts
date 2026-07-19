@@ -12,6 +12,15 @@ import type { Contact, Hyperlimit, MissileState, ShipState, SimState, Vec2 } fro
 const ZOOM_MIN = 50        // km/px
 const ZOOM_MAX = 500_000   // km/px
 const PICK_PX = 15
+
+/**
+ * Pinch-zoom (dotyk): nové měřítko z poměru vzdáleností prstů —
+ * roztažení (d1 > d0) přibližuje (méně km/px). Čistá funkce (testy).
+ */
+export function pinchZoom(kmPerPx: number, d0: number, d1: number): number {
+  if (d0 <= 0 || d1 <= 0) return kmPerPx
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, kmPerPx * (d0 / d1)))
+}
 /** přibližná obálka útočných raket (km) — viz GAME_DESIGN kap. 2 */
 /** poháněné obálky z klidu: LO (46k g/180 s) a HI (92k g/60 s) */
 const MISSILE_ENVELOPE_LO = 7_300_000
@@ -84,6 +93,22 @@ export class TacticalPlot {
   private drag: { x: number; y: number; moved: boolean } | null = null
   /** rozpracovaný obdélníkový výběr (Shift-tažení), screen souřadnice */
   private boxSel: { x0: number; y0: number; x1: number; y1: number } | null = null
+  /** aktivní pointery (dotyk): id → poloha v canvas souřadnicích */
+  private pointers = new Map<number, Vec2>()
+  /** rozpracovaný pinch: vzdálenost prstů + střed (canvas souřadnice) */
+  private pinch: { d: number; cx: number; cy: number } | null = null
+  /** po pinchi potlačit tap/klik (prst se zvedá, nemá vybírat loď) */
+  private suppressTap = false
+  /**
+   * Režim hromadného výběru (mobil — náhrada Shiftu): tap = toggle výběru,
+   * tažení = obdélníkový výběr. Přepíná tlačítko „Výběr" v liště rozkazů.
+   */
+  multiSelectMode = false
+
+  /** aktuální měřítko (km/px) — čtení pro testy/smoke */
+  get zoom(): number {
+    return this.kmPerPx
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -91,23 +116,60 @@ export class TacticalPlot {
     if (!ctx) throw new Error('canvas 2d nedostupný')
     this.ctx = ctx
 
+    const canvasXY = (e: PointerEvent): Vec2 => {
+      const r = canvas.getBoundingClientRect()
+      return { x: e.clientX - r.left, y: e.clientY - r.top }
+    }
+    // syntetické eventy (testy) a exotické prohlížeče: capture nesmí shodit handler
+    const capture = (id: number): void => {
+      try { canvas.setPointerCapture(id) } catch { /* neplatné pointerId — noop */ }
+    }
+
     canvas.addEventListener('pointerdown', e => {
-      // Shift-tažení = obdélníkový výběr vlastních lodí; bez Shiftu pan
-      if (e.shiftKey) {
-        const r = canvas.getBoundingClientRect()
-        const sx = e.clientX - r.left
-        const sy = e.clientY - r.top
-        this.boxSel = { x0: sx, y0: sy, x1: sx, y1: sy }
+      const p = canvasXY(e)
+      this.pointers.set(e.pointerId, p)
+      if (this.pointers.size === 2) {
+        // druhý prst = pinch: zruš rozpracovaný pan/box, tap se po něm ruší
+        const [a, b] = [...this.pointers.values()]
+        this.pinch = { d: Math.hypot(b.x - a.x, b.y - a.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }
+        this.drag = null
+        this.boxSel = null
+        this.suppressTap = true
+        capture(e.pointerId)
+        return
+      }
+      // Shift-tažení / režim výběru = obdélníkový výběr; jinak pan
+      if (e.shiftKey || this.multiSelectMode) {
+        this.boxSel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }
       } else {
         this.drag = { x: e.clientX, y: e.clientY, moved: false }
       }
-      canvas.setPointerCapture(e.pointerId)
+      capture(e.pointerId)
     })
     canvas.addEventListener('pointermove', e => {
+      if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, canvasXY(e))
+      // pinch: zoom kolem středu prstů + posun kamery se středem
+      if (this.pinch && this.pointers.size >= 2) {
+        const [a, b] = [...this.pointers.values()]
+        const d1 = Math.hypot(b.x - a.x, b.y - a.y)
+        const cx = (a.x + b.x) / 2
+        const cy = (a.y + b.y) / 2
+        if (d1 > 0) {
+          const before = this.screenToWorld(cx, cy)
+          this.kmPerPx = pinchZoom(this.kmPerPx, this.pinch.d, d1)
+          const after = this.screenToWorld(cx, cy)
+          this.pan.x += before.x - after.x
+          this.pan.y += before.y - after.y
+        }
+        this.pan.x -= (cx - this.pinch.cx) * this.kmPerPx
+        this.pan.y += (cy - this.pinch.cy) * this.kmPerPx
+        this.pinch = { d: d1 > 0 ? d1 : this.pinch.d, cx, cy }
+        return
+      }
       if (this.boxSel) {
-        const r = canvas.getBoundingClientRect()
-        this.boxSel.x1 = e.clientX - r.left
-        this.boxSel.y1 = e.clientY - r.top
+        const p = canvasXY(e)
+        this.boxSel.x1 = p.x
+        this.boxSel.y1 = p.y
         return
       }
       if (!this.drag) return
@@ -120,10 +182,19 @@ export class TacticalPlot {
       this.drag.x = e.clientX
       this.drag.y = e.clientY
     })
-    canvas.addEventListener('pointerup', e => {
-      const r = canvas.getBoundingClientRect()
-      const sx = e.clientX - r.left
-      const sy = e.clientY - r.top
+    const release = (e: PointerEvent): void => {
+      this.pointers.delete(e.pointerId)
+      if (this.pointers.size < 2) this.pinch = null
+      if (this.pointers.size === 0 && this.suppressTap) {
+        // konec pinch gesta — poslední prst nahoře, tap se nekoná
+        this.suppressTap = false
+        this.drag = null
+        this.boxSel = null
+        return
+      }
+      if (this.suppressTap) return
+      if (e.type !== 'pointerup') { this.drag = null; this.boxSel = null; return }
+      const p = canvasXY(e)
       if (this.boxSel) {
         const box = this.boxSel
         this.boxSel = null
@@ -132,16 +203,19 @@ export class TacticalPlot {
           this.onBoxSelect?.(
             this.screenToWorld(box.x0, box.y0), this.screenToWorld(box.x1, box.y1))
         } else {
-          // Shift-klik bez tažení: toggle výběru lodi
-          this.onPick?.(this.pick(sx, sy), this.screenToWorld(sx, sy), true)
+          // Shift-klik / tap v režimu výběru bez tažení: toggle výběru lodi
+          this.onPick?.(this.pick(p.x, p.y), this.screenToWorld(p.x, p.y), true)
         }
         return
       }
       const wasClick = this.drag !== null && !this.drag.moved
       this.drag = null
       if (!wasClick) return
-      this.onPick?.(this.pick(sx, sy), this.screenToWorld(sx, sy), e.shiftKey)
-    })
+      this.onPick?.(this.pick(p.x, p.y), this.screenToWorld(p.x, p.y),
+        e.shiftKey || this.multiSelectMode)
+    }
+    canvas.addEventListener('pointerup', release)
+    canvas.addEventListener('pointercancel', release)
     canvas.addEventListener('wheel', e => {
       e.preventDefault()
       const r = canvas.getBoundingClientRect()

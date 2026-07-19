@@ -24,6 +24,50 @@ window.addEventListener('pointerdown', () => audio.unlock())
 const panels = new Panels(plotContainer, topbar, a => { audio.uiClick(); controller.handleAction(a) }, audio)
 const controller = new UIController(bridge, plot, panels)
 
+// hook pro smoke testy (Playwright) — čtení stavu plotu zvenku
+Object.assign(window, { __wob: { plot } })
+
+// ---------- mobil / tablet ----------
+
+// výsuvné šuplíky HUD sloupců (telefonní breakpoint — záložky ◧/◨)
+for (const [tabId, hudId] of [['tab-tl', 'hud-tl'], ['tab-tr', 'hud-tr']] as const) {
+  const tab = document.getElementById(tabId)
+  const hud = document.getElementById(hudId)
+  tab?.addEventListener('click', () => {
+    const open = hud?.classList.toggle('open') === true
+    // otevření jednoho šuplíku zavře druhý (na telefonu se nevejdou oba)
+    if (open) {
+      const other = hudId === 'hud-tl' ? 'hud-tr' : 'hud-tl'
+      document.getElementById(other)?.classList.remove('open')
+    }
+    tab.classList.toggle('active', open)
+  })
+}
+
+// wake lock: při běžící misi nenech displej zhasnout (dlouhá komprese času);
+// zámek zaniká při schování stránky — po návratu ho obnovíme
+let wakeLock: { release(): Promise<void> } | null = null
+async function acquireWakeLock(): Promise<void> {
+  try {
+    const wl = (navigator as Navigator & {
+      wakeLock?: { request(type: 'screen'): Promise<{ release(): Promise<void> }> }
+    }).wakeLock
+    if (wl && !wakeLock) wakeLock = await wl.request('screen')
+  } catch { /* zamítnuto/nepodporováno — nevadí */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void acquireWakeLock()
+  else wakeLock = null // systém zámek při schování uvolnil sám
+})
+window.addEventListener('pointerdown', () => { void acquireWakeLock() }, { once: true })
+
+// service worker (jen produkce): offline hraní + instalace na plochu
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* offline nedostupný */ })
+  })
+}
+
 let outcomeShown = false
 let currentMissionId = ''
 
@@ -169,6 +213,10 @@ bridge.onReady = scenario => {
 
 bridge.onSnapshot = (state, compression) => {
   audio.onSnapshot(state)
+  // haptika (mobil): zásah do vlastní lodi krátce zavibruje
+  if (state.events.some(e => (e.kind === 'missileHit' || e.kind === 'energyHit') && e.slowdown)) {
+    navigator.vibrate?.(40)
+  }
   controller.handleSnapshot(state, compression)
   if (!outcomeShown && state.outcome !== 'running') {
     outcomeShown = true

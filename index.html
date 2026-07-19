@@ -3,13 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#05080a" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/img/icon-192.png" />
   <title>Wall of Battle</title>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #05080a; color: #9fd8a0; font-family: "Consolas", "Menlo", monospace; overflow: hidden; }
     #app { position: relative; height: 100vh; }
     #plot-container { position: absolute; inset: 0; }
-    #plot { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #plot { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
     #topbar { position: absolute; top: 0; left: 0; right: 0; padding: 4px 8px; font-size: 12px; pointer-events: none; z-index: 8; }
     #topbar > * { pointer-events: auto; }
     /* --- HUD vrstvy nad plotem (kontejnery nechytají klik, panely ano) --- */
@@ -127,6 +130,65 @@
     .help-grid { display: grid; grid-template-columns: 130px 1fr; gap: 2px 10px; font-size: 12px; }
     .help-grid b { color: #9fd8a0; }
     .help-grid span { color: #6fae74; }
+
+    /* ---------- MOBIL A TABLET ---------- */
+    /* výsuvné záložky HUD sloupců — mimo telefonní breakpoint skryté */
+    .hud-tab { display: none; }
+    /* výzva k otočení na šířku — jen dotyk v portrétu */
+    #rotate-hint { display: none; }
+
+    /* dotyková zařízení: větší cíle (min. ~40 px), víc vzduchu */
+    @media (pointer: coarse) {
+      button { min-height: 38px; padding: 6px 12px; font-size: 14px; }
+      .ob { gap: 6px; }
+      .ob .obg { gap: 6px; }
+      .hud { font-size: 12px; }
+      .panel { padding: 6px 8px; }
+      .panel h3 { font-size: 13px; padding: 4px 0; }
+      .contact-row, .fleet-row { padding: 8px 6px; }
+      .cls-row { padding: 6px 0; }
+      .tb-audio input[type=range] { width: 90px; height: 28px; }
+      .overlay button { min-height: 44px; }
+      #topbar { font-size: 14px; }
+      .tb-comp button { min-width: 44px; }
+    }
+
+    /* telefon (šířka ≤ 900 px): HUD sloupce jako výsuvné šuplíky */
+    @media (max-width: 900px) {
+      #hud-tl, #hud-tr {
+        top: 44px; bottom: 76px; width: min(340px, 86vw);
+        background: #05080af2; z-index: 12;
+        transition: transform .2s ease; padding: 6px;
+      }
+      #hud-tl { left: 0; transform: translateX(-100%); border-right: 1px solid #1c3a1e; }
+      #hud-tr { right: 0; transform: translateX(100%); border-left: 1px solid #1c3a1e; }
+      #hud-tl.open, #hud-tr.open { transform: translateX(0); }
+      .hud-tab {
+        display: block; position: absolute; z-index: 13; top: 48px;
+        min-width: 44px; min-height: 52px; font-size: 16px;
+        background: #081008ee; border: 1px solid #2a5a2e; color: #9fd8a0;
+      }
+      #tab-tl { left: 0; border-left: none; }
+      #tab-tr { right: 0; border-right: none; }
+      /* spodní lišta rozkazů: jeden řádek, horizontální scroll */
+      #hud-bottom { left: 0; right: 0; bottom: 0; overflow-x: auto; padding: 4px calc(4px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(4px + env(safe-area-inset-left)); }
+      #hud-bottom .panel { min-width: max-content; }
+      .ob { flex-wrap: nowrap; }
+      .ob .obg { flex-wrap: nowrap; }
+      #hud-br { display: none; }  /* komunikaci nesou toasty, log je v šuplíku netřeba */
+      #toasts { bottom: 84px; max-width: 86vw; }
+      #topbar { padding-top: calc(4px + env(safe-area-inset-top)); }
+      .tb-slow { max-width: 30vw; }
+    }
+
+    /* portrét na dotyku: taktický plot potřebuje šířku — vyzvi k otočení */
+    @media (orientation: portrait) and (pointer: coarse) and (max-width: 900px) {
+      #rotate-hint {
+        display: flex; position: fixed; inset: 0; z-index: 40;
+        background: #05080af8; align-items: center; justify-content: center;
+        text-align: center; font-size: 16px; line-height: 1.6; padding: 24px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -138,8 +200,11 @@
       <div id="hud-tr" class="hud"></div>
       <div id="hud-bottom" class="hud"></div>
       <div id="hud-br" class="hud"></div>
+      <button id="tab-tl" class="hud-tab" title="loď a flotila">◧</button>
+      <button id="tab-tr" class="hud-tab" title="kontakty a cíle">◨</button>
     </div>
   </div>
+  <div id="rotate-hint">OTOČTE ZAŘÍZENÍ NA ŠÍŘKU<br>taktický displej potřebuje širokou obrazovku</div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

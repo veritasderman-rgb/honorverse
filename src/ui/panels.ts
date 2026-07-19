@@ -39,6 +39,8 @@ export interface UiState {
   escortJammerMode: boolean
   /** auto-zpomalování času u důležitých událostí (toggle ⚠ v topbaru) */
   autoSlowEnabled: boolean
+  /** režim hromadného výběru (mobil — tap = toggle, tažení = box výběr) */
+  selectMode: boolean
 }
 
 export type PanelAction =
@@ -188,6 +190,8 @@ export class Panels {
   private hudBr: HTMLElement
   /** sbalené panely (per panel, persistentní) */
   private folds: Record<string, boolean> = loadFolds()
+  /** režim nápovědy (ⓘ v topbaru): klepnutí ukazuje tooltipy místo akcí */
+  private infoMode = false
   /** rozbalené detaily třídy lodi ('own' / 'tgt') — jen v paměti UI */
   private classDetailOpen = new Set<string>()
   /** poslední snapshot pro okamžitý přerender po sbalení/rozbalení */
@@ -214,6 +218,14 @@ export class Panels {
     // root = #plot-container pokrývá HUD vrstvy i topbar (canvas nemá data-*)
     const handler = (e: Event): void => {
       const t = e.target as Element | null
+      // režim nápovědy (ⓘ, dotyk): klepnutí UKÁŽE tooltip místo akce —
+      // title atributy na dotyku jinak nejsou dostupné
+      if (this.infoMode && !t?.closest?.('.tb-audio')) {
+        const tt = t?.closest?.('[title]')
+        const txt = tt?.getAttribute('title')
+        if (txt) this.showToast(`<b>ⓘ</b> ${esc(txt)}`, 'toast-comm', 9000)
+        return
+      }
       const el = t?.closest?.('[data-comp],[data-sel],[data-act],[data-fold],[data-clsdetail]')
       if (!el) return
       const fold = el.getAttribute('data-fold')
@@ -381,11 +393,17 @@ export class Panels {
     const bar = document.createElement('span')
     bar.className = 'tb-audio'
     bar.innerHTML =
-      `<button class="tb-mute" title="ztlumit / zapnout zvuk">${audio.muted ? '🔇' : '🔊'}</button>`
+      `<button class="tb-info" title="režim nápovědy (dotyk): klepnutí na prvek ukáže jeho vysvětlení místo akce">ⓘ</button>`
+      + `<button class="tb-mute" title="ztlumit / zapnout zvuk">${audio.muted ? '🔇' : '🔊'}</button>`
       + `<label title="hlasitost hudby">♪ <input class="tb-vol-music" type="range" min="0" max="100"`
       + ` value="${Math.round(audio.musicVolume * 100)}"></label>`
       + `<label title="hlasitost efektů">FX <input class="tb-vol-sfx" type="range" min="0" max="100"`
       + ` value="${Math.round(audio.sfxVolume * 100)}"></label>`
+    const info = bar.querySelector<HTMLButtonElement>('.tb-info')!
+    info.addEventListener('click', () => {
+      this.infoMode = !this.infoMode
+      info.classList.toggle('active', this.infoMode)
+    })
     const mute = bar.querySelector<HTMLButtonElement>('.tb-mute')!
     mute.addEventListener('click', () => {
       audio.setMuted(!audio.muted)
@@ -962,6 +980,8 @@ export class Panels {
       + `<button data-act="intercept" title="${esc(tip.intercept)}"${dis(canFire)}>Intercept${xN}</button>`
       + `<button data-act="course" title="${esc(tip.course)}" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? 'Kurz: klikni do plotu…' : `Kurz sem${xN}`}</button>`
       + throttleSeg
+      + `<button data-act="selectMode" class="${ui.selectMode ? 'active' : ''}" `
+      + `title="Režim hromadného výběru (na dotyku nahrazuje Shift): tap přidá/odebere loď z výběru, tažení po plotu = obdélníkový výběr. Vypni pro běžný pan a výběr cílů.">Výběr ⊞</button>`
       + `</span>`
       + `<span class="obg">`
       + `<button data-act="salvo2" title="${esc(tip.salvo('2'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 2</button>`
