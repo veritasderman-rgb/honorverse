@@ -120,7 +120,7 @@ describe('mise 2 — Konvoj Pomezím (E2E)', () => {
     for (const id of [8, 9]) {
       const p = state.ships.find(s => s.id === id)!
       expect(p.side).toBe('enemy')
-      expect(p.classId).toBe('dd-vichr')
+      expect(p.classId).toBe('dd-korzar') // piráti mají opotřebovanou techniku, ne první linii
       expect(p.doctrine).toBe('pirate')
       expect(p.pos.y).toBeLessThan(0) // opačná strana konvoje než návnada
     }
@@ -159,6 +159,47 @@ describe('mise 2 — Konvoj Pomezím (E2E)', () => {
     expect(state.outcome).toBe('lose')
     expect(objState(state, 'obj-convoy')).toBe('failed')
     expect(state.events.some(e => e.text.includes('neúnosné ztráty'))).toBe(true)
+  })
+
+  it('piráti znají manifest: od startu jdou po obchodnících, ne po eskortě', () => {
+    const state = sim.create(mission02)
+    for (let i = 0; i < 60; i++) sim.tick(state, SIM_DT) // manifest trigger + senzory
+    const karakal = state.ships[6]
+    expect(state.flags['revealed:2']).toBe(true)
+    expect(karakal.nav?.kind).toBe('intercept')
+    if (karakal.nav?.kind === 'intercept') {
+      expect([2, 3, 4, 5]).toContain(karakal.nav.targetId) // kořist, ne ANS Dauntless
+    }
+  })
+
+  it('oblastní obrana: eskorta u konvoje sundává salvy mířící na obchodníky', () => {
+    // dva běhy se stejným seedem: bez eskorty poblíž vs. s eskortou poblíž
+    const run = (escortNear: boolean): number => {
+      const state = sim.create(mission02)
+      const merchant = state.ships[1]
+      const escort = state.ships[0]
+      const pirate = state.ships[6]
+      // pirát 3 mil. km od obchodníka, eskorta buď hned vedle, nebo daleko
+      pirate.pos = { x: merchant.pos.x + 3_000_000, y: merchant.pos.y }
+      pirate.vel = { ...merchant.vel }
+      escort.pos = escortNear
+        ? { x: merchant.pos.x + 500_000, y: merchant.pos.y }
+        : { x: merchant.pos.x - 80_000_000, y: 0 }
+      escort.vel = { ...merchant.vel }
+      // salva na obchodníka; pak nech obranu pracovat
+      const before = merchant.hull
+      for (let i = 0; i < 3; i++) {
+        pirate.tubeCooldown = 0
+        sim.applyOrder(state, { kind: 'launchSalvo', shipId: 7, targetId: 2, count: 4, mode: 1 })
+        for (let t = 0; t < 400; t++) sim.tick(state, SIM_DT)
+      }
+      return before - merchant.hull
+    }
+    const dmgUncovered = run(false)
+    const dmgCovered = run(true)
+    // deštník eskorty musí škody na obchodníkovi výrazně srazit
+    expect(dmgCovered).toBeLessThan(dmgUncovered)
+    expect(dmgUncovered).toBeGreaterThan(0) // bez krytí obchodník dostává zásahy
   })
 })
 

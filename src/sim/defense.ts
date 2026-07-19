@@ -56,18 +56,24 @@ export function updateDefenses(state: SimState, dt: number): void {
   }
 
   // --- vrstva 2: protirakety (kapitulovaná loď se nebrání — složila zbraně) ---
+  // OBLASTNÍ OBRANA: loď zachytává i rakety mířící na SPŘÁTELENÉ lodě, pokud
+  // raketa proletí její interceptní obálkou — eskorta tak kryje konvoj
+  // „protiraketovým deštníkem" (vlastní obrana má vždy přednost).
+  const sideOf = new Map(state.ships.map(s => [s.id, s.side]))
   for (const ship of state.ships) {
     if (ship.destroyed || ship.surrendered || ship.cms <= 0) continue
     const def = SHIP_CLASSES[ship.classId]
     const rate = (def.cmLaunchers * ship.subsystems.cm) / CM_COOLDOWN // odpalů/s
     if (rate <= 0) continue
 
-    // příchozí hrozby v interceptní obálce, nejbližší první (determinismus: tiebreak id)
+    // příchozí hrozby v interceptní obálce: nejdřív vlastní, pak chráněnci;
+    // uvnitř skupiny nejbližší první (determinismus: tiebreak id)
     const incoming = state.missiles
-      .filter(m => m.phase !== 'dead' && m.targetId === ship.id && m.side !== ship.side
+      .filter(m => m.phase !== 'dead' && m.side !== ship.side
+        && (m.targetId === ship.id || sideOf.get(m.targetId) === ship.side)
         && dist(m.pos, ship.pos) < CM_INTERCEPT_RANGE)
-      .map(m => ({ m, d: dist(m.pos, ship.pos) }))
-      .sort((a, b) => a.d - b.d || a.m.id - b.m.id)
+      .map(m => ({ m, d: dist(m.pos, ship.pos), self: m.targetId === ship.id ? 0 : 1 }))
+      .sort((a, b) => a.self - b.self || a.d - b.d || a.m.id - b.m.id)
     if (incoming.length === 0) continue
 
     // budget odpalů za tick: celočíselná část + stochastické zaokrouhlení

@@ -7,7 +7,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 520, sidewallStrength: 12, hullPoints: 60,
     tubesPerBroadside: 3, cmLaunchers: 4, pdlcClusters: 6,
     energyMountsPerBroadside: 2, energyDamage: 25,
-    magazineMissiles: 90, magazineCMs: 120,
+    magazineMissiles: 90, magazineCMs: 260,
     wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35,
   },
   'cl-sokol': {
@@ -15,7 +15,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 505, sidewallStrength: 16, hullPoints: 90,
     tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
     energyMountsPerBroadside: 3, energyDamage: 30,
-    magazineMissiles: 150, magazineCMs: 180,
+    magazineMissiles: 150, magazineCMs: 340,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4,
   },
   'ca-bastion': {
@@ -23,7 +23,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 490, sidewallStrength: 22, hullPoints: 150,
     tubesPerBroadside: 8, cmLaunchers: 10, pdlcClusters: 12,
     energyMountsPerBroadside: 4, energyDamage: 40,
-    magazineMissiles: 280, magazineCMs: 320,
+    magazineMissiles: 280, magazineCMs: 420,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45,
   },
   'merch-freighter': {
@@ -58,7 +58,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 475, sidewallStrength: 26, hullPoints: 220,
     tubesPerBroadside: 10, cmLaunchers: 14, pdlcClusters: 14,
     energyMountsPerBroadside: 5, energyDamage: 45,
-    magazineMissiles: 400, magazineCMs: 400,
+    magazineMissiles: 400, magazineCMs: 500,
     wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5,
   },
   /** orbitální stanice — nehybný opěrný bod se štítovými generátory, mise 5 */
@@ -69,6 +69,24 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     energyMountsPerBroadside: 6, energyDamage: 40,
     magazineMissiles: 300, magazineCMs: 600,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.3,
+  },
+  /** pirátský křižník — opotřebovaná kořistní loď, ne první linie (Pomezí) */
+  'cl-korzar': {
+    id: 'cl-korzar', name: 'třída Korzár', hullCode: 'CL', tonnage: 110_000,
+    maxAccelG: 480, sidewallStrength: 10, hullPoints: 70,
+    tubesPerBroadside: 4, cmLaunchers: 4, pdlcClusters: 5,
+    energyMountsPerBroadside: 2, energyDamage: 25,
+    magazineMissiles: 60, magazineCMs: 80,
+    wedgeDetectionRange: 90_000_000, activeSensorRange: 4_000_000, ecm: 0.2,
+  },
+  /** pirátská šalupa — lehký nájezdník (Pomezí) */
+  'dd-korzar': {
+    id: 'dd-korzar', name: 'pirátská šalupa', hullCode: 'DD', tonnage: 55_000,
+    maxAccelG: 500, sidewallStrength: 8, hullPoints: 45,
+    tubesPerBroadside: 2, cmLaunchers: 3, pdlcClusters: 4,
+    energyMountsPerBroadside: 1, energyDamage: 20,
+    magazineMissiles: 40, magazineCMs: 60,
+    wedgeDetectionRange: 80_000_000, activeSensorRange: 3_500_000, ecm: 0.15,
   },
   /** „obchodník" s vojenským kompenzátorem — mise 1 (zvrat) */
   'merch-runner': {

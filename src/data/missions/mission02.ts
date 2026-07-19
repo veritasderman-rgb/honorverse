@@ -93,7 +93,7 @@ export const mission02: Scenario = {
     },
     {
       // pirát #1 — návnada; najíždí z boku (~30 mil. km od konvoje)
-      classId: 'cl-sokol', side: 'enemy', name: 'Karakal',
+      classId: 'cl-korzar', side: 'enemy', name: 'Karakal',
       pos: { x: 20_000_000, y: 30_000_000 }, vel: { x: 0, y: -200 },
       doctrine: 'pirate', activeSensors: true,
     },
@@ -105,6 +105,22 @@ export const mission02: Scenario = {
   ],
 
   triggers: [
+    {
+      // piráti přiletěli cíleně na TENHLE konvoj — znají jeho manifest,
+      // od začátku vědí, kdo je obchodník (AI pak loví kořist, ne eskortu)
+      id: 'trg-manifest', once: true,
+      conditions: [{ kind: 'time', t: 1 }],
+      actions: [
+        { kind: 'revealClass', shipId: 2 },
+        { kind: 'revealClass', shipId: 3 },
+        { kind: 'revealClass', shipId: 4 },
+        { kind: 'revealClass', shipId: 5 },
+        {
+          kind: 'comm', speaker: 'comms',
+          text: 'Zachycený pirátský provoz: znají složení konvoje — půjdou po nákladních lodích, ne po nás.',
+        },
+      ],
+    },
     {
       // pirát vyhrožuje konvoji, jakmile se přiblíží na dosah senzorů obchodníků
       id: 'trg-comm-pirate-threat', once: true,
@@ -141,7 +157,7 @@ export const mission02: Scenario = {
         {
           kind: 'spawnShip',
           ship: {
-            classId: 'dd-vichr', side: 'enemy', name: 'Šakal',
+            classId: 'dd-korzar', side: 'enemy', name: 'Šakal',
             pos: { x: 25_000_000, y: -25_000_000 }, vel: { x: 0, y: 150 },
             doctrine: 'pirate', activeSensors: true,
           },
@@ -149,7 +165,7 @@ export const mission02: Scenario = {
         {
           kind: 'spawnShip',
           ship: {
-            classId: 'dd-vichr', side: 'enemy', name: 'Hyena',
+            classId: 'dd-korzar', side: 'enemy', name: 'Hyena',
             pos: { x: 32_000_000, y: -25_000_000 }, vel: { x: 0, y: 150 },
             doctrine: 'pirate', activeSensors: true,
           },
