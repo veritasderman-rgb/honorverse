@@ -270,7 +270,7 @@ describe('saturace PDLC', () => {
 // ---------- opravy a posádka ----------
 
 describe('polní opravy (damage control)', () => {
-  it('subsystém pod stropem se opravuje ~0.0004/s do 0.7 a hlásí „znovu online"', () => {
+  it('subsystém pod stropem se opravuje ~0.0012/s do 0.7 a hlásí „znovu online"', () => {
     const scenario = makeScenario({
       ships: [{
         classId: 'dd-vichr', side: 'player', name: 'DD',
@@ -279,14 +279,14 @@ describe('polní opravy (damage control)', () => {
       }],
     })
     const state = sim.create(scenario)
-    // 500 s: 0.3 + 0.2 = 0.5
-    for (let i = 0; i < 1000; i++) sim.tick(state, SIM_DT)
-    expect(state.ships[0].subsystems.tubesPort).toBeCloseTo(0.5, 2)
+    // 150 s: 0.3 + 0.18 = 0.48 — oprava viditelná BĚHEM bitvy, ne za hodinu
+    for (let i = 0; i < 300; i++) sim.tick(state, SIM_DT)
+    expect(state.ships[0].subsystems.tubesPort).toBeCloseTo(0.48, 2)
     expect(state.ships[0].subsystems.pdlc).toBe(0.9) // nad stropem se nemění
 
-    // dalších 600 s: dosažení stropu 0.7 + hlášení inženýra
+    // dalších 300 s: dosažení stropu 0.7 + hlášení inženýra
     const events: string[] = []
-    for (let i = 0; i < 1200; i++) {
+    for (let i = 0; i < 600; i++) {
       sim.tick(state, SIM_DT)
       for (const ev of state.events) events.push(ev.text)
       state.events.length = 0

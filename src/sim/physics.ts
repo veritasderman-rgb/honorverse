@@ -2,7 +2,7 @@
  * Fyzika lodí: autopilot (nav plán), otáčení, akcelerace impelerem,
  * integrace pohybu. Jednotky: km, s, km/s, km/s². Úhly rad.
  */
-import type { ShipState, SimState } from './types'
+import type { ShipState, SimState, Vec2 } from './types'
 import { EMERGENCY_THROTTLE_MAX, G, SHIP_MAX_SPEED, THRUSTER_G, TURN_RATE } from './constants'
 import { add, angleDiff, angleOf, clampLen, dot, fromAngle, len, norm, scale, sub } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
@@ -115,6 +115,41 @@ export function desiredHeading(ship: ShipState, state: SimState): number | null 
   const sol = interceptSolution(ship.pos, ship.vel, accel, nav.dest, { x: 0, y: 0 })
   if (sol) return sol.heading
   return d > 0 ? angleOf(toDest) : null
+}
+
+/**
+ * Predikce trajektorie lodi dle aktuálního nav plánu, tahu a stavu impelerů:
+ * „duchová" kopie lodi se prožene stejnou fyzikou jako sim (otáčení
+ * TURN_RATE, akcelerace, setrvačnost), ostatní lodě se extrapolují
+ * balisticky (cíl interceptu se hýbe). Čistá funkce — nic nemutuje,
+ * nečerpá RNG. Vrací body dráhy po kroku `step` s; UI z nich kreslí
+ * skutečnou KŘIVKU manévru (delší rychlost ⇒ širší oblouk).
+ */
+export function predictPath(
+  state: SimState, ship: ShipState, duration = 1200, step = 4,
+): Vec2[] {
+  const ghost: ShipState = {
+    ...ship,
+    pos: { ...ship.pos }, vel: { ...ship.vel },
+    subsystems: { ...ship.subsystems },
+    formation: null, // predikce sleduje nav plán, ne station-keeping
+  }
+  const ghostState = {
+    ...state,
+    ships: state.ships.map(s =>
+      s.id === ship.id ? ghost : { ...s, pos: { ...s.pos }, vel: { ...s.vel } }),
+  } as SimState
+  const pts: Vec2[] = []
+  const n = Math.ceil(duration / step)
+  for (let i = 0; i < n; i++) {
+    for (const s of ghostState.ships) {
+      if (s === ghost || s.destroyed) continue
+      s.pos = add(s.pos, scale(s.vel, step)) // ostatní balisticky
+    }
+    updateShipPhysics(ghostState, ghost, step)
+    pts.push({ x: ghost.pos.x, y: ghost.pos.y })
+  }
+  return pts
 }
 
 /**

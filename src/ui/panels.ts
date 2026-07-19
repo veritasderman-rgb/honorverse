@@ -13,7 +13,7 @@ import {
   CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
   ENERGY_MAX_RANGE, G, ROLL_TIME, SURRENDER_COOLDOWN, TUBE_COOLDOWN,
 } from '../sim/constants'
-import { effectiveTubes } from '../sim/damage'
+import { effectiveTubes, sidewallPowerFactor } from '../sim/damage'
 import { estimatePenetration } from '../sim/estimate'
 import { moraleFor, surrenderChance, weaponsOut } from '../sim/surrender'
 import { fireSolution, poweredEnvelope } from '../sim/weapons'
@@ -534,6 +534,13 @@ export class Panels {
         + `<span>senzory: <b class="${own.activeSensors ? 'amber' : 'ok'}">${own.activeSensors ? 'AKTIVNÍ' : 'PASIVNÍ'}</b></span></div>`
         + `<div class="row"><span>poloha: <b class="${own.rolledTo != null ? 'amber' : 'ok'}">${own.rolledTo != null ? 'ODVALENÁ' : 'normální'}</b></span>`
         + `<span>tah: ${Math.round(own.throttle * 100)} %</span></div>`
+        // rozpočet reaktoru: výkon bočníků klesá s tahem (sim: applyBeamDamage)
+        + (() => {
+          const sw = sidewallPowerFactor(own.throttle)
+          const cls = sw >= 1 ? 'ok' : sw >= 0.6 ? 'amber' : 'bad'
+          return `<div class="row" title="Reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ bočníky 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 %.">`
+            + `<span>výkon bočníků:</span><b class="${cls}">${Math.round(sw * 100)} %</b></div>`
+        })()
 
     // funkční šachty (vliv poškození subsystémů na palbu — lepší bok)
     const tubesMax = def?.tubesPerBroadside ?? 0
@@ -905,9 +912,10 @@ export class Panels {
       sensors: `Plná identifikace cílů do ${sensM} mil. km + lepší zámek našich raket (plné palebné `
         + 'řešení 100 % místo 70 %); pozor — vyzařování zlepšuje řešení nepříteli o 15 %. '
         + 'Pasivní detekce cizího klínu funguje vždy.',
-      throttle: 'Výkon pohonu (kompenzátoru): 80 % je standard s bezpečnostní rezervou, 100 % plný výkon. '
-        + '120 % = NOUZOVÝ výkon „za červenou čarou" — o pětinu vyšší akcelerace, ale riziko poškození '
-        + 'impelerového prstence (v průměru ~1× za 33 minut letu). Platí pro celý výběr.',
+      throttle: 'Výkon pohonu (kompenzátoru): 80 % je standard, 100 % plný výkon, '
+        + '120 % = NOUZOVÝ výkon „za červenou čarou" (riziko poškození prstence ~1× za 33 min). '
+        + 'POZOR — reaktor neutáhne pohon i bočníky: tah ≤ 40 % ⇒ bočníky 120 %, 60 % ⇒ 100 %, '
+        + '80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 %. Rychlý přílet = papírové boky. Platí pro celý výběr.',
       formation: 'Formace eskadry (aktivní při výběru ≥ 2 ovladatelných lodí; aktivní loď = leader, '
         + 'ostatní dostanou sloty a drží je automaticky — vlastní kurz ignorují). '
         + 'STĚNA: kolmá řada, rozestup 400 tis. km — disciplinovaná palebná síť: Pk protiraket ×1,15, '

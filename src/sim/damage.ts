@@ -3,7 +3,7 @@
  * Lodě umírají po částech — žádný prostý HP bar.
  */
 import type { ShipState, SimState, Subsystems } from './types'
-import { REPAIR_CAP, REPAIR_RATE } from './constants'
+import { REPAIR_CAP, REPAIR_RATE, SIDEWALL_POWER_CURVE, SIDEWALL_WEAR } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
 import { rand } from './rng'
 import { voiceOwnHit } from './voice'
@@ -41,8 +41,30 @@ export function effectiveAccelFactor(ship: ShipState): number {
 }
 
 /**
+ * Výkon bočníků dle rozkazového tahu (rozpočet reaktoru — pohon a štítové
+ * generátory se o výkon dělí): lomená čára SIDEWALL_POWER_CURVE, lineární
+ * interpolace. Tah ≤ 40 % ⇒ 1.2, 60 % ⇒ 1.0, 80 % ⇒ 0.6, 100 % ⇒ 0.4,
+ * 120 % ⇒ 0.25. Sdílí sim (applyBeamDamage) i UI (readout u ovládání tahu).
+ */
+export function sidewallPowerFactor(throttle: number): number {
+  const curve = SIDEWALL_POWER_CURVE
+  if (throttle <= curve[0][0]) return curve[0][1]
+  for (let i = 1; i < curve.length; i++) {
+    const [x1, y1] = curve[i]
+    if (throttle <= x1) {
+      const [x0, y0] = curve[i - 1]
+      return y0 + ((throttle - x0) / (x1 - x0)) * (y1 - y0)
+    }
+  }
+  return curve[curve.length - 1][1]
+}
+
+/**
  * Aplikuje jeden paprsek (laserová tyč hlavice / energetický mount).
- * Boky: bočník odečte práh (slabý paprsek pohltí celý).
+ * Boky: racionální útlum bočníkem — prošlé dmg²/(dmg+práh): silný bočník
+ * čtvrtí slabé paprsky (ale VŽDY něco prosákne — žádná věčná imunita),
+ * slabý bočník těžký graser skoro nezpomalí. Absorbovaná energie navíc
+ * pálí generátory bočníku (SIDEWALL_WEAR) — soustavná palba štít mele.
  * Hrdlo: bez bočníku, ·1.25. Záď: bez bočníku, bonus šance na zadní impeler.
  */
 export function applyBeamDamage(
@@ -56,10 +78,17 @@ export function applyBeamDamage(
 
   let dmg = rawDamage
   if (aspect === 'port' || aspect === 'stbd') {
-    const wall = aspect === 'port' ? target.subsystems.sidewallPort : target.subsystems.sidewallStbd
-    const threshold = def.sidewallStrength * wall
-    if (dmg <= threshold) return // bočník paprsek pohltil
-    dmg -= threshold
+    const wallKey = aspect === 'port' ? 'sidewallPort' : 'sidewallStbd'
+    const wall = target.subsystems[wallKey]
+    // rozpočet reaktoru: rychlá loď (vysoký tah) má bočníky podvyživené
+    const threshold = def.sidewallStrength * wall * sidewallPowerFactor(target.throttle)
+    const through = (dmg * dmg) / (dmg + threshold)
+    // opotřebení generátorů absorbovanou energií — bočník se palbou mele
+    if (threshold > 0) {
+      target.subsystems[wallKey] =
+        Math.max(0, wall - ((dmg - through) / def.sidewallStrength) * SIDEWALL_WEAR)
+    }
+    dmg = through
   } else if (aspect === 'throat') {
     dmg *= 1.25 // otevřené hrdlo klínu
   }
@@ -69,8 +98,11 @@ export function applyBeamDamage(
   // hláska posádky hráče: lehký (inženýr) / těžký (XO) zásah — jednou per typ
   voiceOwnHit(state, target, dmg)
 
-  // Zásah subsystémů: šance úměrná prošlému poškození, 1–2 systémy.
-  if (rand(state.rng) < Math.min(1, dmg / 45)) {
+  // Zásah subsystémů: lodě umírají po částech — každý prošlý paprsek má
+  // slušnou šanci něco urvat (základ 25 % + úměra poškození), 1–2 systémy.
+  // Ztráty na systém menší než dřív: vybavení odchází POSTUPNĚ přes víc
+  // zásahů (šachta po šachtě, cluster po clusteru), ne skokově.
+  if (rand(state.rng) < Math.min(1, 0.25 + dmg / 35)) {
     const nHits = rand(state.rng) < 0.35 ? 2 : 1
     for (let i = 0; i < nHits; i++) {
       let key: keyof Subsystems
@@ -79,7 +111,7 @@ export function applyBeamDamage(
       } else {
         key = SUBSYSTEM_KEYS[Math.floor(rand(state.rng) * SUBSYSTEM_KEYS.length)]
       }
-      const loss = 0.15 + rand(state.rng) * 0.25
+      const loss = 0.12 + rand(state.rng) * 0.22
       const prev = target.subsystems[key]
       target.subsystems[key] = Math.max(0, target.subsystems[key] - loss)
       state.events.push({

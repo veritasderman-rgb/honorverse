@@ -517,7 +517,7 @@ export class UIController {
       <h4>Rozkazy</h4>
       <div class="help-grid">
         <b>Intercept</b><span>autopilot spočítá stíhací kurz na cíl</span>
-        <b>Kurz sem</b><span>klikni do plotu — loď poletí na bod</span>
+        <b>Kurz sem</b><span>klikni do plotu — loď poletí na bod; u vybrané lodi plot kreslí PREDIKOVANOU KŘIVKU manévru (otáčení + setrvačnost, značka = 1 minuta letu) — čím rychleji letíš, tím širší oblouk</span>
         <b>Salva 2/4/plná</b><span>odpal raket na vybraný cíl</span>
         <b>Pohon LO/HI</b><span>LO = 46k g / 180 s (dostřel ~7 M km), HI = 92k g / 60 s (rychlost, ~1,6 M km)</span>
         <b>Salva X+Y</b><span>vrstvená salva: LO vlna + zpožděná HI vlna dorazí spolu a saturují bodovou obranu</span>
@@ -530,12 +530,20 @@ export class UIController {
         <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočníků</span>
         <b>Akt. senzory</b><span>plná identifikace zblízka + lepší zámek našich raket; pozor — vyzařování zlepšuje řešení nepříteli o 15 %</span>
       </div>
-      <h4>Výkon pohonu</h4>
+      <h4>Výkon pohonu a rozpočet reaktoru</h4>
       <div class="help-grid">
         <b>tah 20–120 %</b><span>stupňovitý přepínač v liště rozkazů; 80 % je standard s bezpečnostní rezervou kompenzátoru</span>
         <b>100 %</b><span>plný projektovaný výkon — bez rizika, ale bez rezervy</span>
         <b>120 % (červeně)</b><span>NOUZOVÝ výkon „za červenou čarou": +20 % akcelerace, ale se zapnutým klínem hrozí poškození impelerového prstence (v průměru ~1× za 33 minut) — inženýr varuje</span>
+        <b>Tah vs. bočníky</b><span>reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ bočníky 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 % — rychlý přílet znamená papírové boky (readout „výkon bočníků" v panelu lodi)</span>
         <b>Hromadně</b><span>přepínač platí pro celý hromadný výběr — „(×N)" u tlačítka</span>
+      </div>
+      <h4>Poškození a opravy</h4>
+      <div class="help-grid">
+        <b>Bočníky tlumí, neblokují</b><span>boční zásah VŽDY něco prosákne (silný bočník slabý paprsek čtvrtí); absorbovaná energie navíc generátory bočníku opotřebovává — soustavná palba štít postupně mele</span>
+        <b>Umírání po částech</b><span>loď vydrží řádově 10–15 zásahů; každý prošlý paprsek má slušnou šanci vyřadit kus vybavení (šachty, impelery, senzory…) — bojeschopnost klesá dřív, než dojde trup</span>
+        <b>Poškozené impelery</b><span>akcelerace klesá s průměrem obou prstenců — loď se zásahem do pohonu reálně zpomaluje v manévru</span>
+        <b>Polní opravy</b><span>poškozené subsystémy se BĚHEM boje samy opravují (~7 % za minutu, provizorně do 70 %); buff inženýra opravy ×4 — o vyřazený bočník či šachty se dá přetahovat</span>
       </div>
       <h4>Eskadra a formace</h4>
       <div class="help-grid">

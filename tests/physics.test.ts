@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { desiredHeading, updateShipPhysics } from '../src/sim/physics'
+import { desiredHeading, predictPath, updateShipPhysics } from '../src/sim/physics'
 import { G, SHIP_MAX_SPEED, SIM_DT, TURN_RATE } from '../src/sim/constants'
 import { SHIP_CLASSES } from '../src/data/defs'
 import { len, vec } from '../src/sim/vec'
@@ -234,5 +234,46 @@ describe('desiredHeading', () => {
     const h = desiredHeading(ship, makeState([ship]))
     expect(h).not.toBeNull()
     expect(h!).toBeCloseTo(0, 6)
+  })
+})
+
+describe('predictPath — predikovaná trajektorie', () => {
+  it('je čistá funkce: nemutuje loď ani stav', () => {
+    const ship = makeShip({
+      vel: vec(500, 0),
+      nav: { kind: 'course', dest: vec(0, 1e8), arriveAtRest: false },
+    })
+    const state = makeState([ship])
+    const pts = predictPath(state, ship, 600, 4)
+    expect(pts.length).toBe(150)
+    expect(ship.pos).toEqual(vec(0, 0))
+    expect(ship.vel).toEqual(vec(500, 0))
+    expect(ship.heading).toBe(0)
+  })
+
+  it('vyšší rychlost ⇒ širší oblouk zatáčky (setrvačnost)', () => {
+    // kurz kolmo (+y), počáteční rychlost po +x — loď musí oblouk „vyvézt"
+    const run = (v: number): number => {
+      const ship = makeShip({
+        vel: vec(v, 0),
+        nav: { kind: 'course', dest: vec(0, 5e8), arriveAtRest: false },
+      })
+      const pts = predictPath(makeState([ship]), ship, 1200, 4)
+      return Math.max(...pts.map(p => p.x)) // maximální vyjetí po +x
+    }
+    const slow = run(200)
+    const fast = run(2000)
+    expect(fast).toBeGreaterThan(slow * 3)
+  })
+
+  it('predikce interceptu se stáčí za pohybujícím se cílem', () => {
+    const target = makeShip({
+      id: 2, side: 'enemy', classId: 'merch-freighter',
+      pos: vec(2_000_000, 0), vel: vec(0, 300), wedgeOn: false,
+    })
+    const ship = makeShip({ nav: { kind: 'intercept', targetId: 2 } })
+    const pts = predictPath(makeState([ship, target]), ship, 1200, 4)
+    // cíl driftuje k +y — konec predikované dráhy musí mířit nad osu x
+    expect(pts[pts.length - 1].y).toBeGreaterThan(0)
   })
 })

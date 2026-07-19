@@ -6,6 +6,7 @@
  */
 import { SHIP_CLASSES } from '../data/defs'
 import { CM_INTERCEPT_RANGE, ENERGY_MAX_RANGE } from '../sim/constants'
+import { predictPath } from '../sim/physics'
 import type { Contact, Hyperlimit, MissileState, ShipState, SimState, Vec2 } from '../sim/types'
 
 const ZOOM_MIN = 50        // km/px
@@ -418,6 +419,25 @@ export class TacticalPlot {
       ctx.arc(d.x, d.y, 4, 0, Math.PI * 2)
     }
     ctx.stroke()
+
+    // PREDIKOVANÁ TRAJEKTORIE (jen vybraná loď): skutečná křivka manévru
+    // stejnou fyzikou jako sim — otáčení, akcelerace, setrvačnost. Vyšší
+    // rychlost ⇒ viditelně širší oblouk. Značka každou minutu letu.
+    if (selected) {
+      const path = predictPath(s, ship, 1200, 4)
+      ctx.globalAlpha = 0.55
+      ctx.beginPath()
+      ctx.moveTo(p.x, p.y)
+      for (const pt of path) {
+        const q = this.worldToScreen(pt)
+        ctx.lineTo(q.x, q.y)
+      }
+      ctx.stroke()
+      for (let i = 14; i < path.length; i += 15) { // 15 × 4 s = 60 s
+        const q = this.worldToScreen(path[i])
+        ctx.fillRect(q.x - 1.5, q.y - 1.5, 3, 3)
+      }
+    }
     ctx.restore()
   }
 
