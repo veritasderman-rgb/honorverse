@@ -69,20 +69,22 @@ export const mission10: Scenario = {
       hull: 300, subsystems: unfinishedBase(), activeSensors: true,
       fireControl: { mode: 'auto', targetId: FLAGSHIP, salvoSize: 6, driveMode: 0, engaged: false },
     },
-    // hlídka základny: tichý drift, na detekci svazu přejde do lovu
+    // hlídka základny: předsunutá zástěna na ose útoku, tichý drift;
+    // na detekci svazu (< 40 mil. km) přejde do lovu — FÁZE 1 (průlom)
+    // leží záměrně DALEKO před polem podů (< 60 mil. km od základny)
     {
       classId: 'ca-bastion', side: 'enemy', name: 'VDS Zarja',
-      pos: { x: -104_000_000, y: 6_000_000 }, vel: { x: 250, y: 0 },
+      pos: { x: -70_000_000, y: 6_000_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
       classId: 'ca-bastion', side: 'enemy', name: 'VDS Uragan',
-      pos: { x: -104_000_000, y: -6_000_000 }, vel: { x: 250, y: 0 },
+      pos: { x: -70_000_000, y: -6_000_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
       classId: 'cl-sokol', side: 'enemy', name: 'VDS Altair',
-      pos: { x: -100_000_000, y: 0 }, vel: { x: 250, y: 0 },
+      pos: { x: -66_000_000, y: 0 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {

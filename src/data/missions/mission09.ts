@@ -40,18 +40,20 @@ const attackerNeutralized = (id: number): Scenario['triggers'] => [
   },
 ]
 
-/** druhá linie Direktoriátu: starší senzory a ECM (invazi nesou i rezervy) */
+/** druhá linie Direktoriátu: starší senzory, ECM i obranné baterie —
+ * invazi po nájezdech na logistiku (mise 7) nesou i rezervy */
 const secondLine = (): Subsystems => ({
   impellerFwd: 1, impellerAft: 1,
   sidewallPort: 1, sidewallStbd: 1,
   tubesPort: 1, tubesStbd: 1,
   energyPort: 1, energyStbd: 1,
-  pdlc: 1, cm: 1, sensors: 0.8, ecm: 0.8,
+  pdlc: 0.7, cm: 0.7, sensors: 0.8, ecm: 0.8,
 })
 
 /** útočník sledu: „přistál" na hyperlimitu, kurz na stanici (brzdí k cíli).
  * Než hlídkové senzory zachytí klíny obránců, drží naplánovaný nájezd;
- * pak doktrína hunter převezme intercept. */
+ * pak doktrína hunter převezme intercept. Zásobníky jen napůl plné —
+ * přesně o tohle šlo v misi 7 (podříznutá logistika). */
 const invader = (
   id: number, classId: string, name: string, x: number, y: number,
 ): Scenario['triggers'][0]['actions'][0] => {
@@ -64,6 +66,8 @@ const invader = (
       doctrine: 'hunter', activeSensors: true,
       nav: { kind: 'course', dest: { x: 0, y: 0 }, arriveAtRest: true },
       subsystems: secondLine(),
+      missiles: classId === 'ca-bastion' ? 100 : 60,
+      cms: classId === 'ca-bastion' ? 80 : 50,
     },
   }
 }
