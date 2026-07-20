@@ -405,12 +405,28 @@ export class Panels {
     const bar = document.createElement('span')
     bar.className = 'tb-audio'
     bar.innerHTML =
-      `<button class="tb-info" title="režim nápovědy (dotyk): klepnutí na prvek ukáže jeho vysvětlení místo akce">ⓘ</button>`
+      `<button class="tb-crt" title="CRT vzhled: scanlines + vinětace (jen kosmetika)">📺</button>`
+      + `<button class="tb-info" title="režim nápovědy (dotyk): klepnutí na prvek ukáže jeho vysvětlení místo akce">ⓘ</button>`
       + `<button class="tb-mute" title="ztlumit / zapnout zvuk">${audio.muted ? '🔇' : '🔊'}</button>`
       + `<label title="hlasitost hudby">♪ <input class="tb-vol-music" type="range" min="0" max="100"`
       + ` value="${Math.round(audio.musicVolume * 100)}"></label>`
       + `<label title="hlasitost efektů">FX <input class="tb-vol-sfx" type="range" min="0" max="100"`
       + ` value="${Math.round(audio.sfxVolume * 100)}"></label>`
+    // CRT overlay: persistentní, default VYP na dotyku (výkon — fáze D)
+    const crt = bar.querySelector<HTMLButtonElement>('.tb-crt')!
+    const plotEl = document.getElementById('plot-container')
+    let crtOn = false
+    try { crtOn = localStorage.getItem('wob-crt') === '1' } catch { /* noop */ }
+    const applyCrt = (): void => {
+      plotEl?.classList.toggle('crt', crtOn)
+      crt.classList.toggle('active', crtOn)
+    }
+    applyCrt()
+    crt.addEventListener('click', () => {
+      crtOn = !crtOn
+      try { localStorage.setItem('wob-crt', crtOn ? '1' : '0') } catch { /* noop */ }
+      applyCrt()
+    })
     const info = bar.querySelector<HTMLButtonElement>('.tb-info')!
     info.addEventListener('click', () => {
       this.infoMode = !this.infoMode

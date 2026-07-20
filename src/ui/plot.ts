@@ -251,9 +251,32 @@ export class TacticalPlot {
       this.fxScenario = state.scenarioId
       this.effects = []
       this.wrecks = []
+      this.outcomeSeen = 'running'
     }
     ingestEvents(state.events, state.ships, this.effects, this.wrecks, this.snapAt)
+    // šťáva (fáze C): otřes + rudý puls při zásahu do vlastní lodi
+    for (const ev of state.events) {
+      if ((ev.kind === 'missileHit' || ev.kind === 'energyHit') && ev.slowdown === true) {
+        this.shakeUntil = this.snapAt + 280
+        this.pulseUntil = this.snapAt + 550
+      }
+      if (ev.kind === 'shipDestroyed' && ev.side === 'player') {
+        this.shakeUntil = this.snapAt + 450
+        this.pulseUntil = this.snapAt + 900
+      }
+    }
+    // hyperpřechod: přechod mise do výhry = aurora záblesk
+    if (state.outcome === 'win' && this.outcomeSeen === 'running') {
+      this.flashUntil = this.snapAt + 1400
+    }
+    this.outcomeSeen = state.outcome
   }
+
+  /** šťáva (fáze C): časovače otřesu, pulsu okraje a aurora záblesku */
+  private shakeUntil = 0
+  private pulseUntil = 0
+  private flashUntil = 0
+  private outcomeSeen = 'running'
 
   setCourseCursor(on: boolean): void {
     this.canvas.style.cursor = on ? 'crosshair' : 'default'
@@ -438,8 +461,17 @@ export class TacticalPlot {
     }
     const ctx = this.ctx
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    // otřes obrazu při zásahu (fáze C): pár px jitteru s dozvukem
+    const now = performance.now()
+    if (now < this.shakeUntil) {
+      const k = (this.shakeUntil - now) / 280
+      ctx.translate(
+        Math.sin(now / 13) * 3 * k,
+        Math.cos(now / 17) * 3 * k,
+      )
+    }
     ctx.fillStyle = CLR.bg
-    ctx.fillRect(0, 0, w, h)
+    ctx.fillRect(-8, -8, w + 16, h + 16)
     ctx.font = '10px Consolas, Menlo, monospace'
 
     this.pickables = []
@@ -474,6 +506,39 @@ export class TacticalPlot {
     drawEffects(ctx, this.effects, performance.now(), pt => this.worldToScreen(pt))
     this.drawSelectionMarker(ctx)
     this.drawSelectionBox(ctx)
+    this.drawJuice(ctx, w, h)
+  }
+
+  /** rudý puls okraje při zásahu + aurora hyperpřechodu při výhře (fáze C) */
+  private drawJuice(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const now = performance.now()
+    if (now < this.pulseUntil) {
+      const k = (this.pulseUntil - now) / 550
+      const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.72)
+      g.addColorStop(0, 'transparent')
+      g.addColorStop(1, '#7a2a1f')
+      ctx.save()
+      ctx.globalAlpha = 0.5 * k
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, w, h)
+      ctx.restore()
+    }
+    if (now < this.flashUntil) {
+      // aurora: zelenobílé pásy přes obraz, rychle dohasínají
+      const k = (this.flashUntil - now) / 1400
+      ctx.save()
+      ctx.globalAlpha = 0.35 * k
+      for (let i = 0; i < 4; i++) {
+        const y = h * (0.15 + i * 0.22) + Math.sin(now / 300 + i * 2) * 14
+        const g = ctx.createLinearGradient(0, y - 26, 0, y + 26)
+        g.addColorStop(0, 'transparent')
+        g.addColorStop(0.5, i % 2 === 0 ? '#8fe08a' : '#eaffea')
+        g.addColorStop(1, 'transparent')
+        ctx.fillStyle = g
+        ctx.fillRect(0, y - 26, w, 52)
+      }
+      ctx.restore()
+    }
   }
 
   /** čárkovaný rám rozpracovaného obdélníkového výběru (Shift-tažení) */
@@ -687,6 +752,28 @@ export class TacticalPlot {
     ctx.restore()
   }
 
+  /** fosforová stopa (fáze C): dohasínající čára ZA lodí proti vektoru */
+  private drawTrail(ctx: CanvasRenderingContext2D, p: Vec2, vel: Vec2, color: string): void {
+    const v = Math.hypot(vel.x, vel.y)
+    if (v < 1) return
+    const px = Math.min(80, (v * 25) / this.kmPerPx)
+    if (px < 6) return
+    const nx = vel.x / v
+    const ny = vel.y / v
+    ctx.save()
+    const g = ctx.createLinearGradient(p.x, p.y, p.x - nx * px, p.y + ny * px)
+    g.addColorStop(0, color)
+    g.addColorStop(1, 'transparent')
+    ctx.strokeStyle = g
+    ctx.globalAlpha = 0.28
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.lineTo(p.x - nx * px, p.y + ny * px)
+    ctx.stroke()
+    ctx.restore()
+  }
+
   private drawVelVector(ctx: CanvasRenderingContext2D, p: Vec2, vel: Vec2, color: string): void {
     const v = Math.hypot(vel.x, vel.y)
     if (v < 0.5) return
@@ -829,6 +916,7 @@ export class TacticalPlot {
     ctx.stroke()
     ctx.restore()
 
+    this.drawTrail(ctx, p, ship.vel, CLR.ownDim)
     this.drawVelVector(ctx, p, ship.vel, CLR.ownDim)
 
     ctx.save()
@@ -909,6 +997,7 @@ export class TacticalPlot {
       ctx.restore()
     }
 
+    if (!memory) this.drawTrail(ctx, p, c.vel, color)
     this.drawVelVector(ctx, p, c.vel, color)
 
     // značka: klasifikovaný kontakt = silueta odhadnuté třídy (menší),
