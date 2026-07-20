@@ -226,6 +226,48 @@ export class UIController {
       this.refresh()
       return
     }
+    // velení eskadry: doktríny palby pro celý hromadný výběr
+    if (act === 'fleetNearest' || act === 'fleetBiggest' || act === 'fleetSpread') {
+      const mode = act === 'fleetNearest' ? 'nearest'
+        : act === 'fleetBiggest' ? 'biggest' : 'spread'
+      for (const sh of this.selectedShips()) {
+        this.send({
+          kind: 'setFireControl', shipId: sh.id,
+          fc: {
+            mode, targetId: null,
+            salvoSize: SHIP_CLASSES[sh.classId]?.tubesPerBroadside ?? 4,
+            driveMode: this.salvoMode,
+            autonomous: this.autonomousMode,
+          },
+        })
+      }
+      this.refresh()
+      return
+    }
+    if (act === 'fleetFocus') {
+      // soustředěná palba: celý výběr AUTO na hráčem vybraný cíl
+      if (t == null) return
+      for (const sh of this.selectedShips()) {
+        this.send({
+          kind: 'setFireControl', shipId: sh.id,
+          fc: {
+            mode: 'auto', targetId: t,
+            salvoSize: SHIP_CLASSES[sh.classId]?.tubesPerBroadside ?? 4,
+            driveMode: this.salvoMode,
+            autonomous: this.autonomousMode,
+          },
+        })
+      }
+      this.refresh()
+      return
+    }
+    if (act === 'fleetHold') {
+      for (const sh of this.selectedShips()) {
+        this.send({ kind: 'holdFire', shipId: sh.id })
+      }
+      this.refresh()
+      return
+    }
     switch (act) {
       case 'intercept':
         if (t != null) {
@@ -552,6 +594,8 @@ export class UIController {
         <b>Šíp V</b><span>šíp za leaderem (60°): sdílený senzorový obraz — +5 % palebného řešení členů</span>
         <b>Rozptyl ◦</b><span>mřížka 1,5 M km: útočník nesaturuje eskadru jako celek, členové +3 % efektivního ECM</span>
         <b>Plot</b><span>členové mají tenkou čáru k leaderovi; v panelu FLOTILA značky Σ / V / ◦</span>
+        <b>ESKADRA (≥ 3 lodě)</b><span>doktríny palby pro celý výběr — lodě si cíle volí SAMY a po zničení plynule přejdou na další: Nejbližší (každá na svůj nejbližší kontakt), Největší (všechny na nejtěžší trup — koncentrace saturuje obranu), Rozdělit (každá loď jiný cíl — proti hejnu slabších), Soustředit (AUTO všech na tebou vybraný cíl), Držet palbu (vše vypnout)</span>
+        <b>Doktrína + energie</b><span>doktríny řídí i energetické baterie a pálí dál energií, i když dojdou rakety; v rosteru FLOTILA vidíš režim každé lodi (AUTO·nejbl. …)</span>
       </div>
       <h4>Senzorový duel (EMCON)</h4>
       <div class="help-grid">

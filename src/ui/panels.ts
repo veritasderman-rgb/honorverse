@@ -149,6 +149,11 @@ const emptyStats = (): CombatStats => ({
 })
 
 /** české popisky příčin zániku rakety */
+/** české štítky doktrín palby eskadry (roster, panel lodi) */
+const FIRE_MODE_LABELS: Record<string, string> = {
+  auto: 'AUTO', nearest: 'AUTO·nejbl.', biggest: 'AUTO·nejv.', spread: 'AUTO·rozděl.',
+}
+
 /**
  * Plný / krátký popisek tlačítka: telefonní CSS ukazuje krátký (.lbl-sm),
  * ať se celé bojové menu vejde na obrazovku bez scrollování.
@@ -545,7 +550,7 @@ export class Panels {
       const idx = controllable.findIndex(c => c.id === s.id)
       const active = s.id === ui.ownShipId
       const inSel = !active && ui.selectedShipIds.includes(s.id)
-      const auto = s.fireControl.mode === 'auto'
+      const auto = s.fireControl.mode !== 'hold'
       const key = ctrl && idx >= 0 && idx < 9 ? `${idx + 1} ` : ''
       const mark = active ? '▶ ' : ''
       // značka formace: Σ stěna, V šíp, ◦ rozptyl
@@ -557,7 +562,7 @@ export class Panels {
         + `><div class="row"><span>${mark}${key}${esc(s.name)} <span class="dim">(${esc(def?.hullCode ?? '?')})</span>${fmark}</span>`
         + `<b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></div>`
         + `<div class="row dim"><span>rakety ${s.missiles} · CM ${s.cms}</span>`
-        + `<span>${ctrl ? (auto ? 'AUTO' : '') : 'AI'}</span></div></div>`
+        + `<span>${ctrl ? (FIRE_MODE_LABELS[s.fireControl.mode] ?? '') : 'AI'}</span></div></div>`
     }).join('')
     return this.panel('fleet', 'Flotila', rows,
       'klávesy 1–9 přepínají aktivní loď · Shift-klik přidá/odebere loď z hromadného výběru')
@@ -615,17 +620,20 @@ export class Panels {
         + `<span class="pc">${own.energyCooldown > 0 ? Math.ceil(own.energyCooldown) + ' s' : 'OK'}</span></div>`
       : ''
 
-    // stav AUTO palby
+    // stav AUTO palby / doktríny eskadry
     const fc = own.fireControl
     let fireRow = ''
-    if (fc.mode === 'auto' && fc.targetId != null) {
+    if (fc.mode !== 'hold' && fc.targetId != null) {
       const tgt = state.ships.find(s => s.id === fc.targetId)
       const tgtName = tgt ? tgt.name : `#${fc.targetId}`
       const next = fc.engaged
         ? (own.tubeCooldown > 0 ? `další salva za ${Math.ceil(own.tubeCooldown)} s` : 'pálí')
         : 'čeká na obálku'
-      fireRow = `<div class="row auto-fire"><span class="amber">AUTO → ${esc(tgtName)}</span>`
+      fireRow = `<div class="row auto-fire"><span class="amber">${FIRE_MODE_LABELS[fc.mode] ?? 'AUTO'} → ${esc(tgtName)}</span>`
         + `<span>${next} · zbývá ${own.missiles}</span></div>`
+    } else if (fc.mode !== 'hold' && fc.mode !== 'auto') {
+      fireRow = `<div class="row auto-fire"><span class="amber">${FIRE_MODE_LABELS[fc.mode]}</span>`
+        + `<span>hledá cíl…</span></div>`
     }
     // druhá vlna vrstvené salvy
     let waveRow = ''
@@ -999,6 +1007,32 @@ export class Panels {
       + xN
       + `</span>`
 
+    // VELENÍ ESKADRY: doktríny palby pro hromadný výběr — bez ručního
+    // klikání cílů ve velkých bitvách. Viditelné od 3 ovladatelných lodí.
+    const fleetCount = controllableShips(state).length
+    const selShips = ui.selectedShipIds
+      .map(id => state.ships.find(s => s.id === id))
+      .filter((s): s is ShipState => !!s && !s.destroyed)
+    const allMode = (m: string): boolean =>
+      selShips.length > 0 && selShips.every(s => s.fireControl.mode === m)
+    const squadTips: Record<string, string> = {
+      fleetNearest: 'Doktrína NEJBLIŽŠÍ: každá vybraná loď si sama drží palbu na svůj nejbližší nepřátelský kontakt a po jeho zničení plynule přejde na další. Rozptýlená sebeobrana — ideální proti dotírající zástěně.',
+      fleetBiggest: 'Doktrína NEJVĚTŠÍ: každá vybraná loď pálí na nejtěžší známý trup — celá eskadra se tak sama koncentruje (saturace obrany!) a po zničení roluje na další nejtěžší. Doktrína stěny proti stěně.',
+      fleetSpread: 'Doktrína ROZDĚLIT: vybrané lodě si cíle rozdělí (každá jiný) — proti hejnu slabších lodí, kde koncentrace plýtvá salvami.',
+      fleetFocus: 'SOUSTŘEDIT: všechny vybrané lodě AUTO palbou na TEBOU vybraný cíl (klikni na kontakt). Jednorázové přiřazení — po zničení cíle se lodě zastaví.',
+      fleetHold: 'DRŽET PALBU: všechny vybrané lodě přestanou střílet (doktríny i AUTO vypnuty).',
+    }
+    const squadSeg = fleetCount >= 3
+      ? `<span class="obg" title="Velení eskadry: doktríny palby pro celý výběr — cíle si lodě volí samy (deterministicky), i při kompresi času.">${lbl('ESKADRA:', 'E:')}`
+        + `<button data-act="fleetNearest" class="${allMode('nearest') ? 'active' : ''}" title="${esc(squadTips.fleetNearest)}"${dis(!noShip)}>${lbl('Nejbližší', 'Nejbl.')}</button>`
+        + `<button data-act="fleetBiggest" class="${allMode('biggest') ? 'active' : ''}" title="${esc(squadTips.fleetBiggest)}"${dis(!noShip)}>${lbl('Největší', 'Nejv.')}</button>`
+        + `<button data-act="fleetSpread" class="${allMode('spread') ? 'active' : ''}" title="${esc(squadTips.fleetSpread)}"${dis(!noShip)}>${lbl('Rozdělit', 'Rozd.')}</button>`
+        + `<button data-act="fleetFocus" title="${esc(squadTips.fleetFocus)}"${dis(canFire)}>${lbl('Soustředit', 'Soustř.')}</button>`
+        + `<button data-act="fleetHold" title="${esc(squadTips.fleetHold)}"${dis(!noShip)}>${lbl('Držet palbu', '✋')}</button>`
+        + xN
+        + `</span>`
+      : ''
+
     // vodorovná command lišta: [pohyb] | [palba] | [obrana/EMCON]
     // progres přebíjení šachet jako tenká linka pod tlačítky
     const ready = own ? 1 - Math.min(1, own.tubeCooldown / TUBE_COOLDOWN) : 1
@@ -1036,6 +1070,7 @@ export class Panels {
       + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}" title="${esc(tip.sensors)}"${dis(!noShip)}>${lbl(`Akt. senzory ${own?.activeSensors ? 'ZAP' : 'VYP'}`, 'Senzor')}${xN}</button>`
       + `</span>`
       + formationSeg
+      + squadSeg
       + `</div>`
       + cdLine,
       'mezerník pauza · +/− komprese · A auto · H nápověda')

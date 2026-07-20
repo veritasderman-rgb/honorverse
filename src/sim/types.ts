@@ -84,9 +84,19 @@ export type Speaker =
   | 'captain' | 'xo' | 'engineer' | 'tactical' | 'comms'
   | 'enemy-captain' | 'pirate' | 'station' | 'governor'
 
-/** Řízení palby lodi (AUTO režim = engine sám opakuje salvy na cíl v obálce). */
+/**
+ * Řízení palby lodi. Režimy:
+ *   hold    — nestřílí,
+ *   auto    — opakuje salvy na PEVNÝ cíl (targetId), dokud je v obálce,
+ *   nearest — doktrína eskadry: sám si vybírá NEJBLIŽŠÍ nepřátelský kontakt
+ *             (po zničení plynule roluje na další),
+ *   biggest — doktrína eskadry: NEJTĚŽŠÍ známý trup (koncentrace celé
+ *             eskadry vzniká sama — všechny lodě volí stejně),
+ *   spread  — doktrína eskadry: rozdělit cíle (každá loď jiný — proti hejnu).
+ * Doktríny volí cíl deterministicky z kontaktů vlastní strany.
+ */
 export interface FireControl {
-  mode: 'hold' | 'auto'
+  mode: 'hold' | 'auto' | 'nearest' | 'biggest' | 'spread'
   targetId: number | null
   salvoSize: number
   driveMode: DriveMode

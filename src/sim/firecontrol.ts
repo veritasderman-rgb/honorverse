@@ -6,11 +6,69 @@
  *   - druhá vlna vrstvené salvy (pendingWave) — HI follow-up časovaný
  *     tak, aby dorazil ±10 s s hlavní LO vlnou.
  */
-import type { ShipState, SimState } from './types'
+import type { FireControl, ShipState, Side, SimState } from './types'
 import { ENERGY_MAX_RANGE } from './constants'
+import { SHIP_CLASSES } from '../data/defs'
 import { dist } from './vec'
 import { effectiveTubes } from './damage'
 import { fireEnergy, launchSalvo, poweredEnvelope } from './weapons'
+
+const hostileTo = (a: Side, b: Side): boolean =>
+  (a === 'player' && b === 'enemy') || (a === 'enemy' && b === 'player')
+
+/**
+ * Doktríny palby eskadry (nearest/biggest/spread): DETERMINISTICKÝ výběr
+ * cíle z kontaktů vlastní strany (paměťové piny se nepočítají — na duchy
+ * se nestřílí). Nastaví fc.targetId; null = žádný kandidát.
+ *
+ *   nearest — nejbližší nepřátelský kontakt (mírná lepivost ×1.2, ať cíl
+ *             nepřeskakuje mezi dvěma stejně vzdálenými),
+ *   biggest — nejtěžší ZNÁMÝ trup (tonáž třídy z classGuess; neznámé = 0),
+ *             remíza řeší vzdálenost — koncentrace eskadry vzniká sama,
+ *   spread  — rozdělení cílů: lodě se spread doktrínou se seřadí dle id
+ *             a i-tá si vezme i-tý nejbližší kontakt (mod počtu kandidátů).
+ */
+function doctrineTarget(state: SimState, ship: ShipState, fc: FireControl): void {
+  const cands: { id: number; d: number; ton: number }[] = []
+  for (const c of state.contacts[ship.side] ?? []) {
+    if (c.memory === true) continue
+    const t = state.ships.find(s => s.id === c.shipId)
+    if (!t || t.destroyed || t.surrendered || !hostileTo(ship.side, t.side)) continue
+    cands.push({
+      id: t.id,
+      d: dist(ship.pos, t.pos),
+      ton: SHIP_CLASSES[c.classGuess]?.tonnage ?? 0,
+    })
+  }
+  if (cands.length === 0) {
+    fc.targetId = null
+    fc.engaged = false
+    return
+  }
+  cands.sort((a, b) => a.d - b.d || a.id - b.id)
+
+  if (fc.mode === 'nearest') {
+    const cur = cands.find(x => x.id === fc.targetId)
+    fc.targetId = cur && cur.d <= cands[0].d * 1.2 ? cur.id : cands[0].id
+    return
+  }
+  if (fc.mode === 'biggest') {
+    let best = cands[0]
+    for (const x of cands) {
+      if (x.ton > best.ton || (x.ton === best.ton && x.d < best.d)) best = x
+    }
+    const cur = cands.find(x => x.id === fc.targetId)
+    fc.targetId = cur && cur.ton >= best.ton ? cur.id : best.id
+    return
+  }
+  // spread: pořadí lodi mezi spread-loděmi vlastní strany (dle id)
+  const spreaders = state.ships
+    .filter(s => !s.destroyed && s.side === ship.side && s.fireControl.mode === 'spread')
+    .map(s => s.id)
+    .sort((a, b) => a - b)
+  const rank = Math.max(0, spreaders.indexOf(ship.id))
+  fc.targetId = cands[rank % cands.length].id
+}
 
 /** hláška taktického důstojníka hráči */
 function say(state: SimState, ship: ShipState, text: string, slowdown = false): void {
@@ -43,12 +101,23 @@ export function updateFireControl(state: SimState): void {
       }
     }
 
-    // --- AUTO palba ---
+    // --- AUTO palba / doktríny eskadry ---
     const fc = ship.fireControl
-    if (fc.mode !== 'auto' || fc.targetId == null) continue
+    const doctrine = fc.mode === 'nearest' || fc.mode === 'biggest' || fc.mode === 'spread'
+    if (doctrine) {
+      doctrineTarget(state, ship, fc) // deterministický výběr cíle
+      if (fc.targetId == null) continue
+    }
+    if (!doctrine && (fc.mode !== 'auto' || fc.targetId == null)) continue
 
     const target = state.ships.find(s => s.id === fc.targetId && !s.destroyed && !s.surrendered)
     if (!target) {
+      if (doctrine) {
+        // doktrína si příští tick vybere dalšího — žádné vypínání
+        fc.targetId = null
+        fc.engaged = false
+        continue
+      }
       const capitulated = state.ships.find(s => s.id === fc.targetId)?.surrendered === true
       if (fc.engaged) {
         say(state, ship, capitulated
@@ -60,7 +129,7 @@ export function updateFireControl(state: SimState): void {
       continue
     }
 
-    if (ship.missiles <= 0) {
+    if (ship.missiles <= 0 && !doctrine) {
       if (fc.engaged || fc.mode === 'auto') {
         say(state, ship, 'Prázdné zásobníky raket — auto palba ukončena.', true)
       }
@@ -68,6 +137,7 @@ export function updateFireControl(state: SimState): void {
       fc.engaged = false
       continue
     }
+    // doktrína s prázdnými zásobníky pálí dál aspoň energií (launch níž hlídá munici)
 
     // odvalená loď nestřílí — AUTO čeká (hláška jen na hraně, žádný spam)
     if (ship.rolledTo !== null) {
@@ -86,16 +156,19 @@ export function updateFireControl(state: SimState): void {
     const env = poweredEnvelope(ship.pos, ship.vel, target.pos, target.vel, fc.driveMode)
     const inRange = d <= env
 
-    // hrana: vstup/výstup z poháněné obálky
+    // hrana: vstup/výstup z poháněné obálky (doktríny eskadry mlčí —
+    // hlášky 20 lodí najednou by byly spam)
     if (inRange !== fc.engaged) {
       fc.engaged = inRange
-      say(state, ship, inRange
-        ? `Palebné řešení na ${target.name} — zahajuji palbu.`
-        : `${target.name} mimo poháněnou obálku — palba pozastavena.`, inRange)
+      if (!doctrine) {
+        say(state, ship, inRange
+          ? `Palebné řešení na ${target.name} — zahajuji palbu.`
+          : `${target.name} mimo poháněnou obálku — palba pozastavena.`, inRange)
+      }
     }
 
-    if (inRange && ship.tubeCooldown <= 0 && effectiveTubes(ship) > 0) {
-      launchSalvo(state, ship, fc.targetId, fc.salvoSize, fc.driveMode,
+    if (inRange && ship.missiles > 0 && ship.tubeCooldown <= 0 && effectiveTubes(ship) > 0) {
+      launchSalvo(state, ship, target.id, fc.salvoSize, fc.driveMode,
         { autonomous: fc.autonomous === true })
     }
 
