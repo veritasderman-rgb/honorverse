@@ -54,6 +54,7 @@ export const mission01: Scenario = {
       classId: 'merch-freighter', side: 'neutral', name: 'Hyperlimit',
       pos: { x: 250_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Navigační bóje na hyperlimitu soustavy — hranici, za kterou gravitační studna hvězdy dovolí přechod do hyperprostoru. Kdo ji protne, je pryč.',
     },
     // --- kosmetika soustavy (fáze B): svět u Křižovatky žije ---
     {
@@ -61,6 +62,7 @@ export const mission01: Scenario = {
       classId: 'planet', side: 'neutral', name: 'Gwynedd',
       pos: { x: -30_000_000, y: -18_000_000 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Gwynedd — zemědělský svět Království na vnitřní orbitě Křižovatky. Tři sta milionů lidí, sýpka sektoru; mýto vybírané nad jejich hlavami platí jejich školy i orbitální výtah.',
     },
     {
       // civilní provoz Křižovatky — obchodník na trase (celní hlídka má co sledovat)
@@ -69,6 +71,7 @@ export const mission01: Scenario = {
       doctrine: 'freighter',
       nav: { kind: 'course', dest: { x: 200_000_000, y: -50_000_000 }, arriveAtRest: false },
       throttle: 0.5,
+      desc: 'Nákladní loď na lince Křižovatky — civilní provoz s platným tranzitem a manifestem, který výjimečně sedí.',
     },
     {
       classId: 'merch-freighter', side: 'neutral', name: 'Powys',
@@ -76,12 +79,14 @@ export const mission01: Scenario = {
       doctrine: 'freighter',
       nav: { kind: 'course', dest: { x: -60_000_000, y: 25_000_000 }, arriveAtRest: false },
       throttle: 0.5,
+      desc: 'Nákladní loď na lince Křižovatky — pravidelná linka do Pomezí, náklad: náhradní díly a spotřební zboží.',
     },
     {
       // meteosonda — pulzující drobnost na plotu
       classId: 'probe', side: 'neutral', name: 'Meteo-7',
       pos: { x: 12_000_000, y: 8_000_000 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Meteorologická sonda Kontroly Brány: měří sluneční vítr a mikrometeority na tranzitních koridorech. Majetek správy terminálu — nesestřelovat, papírování je nekonečné.',
     },
   ],
 

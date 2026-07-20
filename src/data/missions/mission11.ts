@@ -120,12 +120,14 @@ export const mission11: Scenario = {
       classId: 'station-zeta', side: 'enemy', name: 'Základna Almadén',
       pos: { x: 55_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'freighter', wedgeOn: false, throttle: 0,
+      desc: 'Zásobovací základna Almadén — simulovaný týlový uzel imperiální stěny: munice, izotopy, opravárenské doky. Volitelný bonusový cíl cvičení.',
     },
     {
       // planeta — pevný bod mapy, kreslí se trvale
       classId: 'planet', side: 'neutral', name: 'Avalon Prime',
       pos: { x: -20_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Avalon Prime — trůnní svět Království. V simulaci admirality představuje to, co stěna brání: důvod, proč se tahle bitva cvičí.',
     },
   ],
 

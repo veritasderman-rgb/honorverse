@@ -49,6 +49,7 @@ export const mission03: Scenario = {
       classId: 'merch-freighter', side: 'neutral', name: 'Stanice Sázava',
       pos: { x: 80_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Stanice Sázava — pohraniční překladiště Království: doky, celnice a pár set dokařů. Poslední civilizovaná zastávka před Pomezím.',
     },
   ],
 

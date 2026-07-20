@@ -96,6 +96,7 @@ export const mission02: Scenario = {
       classId: 'merch-freighter', side: 'neutral', name: 'Cílová bóje',
       pos: { ...DEST }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Navigační bóje zásobovací trasy — bod předání konvoje eskortě pohraniční stanice. Doveď sem obchodníky a služba je splněna.',
     },
     {
       // pirát #1 — návnada; najíždí z boku (~30 mil. km od konvoje)

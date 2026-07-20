@@ -90,6 +90,7 @@ export const mission07: Scenario = {
       classId: 'merch-freighter', side: 'neutral', name: 'Hyperlimit',
       pos: { x: 160_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Ústupový bod na hyperlimitu. Kaperská doktrína má tři kroky: udeřit, rozbít, zmizet — tohle je ten třetí.',
     },
   ],
 

@@ -47,6 +47,16 @@ export function updateSensors(state: SimState, dt: number): void {
       let quality: 0 | 1 | 2 = 0
       let seen = false
 
+      // ZAKRESLENO V MAPÁCH: neutrální statické objekty (planety, stanice,
+      // navigační bóje, sondy — doctrine 'buoy') zná každý z navigačních
+      // map soustavy — jsou vidět a klasifikované VŽDY, bez senzorů.
+      // Nepřátelských základen se to netýká (ty je třeba najít).
+      const charted = target.side === 'neutral' && target.doctrine === 'buoy'
+      if (charted) {
+        seen = true
+        quality = 2
+      }
+
       for (const obs of observers) {
         const def = SHIP_CLASSES[obs.classId]
         if (!def) continue
@@ -83,8 +93,9 @@ export function updateSensors(state: SimState, dt: number): void {
         continue
       }
 
-      // gravitika (klín) je FTL → obraz real-time; EM jen rychlostí světla
-      const age = wedgeDetected ? 0 : bestDist / C
+      // gravitika (klín) je FTL → obraz real-time; EM jen rychlostí světla;
+      // objekt z map (charted) má polohu kanonickou — bez stáří
+      const age = wedgeDetected || !Number.isFinite(bestDist) ? 0 : bestDist / C
       const revealed = state.flags[`revealed:${target.id}`] === true
       const classGuess = quality === 2 || revealed ? target.classId : 'neznámá'
       const def = SHIP_CLASSES[target.classId]
@@ -101,8 +112,9 @@ export function updateSensors(state: SimState, dt: number): void {
         staticObject: def ? def.maxAccelG <= 0 : false,
       })
 
-      // nová stopa → událost (UI zpomalí čas)
-      if (!prev.some(c => c.shipId === target.id)) {
+      // nová stopa → událost (UI zpomalí čas); objekty z map nejsou „nový
+      // kontakt" — jsou tam odjakživa, žádné hlášky ani zpomalení
+      if (!charted && !prev.some(c => c.shipId === target.id)) {
         const known = classGuess !== 'neznámá' ? SHIP_CLASSES[classGuess]?.name ?? classGuess : 'neznámá loď'
         state.events.push({
           t: state.t,

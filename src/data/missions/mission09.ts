@@ -137,12 +137,14 @@ export const mission09: Scenario = {
       classId: 'station-zeta', side: 'player', name: 'Křižovatka',
       pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0, nav: null,
+      desc: 'Stanice Křižovatka — mýtná brána nad svazkem červích děr a srdce bohatství Království. Přesně to, pro co si Velká armáda přiletěla.',
     },
     {
       // domovská planeta — o ni se tu bojuje (kosmetika mapy, fáze B)
       classId: 'planet', side: 'neutral', name: 'Avalon Prime',
       pos: { x: -25_000_000, y: 12_000_000 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Avalon Prime — trůnní svět Hvězdného království. Parlament, admiralita a královna Eleanor III.; miliarda lidí, kteří právě sledují oblohu.',
     },
   ],
 

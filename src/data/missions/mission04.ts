@@ -66,6 +66,7 @@ export const mission04: Scenario = {
       classId: 'merch-freighter', side: 'neutral', name: 'Hyperlimit',
       pos: { x: 260_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Navigační bod na hyperlimitu soustavy Cádiz. Za touto čarou může Aurora skočit do hyperprostoru — jediná cesta domů se záznamy.',
     },
   ],
 

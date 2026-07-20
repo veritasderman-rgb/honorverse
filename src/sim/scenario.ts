@@ -71,6 +71,7 @@ export function spawnShip(state: SimState, spec: ShipSpec): ShipState {
       : { lockBonus: 0, lockUntil: 0, repairBonus: 1, repairUntil: 0 },
     terminalTimes: spec.terminalTimes ? [...spec.terminalTimes] : [],
     formation: spec.formation ? { ...spec.formation } : null,
+    desc: spec.desc,
   }
   state.ships.push(ship)
   return ship

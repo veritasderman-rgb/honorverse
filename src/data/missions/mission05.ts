@@ -88,12 +88,14 @@ export const mission05: Scenario = {
       classId: 'station-zeta', side: 'player', name: 'Stanice Zeta',
       pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0, nav: null,
+      desc: 'Orbitální stanice Zeta — pohraniční uzel Království: překladiště, doky a domov dvou tisíc civilistů. Padne-li Zeta, padne s ní zásobování celého sektoru.',
     },
     {
       // planeta pod stanicí Zeta — kosmetika mapy (fáze B)
       classId: 'planet', side: 'neutral', name: 'Zeta IV',
       pos: { x: 6_000_000, y: -9_000_000 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Zeta IV — hraniční kolonie Království. Pár milionů osadníků, doly a atmosférické procesory; orbitální stanice nad hlavou je jejich jediná spojnice se světem.',
     },
   ],
 

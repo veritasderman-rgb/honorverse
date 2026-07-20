@@ -277,6 +277,13 @@ export interface ShipState {
   terminalTimes: number[]
   /** členství ve formaci eskadry (null/chybí = žádná; jen ovladatelné lodě) */
   formation?: FormationState | null
+  /**
+   * Popisek objektu pro detail po kliknutí na mapě (planety, stanice,
+   * sondy, bóje, civilní provoz…) — scénář jím dává neherním objektům
+   * příběhový kontext. Zobrazí se u neutrálů vždy, u ostatních od
+   * klasifikace (idQuality ≥ 1).
+   */
+  desc?: string
 }
 
 /** Senzorový kontakt — co daná strana VÍ (ne pravda). */

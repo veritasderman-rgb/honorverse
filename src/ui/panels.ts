@@ -716,8 +716,11 @@ export class Panels {
       + `<div class="row"><span>stáří dat:</span><span>${Math.round(c.age)} s (light-lag)</span></div>`
       + `<div class="row"><span>klasifikace:</span><span>${qLabel}</span></div>`
 
+    // neherní objekt z map (planeta, bóje, sonda…): bez bojových řádků
+    const civil = tgtShip?.side === 'neutral' && tgtShip.doctrine === 'buoy'
+
     // kvalita palebného řešení naší vybrané lodi na tento cíl (senzorový duel)
-    if (tgtShip && !tgtShip.destroyed && !own.destroyed) {
+    if (tgtShip && !civil && !tgtShip.destroyed && !own.destroyed) {
       const sol = fireSolution(state, own, tgtShip)
       const ownDef = SHIP_CLASSES[own.classId]
       const fullActive = own.activeSensors && !!ownDef && d < ownDef.activeSensorRange
@@ -740,7 +743,7 @@ export class Panels {
 
     // odhad poškození: idQuality 1 → kvantování 25 %, idQuality 2 → 10 %
     let estDamage: number | null = null
-    if (c.idQuality >= 1 && tgtShip) {
+    if (c.idQuality >= 1 && tgtShip && !civil) {
       const realDef = SHIP_CLASSES[tgtShip.classId]
       const dmg = realDef ? 1 - Math.max(0, tgtShip.hull) / realDef.hullPoints : 0
       const step = c.idQuality >= 2 ? 0.1 : 0.25
@@ -766,7 +769,13 @@ export class Panels {
       body += `<div class="row dim"><span>třída neznámá — přibliž se / aktivní senzory</span></div>`
     }
 
-    if (c.idQuality >= 2 && tDef) {
+    // popisek objektu ze scénáře (planety, stanice, sondy, bóje, civilní
+    // provoz): neutrálům se ukazuje hned, ostatním od klasifikace
+    if (tgtShip?.desc !== undefined && (tgtShip.side === 'neutral' || c.idQuality >= 1)) {
+      body += `<div class="cls-lore">${esc(tgtShip.desc)}</div>`
+    }
+
+    if (c.idQuality >= 2 && tDef && !civil) {
       // výzbroj + porovnání raketových obálek (dle aktuální geometrie)
       body += `<div class="row"><span>výzbroj:</span>`
         + `<span>${tDef.tubesPerBroadside}× šachta/bok · ${tDef.energyMountsPerBroadside}× energet.</span></div>`
@@ -811,9 +820,11 @@ export class Panels {
       body += `<div class="row dim"><span>výzbroj neznámá (ident. vyžaduje aktivní senzory zblízka)</span></div>`
     }
 
-    body += this.surrenderControls(state, own, c, tgtShip, estDamage)
+    if (!civil) body += this.surrenderControls(state, own, c, tgtShip, estDamage)
 
-    return this.panel('target', `Detail cíle #${c.shipId}`, body)
+    // neutrální objekty (planety, stanice, sondy, civilní provoz) nejsou „cíl"
+    return this.panel('target',
+      tgtShip?.side === 'neutral' ? `Objekt #${c.shipId}` : `Detail cíle #${c.shipId}`, body)
   }
 
   /** tlačítko VYZVAT KE KAPITULACI + odhad šance (z KVANTOVANÉHO poškození) */

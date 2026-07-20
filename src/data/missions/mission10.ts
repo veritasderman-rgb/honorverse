@@ -79,6 +79,7 @@ export const mission10: Scenario = {
       doctrine: 'buoy', wedgeOn: false, throttle: 0, nav: null,
       hull: 600, subsystems: unfinishedBase(), activeSensors: true,
       fireControl: { mode: 'auto', targetId: FLAGSHIP, salvoSize: 6, driveMode: 0, engaged: false },
+      desc: 'Předsunuté kotviště Velké armády — rozestavěné doky a zásobníky, ze kterých měl vyplout úder na Křižovatku. Zlatá flotila, která je měla dostavět, nedorazila.',
     },
     // zástěna základny: předsunutá clona na ose útoku, tichý drift;
     // na detekci svazu (< 40 mil. km) přejde do lovu — FÁZE 1 (průlom)
@@ -116,6 +117,7 @@ export const mission10: Scenario = {
       classId: 'merch-freighter', side: 'neutral', name: 'Hyperlimit',
       pos: { x: 155_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Ústupová bóje na hyperlimitu Cádizu. Kdyby se všechno pokazilo, tudy vede cesta domů.',
     },
   ],
 

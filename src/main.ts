@@ -28,8 +28,8 @@ window.addEventListener('pointerdown', () => audio.unlock())
 const panels = new Panels(plotContainer, topbar, a => { audio.uiClick(); controller.handleAction(a) }, audio)
 const controller = new UIController(bridge, plot, panels)
 
-// hook pro smoke testy (Playwright) — čtení stavu plotu zvenku
-Object.assign(window, { __wob: { plot } })
+// hook pro smoke testy (Playwright) — čtení stavu plotu a ovládání zvenku
+Object.assign(window, { __wob: { plot, controller } })
 
 // ---------- odolnost na iOS Safari ----------
 

@@ -70,6 +70,7 @@ export const mission06: Scenario = {
       classId: 'merch-freighter', side: 'neutral', name: 'Hyperlimit',
       pos: { x: 190_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
+      desc: 'Navigační bóje na hyperlimitu — pro Resolute čára života: za ní se dá skočit domů i s tím, co zbylo z eskadry… a se záznamy z Tharsis.',
     },
   ],
 
