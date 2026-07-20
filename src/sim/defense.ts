@@ -11,7 +11,8 @@ import {
   CM_REACTION_TIME, CM_SHOTS_PER_MISSILE,
   CONTROL_RANGE, DECOY_SEDUCE_BASE, DISPERSED_ECM_BONUS, G,
   LOCK_FLOOR, LOCK_FLOOR_BALLISTIC, LOCK_FLOOR_GUIDED,
-  LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_PK, PDLC_ROLLED_FACTOR, PDLC_SATURATION,
+  LOCK_LOST, PDLC_JAMMER_FACTOR, PDLC_MIN_READINESS, PDLC_PK,
+  PDLC_ROLLED_FACTOR, PDLC_SATURATION, PDLC_TRACK_TIME,
   SATURATION_WINDOW, WALL_CM_PK_FACTOR, WALL_TERMINAL_LOCK_MALUS,
 } from './constants'
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
@@ -69,6 +70,17 @@ export function missileTimeToImpact(m: MissileState, targetPos: Vec2, targetVel:
   const vBurn = closing + a * T
   if (vBurn <= 0) return Infinity
   return T + (d - dBurn) / vBurn
+}
+
+/**
+ * Připravenost bodové obrany na salvu podle DOBY LETU salvy: plné palebné
+ * řešení až po PDLC_TRACK_TIME s (výpočty, roztočení věží). Salva odpálená
+ * zblízka (krátký let) potká PDLC nepřipravenou — efektivní clustery
+ * ×readiness, dno PDLC_MIN_READINESS. Druhá půlka honorverse pravidla
+ * „odpal zblízka je vražedný" (první je interceptní budget CM).
+ */
+export function pdlcReadiness(flightTime: number): number {
+  return Math.min(1, Math.max(PDLC_MIN_READINESS, flightTime / PDLC_TRACK_TIME))
 }
 
 /** Aspekt cíle při útoku z pozice fromPos (hrdlo ±0.5 rad, záď ±0.35 rad). */
@@ -261,10 +273,19 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
   const pdlcPk = (PDLC_PK * jammerFactor) / (1 + PDLC_SATURATION * (nWindow - 1))
   const vClose = len(sub(missile.vel, target.vel))
   const cFrac = vClose / C
-  const window = cFrac <= 0.1 ? 1 : cFrac >= 0.5 ? 1 / 3 : 1 - ((cFrac - 0.1) / 0.4) * (2 / 3)
+  // rychlá raketa okno zavírá, ale dálkový let dal obraně čas na predikci
+  // dráhy (floor 0.55, dřív 1/3) — dálkové salvy nesmí těžit z rychlosti
+  // víc, než ztrácejí reakčním časem (škola vzdálenosti)
+  const window = cFrac <= 0.1 ? 1 : cFrac >= 0.5 ? 0.55 : 1 - ((cFrac - 0.1) / 0.4) * 0.45
   // odvalená loď: klín cloní i části vlastních clusterů (×0.6)
   const rolledFactor = target.rolledTo !== null ? PDLC_ROLLED_FACTOR : 1
-  const clusters = Math.floor(tDef.pdlcClusters * target.subsystems.pdlc * window * rolledFactor)
+  // reakční čas obrany: salva s krátkým letem (odpal zblízka) potká PDLC
+  // nepřipravenou (bez launchedAt — testy/legacy — plná připravenost)
+  const readiness = missile.launchedAt !== undefined
+    ? pdlcReadiness(state.t - missile.launchedAt)
+    : 1
+  const clusters = Math.floor(
+    tDef.pdlcClusters * target.subsystems.pdlc * window * rolledFactor * readiness)
   for (let i = 0; i < clusters; i++) {
     if (rand(state.rng) < pdlcPk) {
       state.events.push({

@@ -28,7 +28,6 @@ export class UIController {
   private courseMode = false
   /** rozpracovaná vícebodová trasa (Shift-kliky v režimu kurzu) */
   private routeStarted = false
-  private salvoMode: DriveMode = 0 // výchozí LO — plný dostřel (HI jen zblízka)
   private compression = 0
   /** poslední nenulová komprese (pro obnovení po pauze) */
   private lastRunning = 1
@@ -236,7 +235,7 @@ export class UIController {
           fc: {
             mode, targetId: null,
             salvoSize: SHIP_CLASSES[sh.classId]?.tubesPerBroadside ?? 4,
-            driveMode: this.salvoMode,
+            driveMode: 'auto',
             autonomous: this.autonomousMode,
           },
         })
@@ -253,9 +252,23 @@ export class UIController {
           fc: {
             mode: 'auto', targetId: t,
             salvoSize: SHIP_CLASSES[sh.classId]?.tubesPerBroadside ?? 4,
-            driveMode: this.salvoMode,
+            driveMode: 'auto',
             autonomous: this.autonomousMode,
           },
+        })
+      }
+      this.refresh()
+      return
+    }
+    // koordinovaná salva výběru: každá nabitá loď TEĎ plnou salvu na cíl
+    if (act === 'fleetSalvo') {
+      if (t == null) return
+      for (const sh of this.selectedShips()) {
+        if (sh.tubeCooldown > 0 || sh.missiles <= 0) continue // bez spamu hlášek
+        this.send({
+          kind: 'launchSalvo', shipId: sh.id, targetId: t,
+          count: SHIP_CLASSES[sh.classId]?.tubesPerBroadside ?? 4,
+          mode: 'auto', autonomous: this.autonomousMode,
         })
       }
       this.refresh()
@@ -299,6 +312,12 @@ export class UIController {
           this.send({ kind: 'launchDouble', shipId: own.id, targetId: t })
         }
         break
+      case 'launchPods':
+        // alfa úder z tažených plošin: všechny najednou na vybraný cíl
+        if (t != null && own.pods > 0) {
+          this.send({ kind: 'launchPods', shipId: own.id, targetId: t })
+        }
+        break
       case 'autoFire': {
         // AUTO palba pro celý výběr (zapnutí dle stavu primární lodi)
         const enable = own.fireControl.mode !== 'auto'
@@ -310,7 +329,7 @@ export class UIController {
               ? {
                   mode: 'auto', targetId: t,
                   salvoSize: SHIP_CLASSES[sh.classId]?.tubesPerBroadside ?? 4,
-                  driveMode: this.salvoMode,
+                  driveMode: 'auto',
                   autonomous: this.autonomousMode,
                 }
               : { mode: 'hold' },
@@ -318,15 +337,6 @@ export class UIController {
         }
         break
       }
-      case 'mode':
-        this.salvoMode = this.salvoMode === 1 ? 0 : 1
-        break
-      case 'modeLo':
-        this.salvoMode = 0
-        break
-      case 'modeHi':
-        this.salvoMode = 1
-        break
       case 'autonomous':
         // režim dalších odpalů: řízené / autonomní salvy (fire-and-forget)
         this.autonomousMode = !this.autonomousMode
@@ -378,7 +388,7 @@ export class UIController {
     if (this.targetId == null || own.missiles <= 0) return
     this.send({
       kind: 'launchSalvo', shipId: own.id, targetId: this.targetId,
-      count, mode: this.salvoMode, autonomous: this.autonomousMode,
+      count, mode: 'auto', autonomous: this.autonomousMode,
       escortJammer: this.escortJammerMode,
     })
   }
@@ -559,8 +569,9 @@ export class UIController {
         <b>Intercept</b><span>autopilot spočítá stíhací kurz na cíl</span>
         <b>Kurz sem</b><span>klikni do plotu — loď poletí na bod; u vybrané lodi plot kreslí PREDIKOVANOU KŘIVKU manévru (otáčení + setrvačnost, značka = 1 minuta letu) — čím rychleji letíš, tím širší oblouk</span>
         <b>Trasa (Shift)</b><span>v režimu kurzu SHIFT-klik přidává další waypointy (kosočtverce spojené čarou); obyčejný klik zadá poslední bod a režim ukončí — predikovaná křivka ukáže skutečný průlet body včetně setrvačnosti</span>
-        <b>Salva 2/4/plná</b><span>odpal raket na vybraný cíl</span>
-        <b>Pohon LO/HI</b><span>LO = 46k g / 180 s (dostřel ~7 M km), HI = 92k g / 60 s (rychlost, ~1,6 M km)</span>
+        <b>Salva 2/4/plná</b><span>odpal raket na vybraný cíl; POHON VOLÍ ŘÍZENÍ PALBY SAMO — zblízka (do ~1,6 M km) rychlé HI, na dálku LO (dostřel ~7 M km)</span>
+        <b>ŠKOLA VZDÁLENOSTI</b><span>obrana cíle slábne s krátícím se letem salvy: nad ~7 M km jen balistický dojezd (mizivá šance), na 5+ M km má obrana plný reakční čas, pod ~1,5 M km protirakety stihnou max. 1 pokus a bodová obrana střílí nepřipravená — ZBLÍZKA JE SALVA VRAŽEDNÁ</span>
+        <b>Plošiny</b><span>tažené raketové plošiny (6 raket/ks; DD 1, CL 2, CA 4, BC 6, DN 8): odpal VŠECH najednou mimo šachty — drtivá první salva, která saturuje obranu; jednorázové</span>
         <b>Salva X+Y</b><span>vrstvená salva: LO vlna + zpožděná HI vlna dorazí spolu a saturují bodovou obranu</span>
         <b>Obě salvy</b><span>dvojitá boční salva: levobok LO, otočka (8 s, bez palby), pravobok HI na společný dopad — dvojnásobná vlna</span>
         <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce — a řídí i ENERGETICKÉ baterie (pálí na cíl či nejbližšího nepřítele v dosahu 500 tis. km)</span>
@@ -594,7 +605,8 @@ export class UIController {
         <b>Šíp V</b><span>šíp za leaderem (60°): sdílený senzorový obraz — +5 % palebného řešení členů</span>
         <b>Rozptyl ◦</b><span>mřížka 1,5 M km: útočník nesaturuje eskadru jako celek, členové +3 % efektivního ECM</span>
         <b>Plot</b><span>členové mají tenkou čáru k leaderovi; v panelu FLOTILA značky Σ / V / ◦</span>
-        <b>ESKADRA (≥ 3 lodě)</b><span>doktríny palby pro celý výběr — lodě si cíle volí SAMY a po zničení plynule přejdou na další: Nejbližší (každá na svůj nejbližší kontakt), Největší (všechny na nejtěžší trup — koncentrace saturuje obranu), Rozdělit (každá loď jiný cíl — proti hejnu slabších), Soustředit (AUTO všech na tebou vybraný cíl), Držet palbu (vše vypnout)</span>
+        <b>ESKADRA (≥ 3 lodě)</b><span>doktríny palby pro celý výběr — lodě si cíle volí SAMY a po zničení plynule přejdou na další: Nejbližší (každá na svůj nejbližší kontakt), Největší (všechny na nejtěžší trup — koncentrace saturuje obranu), Rozdělit (každá loď jiný cíl — proti hejnu slabších), Salva výběru (všechny nabité lodě TEĎ plnou salvu na vybraný cíl — koordinovaný úder bez přepínání), Soustředit (AUTO všech na tebou vybraný cíl), Držet palbu (vše vypnout)</span>
+        <b>Roster = velín</b><span>panel FLOTILA ukazuje u každé lodi rakety, plošiny (+NP), režim palby a připravenost šachet (✓ = nabito, ⌛ = přebíjí) — koordinuješ eskadru bez přepínání lodí</span>
         <b>Doktrína + energie</b><span>doktríny řídí i energetické baterie a pálí dál energií, i když dojdou rakety; v rosteru FLOTILA vidíš režim každé lodi (AUTO·nejbl. …)</span>
       </div>
       <h4>Senzorový duel (EMCON)</h4>
@@ -662,7 +674,6 @@ export class UIController {
       selectedShipIds: [...this.selectedShipIds],
       targetId: this.targetId,
       courseMode: this.courseMode,
-      salvoMode: this.salvoMode,
       compression: this.compression,
       slowdownText: this.slowdownText,
       selectedSalvoId: this.selectedSalvoId,

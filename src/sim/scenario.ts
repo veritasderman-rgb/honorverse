@@ -49,6 +49,9 @@ export function spawnShip(state: SimState, spec: ShipSpec): ShipState {
     subsystems: spec.subsystems ? { ...spec.subsystems } : fullSubsystems(),
     hull: spec.hull ?? def.hullPoints,
     missiles: spec.missiles ?? def.magazineMissiles,
+    // plošiny: strana hráče táhne plný příděl třídy; AI jen když jí je dá
+    // scénář (spec.pods) — AI je zatím neumí odpálit sama, visely by mrtvé
+    pods: spec.pods ?? (spec.side === 'player' ? def.podCapacity ?? 0 : 0),
     cms: spec.cms ?? def.magazineCMs,
     decoys: spec.decoys ?? def.decoyCount,
     decoyActive: spec.decoyActive ?? false,

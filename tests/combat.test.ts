@@ -46,7 +46,7 @@ function makeShip(id: number, classId: string, over: Partial<ShipState> = {}): S
     pos: vec(0, 0), vel: vec(0, 0), heading: 0, throttle: 0.8, nav: null,
     wedgeOn: true, activeSensors: true, rolledTo: null,
     subsystems: fullSubsystems(),
-    hull: def.hullPoints, missiles: def.magazineMissiles, cms: def.magazineCMs,
+    hull: def.hullPoints, missiles: def.magazineMissiles, pods: 0, cms: def.magazineCMs,
     decoys: def.decoyCount, decoyActive: false,
     tubeCooldown: 0, energyCooldown: 0, destroyed: false, doctrine: 'player',
     surrendered: false, lastSurrenderDemandAt: -1e9,
@@ -166,20 +166,22 @@ describe('launchSalvo', () => {
 
 describe('vrstvená obrana — statistika (200 seedů)', () => {
   /**
-   * REFERENČNÍ PÁSMO po rekalibraci se stropem protiraket („dva výstřely
-   * na cíl" + interceptní budget dle reakčního času, CM_PK 0.42):
-   * měřený průměr ~3.9/50 ≈ 8 % — přesně knižní „z velké salvy se probije
-   * jednotka kusů". Zdravé pásmo volíme 5–16 % (2.5–8 raket z 50):
-   * pod 5 % by obrana byla zase sterilní, nad 16 % by CA nepřežil ani
-   * dvě salvy a boj by přestal být opotřebovávací.
+   * REFERENČNÍ PÁSMO po tutoriálové rekalibraci „škola vzdálenosti":
+   * scénář (HI, 3 mil. km, zděděných 40 000 km/s → let ~48 s) je RYCHLÝ
+   * ODPAL ZBLÍZKA — PDLC připravenost jen ~0.54 (let < PDLC_TRACK_TIME)
+   * a CM budget 1 pokus. Měřený průměr ~16/50 ≈ 32 % — přesně honorverse
+   * „salva zblízka je vražedná". Zdravé pásmo 20–45 % (10–22.5 z 50):
+   * pod 20 % by boj zblízka přestal být smrtící, nad 45 % by obrana
+   * nehrála roli vůbec. (Trpělivou dálkovou palbu drží nízko druhý test
+   * — gradient vzdálenosti níže.)
    */
-  it('zdravá obrana CA propustí v průměru 5–16 % z 50 raket', () => {
+  it('zdravá obrana CA propustí z rychlé salvy zblízka 20–45 % z 50 raket', () => {
     const SEEDS = 200
     let total = 0
     for (let seed = 1; seed <= SEEDS; seed++) total += runSalvoVsCA(seed, true).hits
     const avg = total / SEEDS
-    expect(avg).toBeGreaterThanOrEqual(2.5)  // ≥ 5 %
-    expect(avg).toBeLessThanOrEqual(8)       // ≤ 16 %
+    expect(avg).toBeGreaterThanOrEqual(10)    // ≥ 20 %
+    expect(avg).toBeLessThanOrEqual(22.5)     // ≤ 45 %
   })
 
   it('bez obrany projde > 80 % salvy', () => {

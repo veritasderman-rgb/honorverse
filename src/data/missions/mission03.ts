@@ -19,7 +19,9 @@ export const mission03: Scenario = {
     'Obchodní loď Mercator hlásí poškození impelerového prstence a žádá '
     + 'o doprovod ke stanici Sázava (~80 mil. km). ANS Dauntless ji má '
     + 'doprovodit — drž se do 2,5 mil. km, obchodník zvládne jen '
-    + 'pomalé plutí. Zpravodajství nemá o lodi žádné záznamy.',
+    + 'pomalé plutí. Zpravodajství nemá o lodi žádné záznamy. '
+    + 'VÝCVIK: kontrola vzdálenosti — kdo řídí odstup, řídí souboj. '
+    + 'Blízko znamená vražedné salvy PRO OBĚ strany.',
   seed: 19930411, // pevný seed — determinismus
   ambient: '#26200e', // nádech mlhoviny soustavy (fáze B)
 
@@ -92,6 +94,14 @@ export const mission03: Scenario = {
           // hráčova (automatická) výzva ke kapitulaci
           kind: 'comm', speaker: 'comms',
           text: 'Vysílám výzvu ke kapitulaci: „Mercatore, složte zbraně a vypněte klín." Odpovědí je odpal raket, kapitáne.',
+        },
+        {
+          // LEKCE KONTROLY VZDÁLENOSTI: kiting proti těžší lodi
+          kind: 'comm', speaker: 'xo',
+          text: 'První důstojník: „OTEVŘÍT VZDÁLENOST, hned! Zblízka jsou salvy vražedné pro obě '
+            + 'strany — a on má víc šachet. Držte ho na dvou až dvou a půl milionech: jeho salvy '
+            + 'k nám poletí dost dlouho, aby obrana stihla dva pokusy na každou raketu. My jsme '
+            + 'rychlejší — vzdálenost si diktujeme MY. Až vystřílí zásobníky, přijde naše chvíle."',
         },
       ],
     },

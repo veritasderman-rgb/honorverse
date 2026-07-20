@@ -93,18 +93,29 @@ export const CM_SHOTS_PER_MISSILE = 2
  * Reakční čas jednoho interceptního pokusu (s): vyhodnocení hrozby, odpal
  * CM a její dolet. Počet povolených pokusů na raketu = floor(čas do dopadu
  * od odpalu / CM_REACTION_TIME), strop CM_SHOTS_PER_MISSILE.
- * PŘESNĚ tohle dělá boj zblízka smrtícím: HI salva odpálená pod ~1 mil. km
- * (let < 50 s) nechá obraně čas jen na JEDEN pokus, pod ~300 tis. km na
- * žádný. Obrana slábne s klesající vzdáleností přirozeně, ne skriptem —
- * a pomalé LO salvy dávají obraně plné dva pokusy i zblízka (volba režimu
- * pohonu je reálné taktické rozhodnutí).
+ * PŘESNĚ tohle dělá boj zblízka smrtícím: HI salva odpálená pod ~1,7 mil. km
+ * (let < 70 s) nechá obraně čas jen na JEDEN pokus, pod ~300 tis. km na
+ * žádný. Obrana slábne s klesající vzdáleností přirozeně, ne skriptem.
+ * (25 → 35 s: tutoriálová rekalibrace „škola vzdálenosti" — gradient musí
+ * být znát už od ~1,5 mil. km, ne až v bodovém doletu.)
  */
-export const CM_REACTION_TIME = 25
+export const CM_REACTION_TIME = 35
 /** cooldown odpalu CM na jeden odpalovač (s) — vysoká kadence, zásobníky rychle tečou */
 export const CM_COOLDOWN = 5
 
 /** bodová obrana */
 export const PDLC_RANGE = 100_000
+/**
+ * Reakční čas bodové obrany na PŘÍCHOZÍ SALVU: plná efektivita clusterů až
+ * po PDLC_TRACK_TIME s letu salvy (výpočet palebného řešení, roztočení
+ * věží). Salva odpálená zblízka (krátký let) potká obranu nepřipravenou —
+ * efektivní clustery ×(let/PDLC_TRACK_TIME), dno PDLC_MIN_READINESS.
+ * Spolu s interceptním budgetem CM (CM_REACTION_TIME) tvoří honorverse
+ * pravidlo: ODPAL ZBLÍZKA JE VRAŽEDNÝ — obrana slábne, jak se odpalová
+ * vzdálenost krátí.
+ */
+export const PDLC_TRACK_TIME = 90
+export const PDLC_MIN_READINESS = 0.4
 /** základní P(kill) jednoho clusteru na raketu v okně průletu */
 export const PDLC_PK = 0.26
 /** saturace: Pk klesá faktorem 1/(1 + PDLC_SATURATION·(n−1)), n = rakety v okně */
@@ -120,6 +131,12 @@ export const ENERGY_COOLDOWN = 20
 
 /** rakety */
 export const TUBE_COOLDOWN = 25
+/**
+ * Tažené raketové plošiny (pody): počet raket na jednu plošinu. Odpalují se
+ * VŠECHNY najednou (alfa úder) — smysl podů je jediná drtivá salva, která
+ * saturuje obranu, ne kapání po jedné. Jednorázové: po odpalu pods = 0.
+ */
+export const PODS_PER_POD = 6
 /** pod tuto hodnotu zámku raketa ztrácí cíl */
 export const LOCK_LOST = 0.2
 

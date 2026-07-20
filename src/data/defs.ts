@@ -21,7 +21,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     energyMountsPerBroadside: 2, energyDamage: 30,
     magazineMissiles: 90, magazineCMs: 260,
     wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35, decoyCount: 4,
-    missileQuality: 1.08,
+    missileQuality: 1.08, podCapacity: 1,
     lore: 'Páteřní torpédoborec Královského námořnictva, pojmenovaný po náhlých '
       + 'horských vichrech avalonské domoviny. Konstrukce upřednostňuje protiraketové '
       + 'zásobníky a kadenci obrany před vlastní údernou silou — Vichr je stavěný jako '
@@ -35,7 +35,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     energyMountsPerBroadside: 3, energyDamage: 38,
     magazineMissiles: 150, magazineCMs: 340,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4, decoyCount: 6,
-    missileQuality: 1.08,
+    missileQuality: 1.08, podCapacity: 2,
     lore: 'Lehký křižník pro samostatné operace daleko od domovských přístavů — '
       + 'jméno nese po loveckém sokolovi avalonských králů. Vyvážený poměr senzorů, '
       + 'ECM a výzbroje z něj dělá ideální průzkumník a lovce nájezdníků. Pět šachet '
@@ -49,7 +49,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     energyMountsPerBroadside: 4, energyDamage: 55,
     magazineMissiles: 280, magazineCMs: 420,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45, decoyCount: 8,
-    missileQuality: 1.08,
+    missileQuality: 1.08, podCapacity: 4,
     lore: 'Těžký křižník stavěný jako pohyblivá pevnost — odtud jméno. Osm šachet '
       + 'na bok, silné boční štíty a vrstvená bodová obrana z Bastionu dělají loď, která '
       + 'dokáže držet linii i proti přesile. Daní je tonáž: pomalejší akcelerace '
@@ -107,7 +107,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     energyMountsPerBroadside: 5, energyDamage: 65,
     magazineMissiles: 400, magazineCMs: 500,
     wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5, decoyCount: 10,
-    missileQuality: 1.08,
+    missileQuality: 1.08, podCapacity: 6,
     lore: 'Bitevní křižník — pod praporcem (odtud jméno) se v avalonské doktríně '
       + 'vede útok: deset šachet na bok, špičkové ECM a rychlost, jaká větším lodím '
       + 'chybí. Praporec je stavěný na nájezdy hluboko do nepřátelského prostoru: '
@@ -122,7 +122,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     energyMountsPerBroadside: 7, energyDamage: 80,
     magazineMissiles: 700, magazineCMs: 900,
     wedgeDetectionRange: 170_000_000, activeSensorRange: 10_000_000, ecm: 0.55, decoyCount: 14,
-    missileQuality: 1.08,
+    missileQuality: 1.08, podCapacity: 8,
     lore: 'Dreadnought — stěna bitvy vtělená do šesti milionů tun. Vladař je '
       + 'odpověď Avalonu na tonáž Impéria: místo počtu trupů avalonská kvalita '
       + '— nejlepší senzory, ECM a raketová elektronika, jaké loděnice '
@@ -139,7 +139,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     energyMountsPerBroadside: 7, energyDamage: 72,
     magazineMissiles: 800, magazineCMs: 700,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.35, decoyCount: 8,
-    missileQuality: 1.0,
+    missileQuality: 1.0, podCapacity: 8,
     lore: 'Imperiální dreadnought — hora oceli pojmenovaná po staré císařské '
       + 'metropoli. Doktrína Toleda je doktrínou celého caudillova námořnictva: '
       + 'tonáž nadevše a šestnáct šachet na bok vynahradí, co elektronika neumí. '

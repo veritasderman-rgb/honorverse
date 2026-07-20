@@ -4,11 +4,12 @@
  * Nově: poháněná obálka (poweredEnvelope), odhad doletu (missileFlightTime)
  * a česká zpětná vazba rozkazů hráče (event 'message', speaker 'tactical').
  */
-import type { DriveMode, MissileState, ShipState, SimState, Vec2 } from './types'
+import type { DriveMode, DriveModeOrder, MissileState, ShipState, SimState, Vec2 } from './types'
 import {
   AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
   ENERGY_MAX_RANGE, G, JAMMER_MIN_SALVO, LINK_LOCK_DECAY, LOCK_LOST,
-  MISSILE_MAX_FLIGHT, MISSILE_QUALITY_LOCK_CAP, RETARGET_LOCK_PENALTY, ROLL_TIME,
+  MISSILE_MAX_FLIGHT, MISSILE_QUALITY_LOCK_CAP, PODS_PER_POD,
+  RETARGET_LOCK_PENALTY, ROLL_TIME,
   SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
   VEE_SOLUTION_BONUS,
 } from './constants'
@@ -71,6 +72,18 @@ export function missileFlightTime(d: number, closing: number, mode: DriveMode): 
   return T + (d - dBurn) / vBurn
 }
 
+/**
+ * Automatická volba režimu pohonu: HI, pokud je cíl v HI poháněné obálce
+ * (rychlý let = obrana cíle dostane minimum reakčního času), jinak LO
+ * (delší dostřel). Hráč pohon nepřepíná — tohle je práce řízení palby.
+ */
+export function autoDriveMode(
+  pos: Vec2, vel: Vec2, targetPos: Vec2, targetVel: Vec2,
+): DriveMode {
+  const d = dist(pos, targetPos)
+  return d <= poweredEnvelope(pos, vel, targetPos, targetVel, 1) ? 1 : 0
+}
+
 interface LaunchOpts {
   /** druhá vlna vrstvené salvy — šachty už jsou přednabité, cooldown neblokuje */
   ignoreCooldown?: boolean
@@ -128,9 +141,9 @@ export function fireSolution(state: SimState, shooter: ShipState, target: ShipSt
 }
 
 /** hláška posádky hráči (jen lodě ovládané hráčem — AI si nestěžuje) */
-function crewSay(state: SimState, ship: ShipState, text: string): void {
+function crewSay(state: SimState, ship: ShipState, text: string, slowdown = false): void {
   if (ship.doctrine !== 'player') return
-  state.events.push({ t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'tactical', text })
+  state.events.push({ t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'tactical', slowdown, text })
 }
 
 /** Odpal salvy: omezena šachtami, municí a cooldownem; no-op hlásí důvod. */
@@ -139,10 +152,16 @@ export function launchSalvo(
   ship: ShipState,
   targetId: number,
   count: number,
-  mode: DriveMode,
+  modeOrder: DriveModeOrder,
   opts: LaunchOpts = {},
 ): void {
   if (ship.destroyed) return
+  // 'auto': řízení palby volí pohon samo — HI v HI obálce (krátký let,
+  // obrana cíle nestíhá), jinak LO (dostřel)
+  const target0 = state.ships.find(s => s.id === targetId && !s.destroyed)
+  const mode: DriveMode = modeOrder === 'auto'
+    ? (target0 ? autoDriveMode(ship.pos, ship.vel, target0.pos, target0.vel) : 0)
+    : modeOrder
   // odvalená loď nemůže pálit boky — klín kryje, ale i maskuje vlastní zbraně
   // (pody visí mimo trup, těch se roll netýká)
   if (ship.rolledTo !== null && !opts.podLaunch) {
@@ -172,13 +191,30 @@ export function launchSalvo(
   }
 
   // varování: cíl mimo poháněnou obálku (odpal projde — rakety doletí balisticky)
-  const target = state.ships.find(s => s.id === targetId && !s.destroyed)
+  const target = target0
   if (target && ship.doctrine === 'player') {
     const d = dist(ship.pos, target.pos)
     const env = poweredEnvelope(ship.pos, ship.vel, target.pos, target.vel, mode)
     if (d > env) {
       crewSay(state, ship,
         `Cíl mimo poháněnou obálku (${fmtMkm(d)} mil. km, dosah ${fmtMkm(env)}) — rakety dojedou balisticky.`)
+    }
+    // ŠKOLA VZDÁLENOSTI (tutoriálový kouč, jednou za misi): dálkový odpal
+    // je plýtvání, odpal zblízka poprava — obrana slábne s krátícím se letem
+    if (d > 5_000_000 && state.flags['coach-longshot'] !== true) {
+      state.flags['coach-longshot'] = true
+      crewSay(state, ship,
+        `ŠKOLA PALBY: na ${fmtMkm(d)} mil. km poletí salva několik minut a obrana cíle `
+        + `dostane plný reakční čas — protirakety dva pokusy na KAŽDOU raketu, bodová obrana `
+        + `připravené řešení. Počítejte s mizernou úspěšností. Pod ~5 mil. km šance rostou, `
+        + `pod 1,5 mil. km je salva vražedná — obrana ji prostě nestihne.`, true)
+    }
+    if (d < 1_500_000 && state.flags['coach-close'] !== true) {
+      state.flags['coach-close'] = true
+      crewSay(state, ship,
+        'ŠKOLA PALBY: odpal zblízka! Krátký let znamená, že protirakety stihnou '
+        + 'nanejvýš jeden pokus a bodová obrana střílí s nepřipraveným řešením. '
+        + 'Přesně takhle se rakety používají — přiblížit se a udeřit naplno.', true)
     }
   }
 
@@ -230,7 +266,7 @@ export function launchSalvo(
   state.events.push(opts.podLaunch
     ? {
       t: state.t, kind: 'launch', shipId: ship.id, side: ship.side, count: n, salvoId,
-      slowdown: true, text: `${ship.name}: raketové pody! Salva ${n} raket`,
+      slowdown: true, text: `${ship.name}: raketové plošiny! Salva ${n} raket`,
     }
     : {
       // count = útočné rakety (jammer se nesimuluje — salvo tally sedí)
@@ -308,6 +344,44 @@ export function launchDouble(state: SimState, ship: ShipState, targetId: number)
   ship.pendingWave = {
     targetId, count: nStbd, mode: 1, launchAt: state.t + delay,
     sourceSide: 'stbd', unrollAfter: true,
+  }
+}
+
+/**
+ * Odpal tažených raketových plošin (podů): VŠECHNY najednou — jednorázový
+ * alfa úder PODS_PER_POD·pods raket mimo šachty i zásobníky lodi (podLaunch:
+ * necajímá kapacita, munice ani cooldown; funguje i z odvalené lodi — pody
+ * visí za zádí). Po odpalu jsou plošiny pryč (odhozené prázdné rámy).
+ * Pohon vždy 'auto' (HI zblízka). Smysl: drtivá PRVNÍ salva, která saturuje
+ * obranu — přesně jak se pody používají v bitvách bitevních stěn.
+ */
+export function launchPods(state: SimState, ship: ShipState, targetId: number): void {
+  if (ship.destroyed) return
+  if (ship.pods <= 0) {
+    crewSay(state, ship, 'Žádné raketové plošiny netáhneme.')
+    return
+  }
+  const target = state.ships.find(s => s.id === targetId && !s.destroyed)
+  if (!target || target.surrendered) {
+    crewSay(state, ship, target?.surrendered
+      ? 'Cíl kapituloval — plošiny na něj nepálíme.'
+      : 'Odpal plošin zamítnut — cíl neexistuje.')
+    return
+  }
+  const contact = state.contacts[ship.side]?.find(c => c.shipId === targetId && c.memory !== true)
+  if (!contact) {
+    crewSay(state, ship, 'Odpal plošin zamítnut — na cíl nedržíme živý senzorový kontakt.')
+    return
+  }
+  const n = ship.pods * PODS_PER_POD
+  ship.pods = 0
+  launchSalvo(state, ship, targetId, n, 'auto', { podLaunch: true, ignoreCooldown: true })
+  // tutoriálová lekce (jednou za misi): k čemu plošiny jsou
+  if (state.flags['coach-pods'] !== true && ship.doctrine === 'player') {
+    state.flags['coach-pods'] = true
+    crewSay(state, ship,
+      `Plošiny odhozeny — ${n} raket v JEDNÉ vlně. Tohle žádná bodová obrana nechytá: `
+      + 'saturace je král. Plošiny jsou jednorázové — další dostaneme až v doku.', true)
   }
 }
 

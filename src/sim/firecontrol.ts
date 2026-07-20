@@ -153,7 +153,10 @@ export function updateFireControl(state: SimState): void {
     }
 
     const d = dist(ship.pos, target.pos)
-    const env = poweredEnvelope(ship.pos, ship.vel, target.pos, target.vel, fc.driveMode)
+    // 'auto' pohon: obálka pro rozhodnutí „pálit?" je LO (delší z obou) —
+    // konkrétní režim volí až launchSalvo dle vzdálenosti
+    const envMode = fc.driveMode === 'auto' ? 0 : fc.driveMode
+    const env = poweredEnvelope(ship.pos, ship.vel, target.pos, target.vel, envMode)
     const inRange = d <= env
 
     // hrana: vstup/výstup z poháněné obálky (doktríny eskadry mlčí —

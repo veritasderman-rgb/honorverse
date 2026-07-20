@@ -28,7 +28,9 @@ export const mission01: Scenario = {
     + 'Kontrola Brány hlásí nákladní loď Cygnus s podezřelým manifestem — '
     + 'proveďte kontrolu: přibližte se na 1 milion km a nedovolte jí '
     + 'opustit soustavu přes hyperlimit. Pozor: jestli má ta loď co '
-    + 'skrývat, poběží — a hyperlimit je jen 250 milionů km daleko.',
+    + 'skrývat, poběží — a hyperlimit je jen 250 milionů km daleko. '
+    + 'VÝCVIK: rozpočet reaktoru (tah vs. boční štíty) a první pravidlo '
+    + 'raketového boje — nestřílet na dálku, ale DOHNAT a udeřit zblízka.',
   seed: 19881003, // pevný seed — determinismus
   ambient: '#0f2438', // nádech mlhoviny soustavy (fáze B)
 
@@ -174,6 +176,14 @@ export const mission01: Scenario = {
       ],
       actions: [
         { kind: 'objectiveComplete', objectiveId: 'obj-inspect' },
+        {
+          // LEKCE RAKETOVÉHO BOJE: zblízka je salva poprava — tady to hráč
+          // poprvé uvidí naživo (runner nemá skoro žádnou obranu)
+          kind: 'comm', speaker: 'tactical',
+          text: 'Jsme na milion kilometrů — a tohle je vzdálenost, na které rakety ZABÍJEJÍ. '
+            + 'Krátký let znamená, že obrana cíle skoro nestihne reagovat. Doporučuji plnou '
+            + 'salvu; kdyby běžel dál, AUTO palba to dokončí za nás.',
+        },
       ],
     },
     {

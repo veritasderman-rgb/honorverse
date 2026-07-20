@@ -28,7 +28,9 @@ export const mission04: Scenario = {
     + 'zmapovat hlídky (ke každé na 6 mil. km, ale POZOR — pod 4 mil. km tě '
     + 'zaměří i potichu) a uniknout za protější hyperlimit. Bez klínu máš '
     + 'jen manévrovací trysky (~5 g) — korekce dráhy plánuj hodiny dopředu. '
-    + 'Zapnutí impeleru tě prozradí na celou soustavu.',
+    + 'Zapnutí impeleru tě prozradí na celou soustavu. '
+    + 'VÝCVIK: senzorový duel a EMCON — kdo vyzařuje, toho je vidět; '
+    + 'ticho je zbraň.',
   seed: 19940829, // pevný seed — determinismus
   ambient: '#2a1410', // nádech mlhoviny soustavy (fáze B)
 

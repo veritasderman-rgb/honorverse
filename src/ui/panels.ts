@@ -16,9 +16,9 @@ import {
 import { effectiveTubes, sidewallPowerFactor } from '../sim/damage'
 import { estimatePenetration } from '../sim/estimate'
 import { moraleFor, surrenderChance, weaponsOut } from '../sim/surrender'
-import { fireSolution, poweredEnvelope } from '../sim/weapons'
+import { autoDriveMode, fireSolution, poweredEnvelope } from '../sim/weapons'
 import { controllableShips, fleetShips, isControllable, rosterVisible } from './roster'
-import type { Contact, DriveMode, ShipClassDef, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
+import type { Contact, ShipClassDef, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { AudioManager } from './audio'
 
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
@@ -28,7 +28,6 @@ export interface UiState {
   selectedShipIds: number[]
   targetId: number | null
   courseMode: boolean
-  salvoMode: DriveMode
   compression: number
   slowdownText: string | null
   /** vybraná vlastní salva na plotu (id salvy) */
@@ -561,8 +560,9 @@ export class Panels {
         + (ctrl ? ` data-act="ownShip:${s.id}" title="převzít loď (klávesa ${idx + 1}); Shift-klik = přidat/odebrat z výběru"` : ' title="AI spojenec — nelze převzít"')
         + `><div class="row"><span>${mark}${key}${esc(s.name)} <span class="dim">(${esc(def?.hullCode ?? '?')})</span>${fmark}</span>`
         + `<b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></div>`
-        + `<div class="row dim"><span>rakety ${s.missiles} · CM ${s.cms}</span>`
-        + `<span>${ctrl ? (FIRE_MODE_LABELS[s.fireControl.mode] ?? '') : 'AI'}</span></div></div>`
+        + `<div class="row dim"><span>rakety ${s.missiles}${s.pods > 0 ? ` <span class="amber" title="tažené raketové plošiny (${s.pods}×6 raket — alfa úder)">+${s.pods}P</span>` : ''} · CM ${s.cms}</span>`
+        + `<span>${ctrl ? (FIRE_MODE_LABELS[s.fireControl.mode] ?? '') : 'AI'}`
+        + `${ctrl ? (s.tubeCooldown > 0 ? ` <span title="šachty přebíjejí">⌛${Math.ceil(s.tubeCooldown)}s</span>` : ' <span class="ok" title="šachty připraveny k salvě">✓</span>') : ''}</span></div></div>`
     }).join('')
     return this.panel('fleet', 'Flotila', rows,
       'klávesy 1–9 přepínají aktivní loď · Shift-klik přidá/odebere loď z hromadného výběru')
@@ -646,7 +646,9 @@ export class Panels {
       (def ? this.classDetail(def, 'own', true) : '')
       + `<div class="row"><span>trup: <b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></span>`
       + `<span>rychlost ${Math.round(speed).toLocaleString('cs-CZ')} km/s · akcel. ${Math.round(accG)} g</span></div>`
-      + `<div class="row"><span>rakety ${own.missiles} · CM ${own.cms}</span>`
+      + `<div class="row"><span>rakety ${own.missiles}`
+      + `${own.pods > 0 ? ` · <span class="amber" title="tažené raketové plošiny: ${own.pods} ks × 6 raket — odpal VŠECH najednou (alfa úder), jednorázové">plošiny ${own.pods}×6</span>` : ''}`
+      + ` · CM ${own.cms}</span>`
       + `<span>návnada: ${own.decoyActive ? '<b class="ok">AKTIVNÍ</b>' : '—'}`
       + ` · zásoba ${own.decoys}</span></div>`
       + tubesRow
@@ -794,7 +796,8 @@ export class Panels {
       if (tgtShip && !tgtShip.destroyed && !own.destroyed) {
         const n = Math.min(effectiveTubes(own), own.missiles)
         if (n > 0) {
-          const est = estimatePenetration(state, own, tgtShip, n, ui.salvoMode)
+          const est = estimatePenetration(state, own, tgtShip, n,
+            autoDriveMode(own.pos, own.vel, tgtShip.pos, tgtShip.vel))
           const tip = 'Hrubý deterministický odhad vrstvené obrany cíle (CM, PDLC, ECM) '
             + 'pro plnou salvu v aktuálním režimu pohonu. Není to slib — skutečnost '
             + 'závisí na náhodě, manévrech, saturaci a obraně cíle za letu.'
@@ -943,10 +946,13 @@ export class Panels {
         + 'obyčejný klik zadá poslední bod. Predikovaná křivka ukáže, jak se '
         + 'loď pokusí body proletět i se setrvačností.',
       salvo: (n: string): string =>
-        `Odpálí ${n} raket na vybraný cíl v režimu ${ui.salvoMode === 1 ? 'HI' : 'LO'}; přebíjení šachet ${TUBE_COOLDOWN} s.`,
-      mode: `Režim pohonu raket: LO = ${mdef.accelG[0].toLocaleString('cs-CZ')} g / ${mdef.driveTime[0]} s hoření `
-        + `(dostřel ~${fmtM(envLo)} M km), HI = ${mdef.accelG[1].toLocaleString('cs-CZ')} g / ${mdef.driveTime[1]} s `
-        + `(rychlý přílet, dostřel ~${fmtM(envHi)} M km). Dostřel natahuje i vlastní vektor k cíli.`,
+        `Odpálí ${n} raket na vybraný cíl; přebíjení šachet ${TUBE_COOLDOWN} s. `
+        + `Pohon volí řízení palby SAMO: zblízka (do ~${fmtM(envHi)} M km) rychlé HI, `
+        + `na dálku LO (dostřel ~${fmtM(envLo)} M km). Pamatuj: čím blíž odpálíš, `
+        + `tím míň času má obrana cíle — pod ~1,5 M km je salva vražedná.`,
+      pods: 'Odhodí VŠECHNY tažené raketové plošiny najednou — 6 raket na plošinu v jediné '
+        + 'vlně mimo šachty i zásobníky (nepodléhá přebíjení). Drtivá první salva, která '
+        + 'saturuje obranu cíle. Jednorázové — nové plošiny až v doku.',
       layered: `Vrstvená salva: ${loC}× LO hned + ${hiC}× HI se zpožděním tak, aby obě vlny dorazily spolu `
         + `a saturovaly bodovou obranu (víc raket v okně = nižší Pk obrany).`,
       autoFire: 'AUTO palba: loď sama opakuje plné salvy, dokud je cíl v poháněné obálce, '
@@ -1021,12 +1027,14 @@ export class Panels {
       fleetSpread: 'Doktrína ROZDĚLIT: vybrané lodě si cíle rozdělí (každá jiný) — proti hejnu slabších lodí, kde koncentrace plýtvá salvami.',
       fleetFocus: 'SOUSTŘEDIT: všechny vybrané lodě AUTO palbou na TEBOU vybraný cíl (klikni na kontakt). Jednorázové přiřazení — po zničení cíle se lodě zastaví.',
       fleetHold: 'DRŽET PALBU: všechny vybrané lodě přestanou střílet (doktríny i AUTO vypnuty).',
+      fleetSalvo: 'SALVA VÝBĚRU: každá vybraná loď s nabitými šachtami TEĎ odpálí plnou salvu na tebou vybraný cíl — koordinovaný úder bez přepínání lodí. Připravenost šachet vidíš v rosteru FLOTILA (✓/⌛).',
     }
     const squadSeg = fleetCount >= 3
       ? `<span class="obg" title="Velení eskadry: doktríny palby pro celý výběr — cíle si lodě volí samy (deterministicky), i při kompresi času.">${lbl('ESKADRA:', 'E:')}`
         + `<button data-act="fleetNearest" class="${allMode('nearest') ? 'active' : ''}" title="${esc(squadTips.fleetNearest)}"${dis(!noShip)}>${lbl('Nejbližší', 'Nejbl.')}</button>`
         + `<button data-act="fleetBiggest" class="${allMode('biggest') ? 'active' : ''}" title="${esc(squadTips.fleetBiggest)}"${dis(!noShip)}>${lbl('Největší', 'Nejv.')}</button>`
         + `<button data-act="fleetSpread" class="${allMode('spread') ? 'active' : ''}" title="${esc(squadTips.fleetSpread)}"${dis(!noShip)}>${lbl('Rozdělit', 'Rozd.')}</button>`
+        + `<button data-act="fleetSalvo" title="${esc(squadTips.fleetSalvo)}"${dis(canFire)}>${lbl('Salva výběru', 'S⊞')}</button>`
         + `<button data-act="fleetFocus" title="${esc(squadTips.fleetFocus)}"${dis(canFire)}>${lbl('Soustředit', 'Soustř.')}</button>`
         + `<button data-act="fleetHold" title="${esc(squadTips.fleetHold)}"${dis(!noShip)}>${lbl('Držet palbu', '✋')}</button>`
         + xN
@@ -1054,9 +1062,7 @@ export class Panels {
       + `<button data-act="salvoFull" title="${esc(tip.salvo(`všechny (${tubes})`))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Plná</button>`
       + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${lbl(`Salva ${loC}+${hiC}`, `${loC}+${hiC}`)}</button>`
       + `<button data-act="salvoDouble" title="${esc(tip.double)}"${dis(canFire && (own?.missiles ?? 0) > 0 && !rolled)}>${lbl('Obě salvy', 'Obě')}</button>`
-      + `<span title="${esc(tip.mode)}">`
-      + `<button data-act="modeLo" class="${ui.salvoMode === 0 ? 'active' : ''}">LO</button>`
-      + `<button data-act="modeHi" class="${ui.salvoMode === 1 ? 'active' : ''}">HI</button></span>`
+      + `<button data-act="launchPods" title="${esc(tip.pods)}"${dis(canFire && (own?.pods ?? 0) > 0)}>${lbl(`Plošiny ${own?.pods ?? 0}×6`, `P${own?.pods ?? 0}`)}</button>`
       + `<button data-act="autonomous" class="${ui.autonomousMode ? 'active' : ''}" title="${esc(tip.autonomous)}"${dis(!noShip)}>`
       + `${ui.autonomousMode ? lbl('autonomní', 'auto.') : lbl('řízené', 'říz.')}</button>`
       + `<button data-act="escortJammer" class="${ui.escortJammerMode ? 'active' : ''}" title="${esc(tip.jammer)}"${dis(!noShip)}>${lbl('+rušička', '+ruš')}</button>`

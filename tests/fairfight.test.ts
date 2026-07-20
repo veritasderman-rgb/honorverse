@@ -47,7 +47,7 @@ function makeShip(id: number, classId: string, over: Partial<ShipState> = {}): S
     pos: vec(0, 0), vel: vec(0, 0), heading: 0, throttle: 0.8, nav: null,
     wedgeOn: true, activeSensors: true, rolledTo: null,
     subsystems: fullSubsystems(),
-    hull: def.hullPoints, missiles: def.magazineMissiles, cms: def.magazineCMs,
+    hull: def.hullPoints, missiles: def.magazineMissiles, pods: 0, cms: def.magazineCMs,
     decoys: def.decoyCount, decoyActive: false,
     tubeCooldown: 0, energyCooldown: 0, destroyed: false, doctrine: 'player',
     surrendered: false, lastSurrenderDemandAt: -1e9,

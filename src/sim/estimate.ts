@@ -17,6 +17,7 @@ import {
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import { dist, dot, norm, sub } from './vec'
 import { BALLISTIC_LOCK_DECAY, fireSolution, missileFlightTime } from './weapons'
+import { pdlcReadiness } from './defense'
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x))
 
@@ -94,9 +95,11 @@ export function estimatePenetration(
   // --- vrstva PDLC: okno dle rychlosti přiblížení + saturace celou salvou ---
   const vArrival = Math.min(mDef.maxSpeed, closing + mDef.accelG[mode] * G * Math.min(tFlight, T))
   const cFrac = Math.max(0, vArrival) / C
-  const window = cFrac <= 0.1 ? 1 : cFrac >= 0.5 ? 1 / 3 : 1 - ((cFrac - 0.1) / 0.4) * (2 / 3)
+  const window = cFrac <= 0.1 ? 1 : cFrac >= 0.5 ? 0.55 : 1 - ((cFrac - 0.1) / 0.4) * 0.45
   const rolledFactor = target.rolledTo !== null ? PDLC_ROLLED_FACTOR : 1
-  const clusters = Math.floor(tDef.pdlcClusters * target.subsystems.pdlc * window * rolledFactor)
+  // reakční čas PDLC: krátký let salvy = nepřipravená obrana (pdlcReadiness)
+  const clusters = Math.floor(
+    tDef.pdlcClusters * target.subsystems.pdlc * window * rolledFactor * pdlcReadiness(tFlight))
   const pdlcPk = PDLC_PK / (1 + PDLC_SATURATION * Math.max(0, afterCm - 1))
   const pdlcSurvive = Math.pow(1 - pdlcPk, Math.max(0, clusters))
   const pdlcKills = afterCm * (1 - pdlcSurvive)

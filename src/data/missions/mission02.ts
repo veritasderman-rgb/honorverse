@@ -68,7 +68,9 @@ export const mission02: Scenario = {
     + 'pirátským hraničním pásmem — k navigační bóji na okraji soustavy. Zpravodajství hlásí '
     + 'v oblasti pirátské nájezdníky. Drž krycí pozici mezi hrozbou '
     + 'a konvojem — intercepty trvají desítky minut a obchodníci se sami '
-    + 'neubrání. Doveď k cíli aspoň tři ze čtyř lodí.',
+    + 'neubrání. Doveď k cíli aspoň tři ze čtyř lodí. '
+    + 'VÝCVIK: pozice > agrese; nech piráty PŘIJÍT k tobě a pal až zblízka '
+    + '— a vyzkoušej raketovou plošinu (odpal 6 raket najednou zahltí obranu).',
   seed: 19920217, // pevný seed — determinismus
   ambient: '#26200e', // nádech mlhoviny soustavy (fáze B)
   decor: [
@@ -158,6 +160,14 @@ export const mission02: Scenario = {
       actions: [
         { kind: 'message', text: 'Další dva impelerové kontakty! Byla to návnada!' },
         { kind: 'setFlag', flag: 'ambush' },
+        {
+          // LEKCE: proti přesile nechat nepřítele přijít + plošiny na dobití
+          kind: 'comm', speaker: 'tactical',
+          text: 'Tři na jednoho — ale ženou se k NÁM, a to je naše výhoda. Vraťte se ke konvoji, '
+            + 'nechte je zkrátit vzdálenost a pak je berte zblízka jednoho po druhém. Táhneme '
+            + 'i raketovou plošinu: šest raket v jedné vlně — až bude první pirát blízko, '
+            + 'odhoďte ji, jeho obrana tolik najednou nechytá.',
+        },
         {
           kind: 'spawnShip',
           ship: {

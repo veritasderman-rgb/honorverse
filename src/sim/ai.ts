@@ -3,7 +3,7 @@
  * AI vidí jen kontakty své strany (state.contacts[side]) a vrací rozkazy;
  * NEaplikuje je — to dělá engine přes applyOrder.
  */
-import type { Contact, DriveMode, Order, ShipState, SimState, Side } from './types'
+import type { Contact, DriveModeOrder, Order, ShipState, SimState, Side } from './types'
 import { AI_ACTIVE_SENSORS_RANGE, CM_INTERCEPT_RANGE, SENSOR_UPDATE_INTERVAL } from './constants'
 import { add, angleDiff, angleOf, dist, norm, scale, sub, vec } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
@@ -42,7 +42,7 @@ const looksLikeMerch = (c: Contact): boolean =>
   SHIP_CLASSES[c.classGuess]?.hullCode === 'MERCH'
 
 /** společná palebná logika bojových doktrín */
-function fireOrders(ship: ShipState, near: Near, salvoRange: number, mode: DriveMode, orders: Order[]): void {
+function fireOrders(ship: ShipState, near: Near, salvoRange: number, mode: DriveModeOrder, orders: Order[]): void {
   const def = SHIP_CLASSES[ship.classId]
   if (!def) return
   // senzorový duel: zahájení palby zblízka → zapnout aktivní senzory
@@ -159,7 +159,7 @@ function pirateOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     if (!(ship.nav?.kind === 'intercept' && ship.nav.targetId === near.c.shipId)) {
       orders.push({ kind: 'intercept', shipId: ship.id, targetId: near.c.shipId })
     }
-    fireOrders(ship, near, SALVO_RANGE_LO, 0, orders)
+    fireOrders(ship, near, SALVO_RANGE_LO, 'auto', orders)
   }
   defenseOrders(state, ship, orders)
 }
@@ -184,7 +184,7 @@ function hunterOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     if (!(ship.nav?.kind === 'intercept' && ship.nav.targetId === near.c.shipId)) {
       orders.push({ kind: 'intercept', shipId: ship.id, targetId: near.c.shipId })
     }
-    fireOrders(ship, near, SALVO_RANGE_LO, 0, orders)
+    fireOrders(ship, near, SALVO_RANGE_LO, 'auto', orders)
   }
   defenseOrders(state, ship, orders)
 }
@@ -198,7 +198,7 @@ function escortOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     if (!(ship.nav?.kind === 'intercept' && ship.nav.targetId === near.c.shipId)) {
       orders.push({ kind: 'intercept', shipId: ship.id, targetId: near.c.shipId })
     }
-    fireOrders(ship, near, ESCORT_SALVO_RANGE, 0, orders)
+    fireOrders(ship, near, ESCORT_SALVO_RANGE, 'auto', orders)
   }
   defenseOrders(state, ship, orders)
 }

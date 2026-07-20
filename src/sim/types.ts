@@ -54,6 +54,13 @@ export interface ShipClassDef {
    * pirátské kořistní lodě 0.9. Chybí-li, platí 1.0.
    */
   missileQuality?: number
+  /**
+   * Kolik tažených raketových plošin (podů) třída utáhne za sebou.
+   * Každá nese PODS_PER_POD raket; odpal všech najednou = drtivá první
+   * salva (alfa úder). CA 4, BC 6, DN 8; lehké trupy jen symbolicky.
+   * Chybí-li, 0 (obchodníci, stanice, sondy plošiny netahají).
+   */
+  podCapacity?: number
   /** lore třídy: původ jména, v čem vyniká, slabiny (rozklikávací detail v UI) */
   lore?: string
 }
@@ -79,6 +86,14 @@ export interface MissileDef {
 
 export type DriveMode = 0 | 1 // index do accelG/driveTime: 0=LO(dostřel), 1=HI(akcelerace)
 
+/**
+ * Režim pohonu v rozkazech: konkrétní (0/1), nebo 'auto' — engine při odpalu
+ * sám zvolí HI, pokud je cíl v HI poháněné obálce (rychlý let = obrana cíle
+ * nestíhá), jinak LO. Hráčské UI posílá vždy 'auto' — přepínání LO/HI je
+ * technikálie, kterou řeší řízení palby, ne kapitán.
+ */
+export type DriveModeOrder = DriveMode | 'auto'
+
 /** Mluvčí komunikace/hlášek — přesně názvy avatarů z docs/ART_PROMPTS.md (img/<speaker>.png). */
 export type Speaker =
   | 'captain' | 'xo' | 'engineer' | 'tactical' | 'comms'
@@ -99,7 +114,7 @@ export interface FireControl {
   mode: 'hold' | 'auto' | 'nearest' | 'biggest' | 'spread'
   targetId: number | null
   salvoSize: number
-  driveMode: DriveMode
+  driveMode: DriveModeOrder
   /** interní stav enginu: cíl byl minulý tick v poháněné obálce (hrana pro hlášky) */
   engaged: boolean
   /** autonomní salvy (fire-and-forget): nižší počáteční zámek, ale bez řídicího spoje */
@@ -230,6 +245,13 @@ export interface ShipState {
   subsystems: Subsystems
   hull: number           // zbývající hullPoints
   missiles: number       // zásoba útočných raket
+  /**
+   * Tažené raketové plošiny (pody) za lodí: každá nese PODS_PER_POD raket,
+   * odpalují se VŠECHNY najednou (jednorázový alfa úder mimo šachty
+   * i zásobníky). Výchozí příděl: podCapacity třídy pro stranu hráče,
+   * AI jen když jí je dá scénář (spec.pods).
+   */
+  pods: number
   cms: number            // zásoba protiraket
   /** zásoba tažených návnad (decoyů) — odečítá se až ZNIČENÍM návnady */
   decoys: number
@@ -311,7 +333,9 @@ export type Order =
   | { kind: 'setWedge'; shipId: number; on: boolean }
   | { kind: 'setActiveSensors'; shipId: number; on: boolean }
   | { kind: 'roll'; shipId: number; towards: number | null }
-  | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveMode; autonomous?: boolean; escortJammer?: boolean }
+  | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveModeOrder; autonomous?: boolean; escortJammer?: boolean }
+  /** odpal VŠECH tažených raketových plošin najednou (PODS_PER_POD raket/ks) — alfa úder */
+  | { kind: 'launchPods'; shipId: number; targetId: number }
   /** vypuštění tažené návnady (aktivní, dokud ji svedená raketa nezničí) */
   | { kind: 'deployDecoy'; shipId: number }
   /** dvojitá boční salva: LO z levoboku, otočka, HI z pravoboku na společný dopad */

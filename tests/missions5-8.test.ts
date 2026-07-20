@@ -321,7 +321,7 @@ describe('mise 7 — Nájezd na konvoj', () => {
     expect(pods.every(m => m.side === 'enemy' && m.targetId === 1)).toBe(true)
     expect(cl.missiles).toBe(missilesBefore) // pody neodečítají zásobníky
     expect(cl.tubeCooldown).toBe(0)          // ani nenabíjejí cooldown šachet
-    const launchEvent = state.events.find(e => e.kind === 'launch' && e.text.includes('raketové pody'))
+    const launchEvent = state.events.find(e => e.kind === 'launch' && e.text.includes('raketové plošiny'))
     expect(launchEvent).toBeDefined()
     expect(launchEvent?.count).toBe(24)
     expect(launchEvent?.slowdown).toBe(true)
@@ -374,7 +374,7 @@ describe('mise 7 — Nájezd na konvoj', () => {
       return best
     }
     const podsFired = (): boolean =>
-      state.events.some(e => e.kind === 'launch' && e.text.includes('raketové pody'))
+      state.events.some(e => e.kind === 'launch' && e.text.includes('raketové plošiny'))
 
     order({ kind: 'setThrottle', shipId: 1, throttle: 1 })
     order({ kind: 'setActiveSensors', shipId: 1, on: true })
@@ -553,7 +553,7 @@ describe('determinismus nových akcí (setSide, podSalvo, pevná id)', () => {
     const a = run()
     const b = run()
     // pody vyletěly — nové akce se skutečně vykonaly
-    expect(a.events.some(e => e.kind === 'launch' && e.text.includes('raketové pody'))).toBe(true)
+    expect(a.events.some(e => e.kind === 'launch' && e.text.includes('raketové plošiny'))).toBe(true)
     expect(JSON.stringify(a)).toBe(JSON.stringify(b))
   })
 

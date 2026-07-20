@@ -37,6 +37,7 @@ function makeShip(over: Partial<ShipState> = {}): ShipState {
     subsystems: fullSubsystems(),
     hull: 60,
     missiles: 90,
+    pods: 0,
     cms: 120,
     decoys: 4,
     decoyActive: false,
