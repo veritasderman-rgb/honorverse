@@ -119,6 +119,7 @@ export function applyBeamDamage(
         kind: 'subsystemHit',
         shipId: target.id,
         side: target.side,
+        pos: { ...target.pos },
         text: `${target.name}: zásah — ${SUBSYSTEM_NAMES[key]} (${Math.round(target.subsystems[key] * 100)} %)`,
       })
       // hlášení inženýra hráči při prvním poškození subsystému (s odhadem opravy)
@@ -144,6 +145,7 @@ export function applyBeamDamage(
       shipId: target.id,
       side: target.side,
       slowdown: true,
+      pos: { ...target.pos },
       text: `${target.name} zničena`,
     })
   }

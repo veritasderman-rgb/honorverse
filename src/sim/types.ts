@@ -339,6 +339,12 @@ export interface SimEvent {
   count?: number
   /** UI: událost, u které má komprese času spadnout na 1× */
   slowdown?: boolean
+  /**
+   * Světová pozice události (km) — pro vizuální efekty plotu (jiskry CM,
+   * paprsky PDLC, detonace, exploze, vraky). Deterministická (pozice
+   * rakety/lodi v okamžiku události), sim ji nikdy nečte zpět.
+   */
+  pos?: Vec2
   /** mluvčí hlášky/komunikace (id avataru z docs/ART_PROMPTS.md) */
   speaker?: Speaker
   /** missileKilled/Miss: PŘÍČINA zániku rakety (rozpad bojové statistiky) */

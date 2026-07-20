@@ -7,6 +7,10 @@
 import { SHIP_CLASSES } from '../data/defs'
 import { CM_INTERCEPT_RANGE, ENERGY_MAX_RANGE } from '../sim/constants'
 import { predictPath } from '../sim/physics'
+import {
+  drawEffects, drawWrecks, ingestEvents, shipSilhouette,
+  type Effect, type Wreck,
+} from './fx'
 import type { Contact, Hyperlimit, MissileState, ShipState, SimState, Vec2 } from '../sim/types'
 
 const ZOOM_MIN = 50        // km/px
@@ -230,10 +234,23 @@ export class TacticalPlot {
     }, { passive: false })
   }
 
+  /** vizuální efekty z eventů simu (fáze A — viditelná obrana, vraky) */
+  private effects: Effect[] = []
+  private wrecks: Wreck[] = []
+  private fxScenario = ''
+
   setSnapshot(state: SimState, compression: number): void {
     this.state = state
     this.compression = compression
     this.snapAt = performance.now()
+    // efekty: nová mise = čistý plot; eventy snapshotu → efekty (jednou,
+    // worker eventy po odeslání maže)
+    if (state.scenarioId !== this.fxScenario) {
+      this.fxScenario = state.scenarioId
+      this.effects = []
+      this.wrecks = []
+    }
+    ingestEvents(state.events, state.ships, this.effects, this.wrecks, this.snapAt)
   }
 
   setCourseCursor(on: boolean): void {
@@ -349,6 +366,9 @@ export class TacticalPlot {
       if (ship.side === 'player' && !ship.destroyed) this.drawOwnShip(ctx, ship)
     }
     for (const c of s.contacts.player) this.drawContact(ctx, c)
+    // vraky (trvalé zakreslení) a bojové efekty nad vším
+    drawWrecks(ctx, this.wrecks, pt => this.worldToScreen(pt))
+    drawEffects(ctx, this.effects, performance.now(), pt => this.worldToScreen(pt))
     this.drawSelectionMarker(ctx)
     this.drawSelectionBox(ctx)
   }
@@ -579,35 +599,37 @@ export class TacticalPlot {
   }
 
   private drawHullIcon(ctx: CanvasRenderingContext2D, hullCode: string): void {
-    // lokální souřadnice: +x = příď
-    ctx.beginPath()
-    switch (hullCode) {
-      case 'DD':
-        ctx.moveTo(8, 0); ctx.lineTo(-6, 5); ctx.lineTo(-6, -5)
-        break
-      case 'MERCH':
-        ctx.moveTo(-7, -5); ctx.lineTo(7, -5); ctx.lineTo(7, 5); ctx.lineTo(-7, 5)
-        break
-      case 'CL':
-        ctx.moveTo(8, 0); ctx.lineTo(0, 5); ctx.lineTo(-8, 0); ctx.lineTo(0, -5)
-        break
-      default: // CA a těžší — větší kosočtverec
-        ctx.moveTo(10, 0); ctx.lineTo(0, 6); ctx.lineTo(-10, 0); ctx.lineTo(0, -6)
-        break
-    }
-    ctx.closePath()
-    ctx.stroke()
+    // detailní vektorové siluety per třída (fáze A) — viz fx.ts
+    shipSilhouette(ctx, hullCode)
   }
 
-  private drawWedge(ctx: CanvasRenderingContext2D): void {
-    // dva krátké oblouky nad/pod osou heading (lokálně: nad/pod osou x)
-    ctx.strokeStyle = CLR.wedge
+  /** klín: jas oblouků roste s tahem, nad 100 % červená (nouzový výkon) */
+  private drawWedge(ctx: CanvasRenderingContext2D, throttle = 0.8): void {
+    ctx.save()
+    ctx.strokeStyle = throttle > 1 ? '#ff8a75' : CLR.wedge
+    ctx.globalAlpha = 0.35 + 0.65 * Math.min(1, throttle)
     ctx.beginPath()
     ctx.arc(0, -6, 10, -2.5, -0.64)
     ctx.stroke()
     ctx.beginPath()
     ctx.arc(0, 6, 10, 0.64, 2.5)
     ctx.stroke()
+    ctx.restore()
+  }
+
+  /** pohonná záře za zádí — délka dle tahu, mihotání render časem */
+  private drawDrive(ctx: CanvasRenderingContext2D, ship: ShipState, stern: number): void {
+    if (!ship.wedgeOn || ship.throttle <= 0) return
+    const flick = 1 + 0.18 * Math.sin(performance.now() / 47 + ship.id * 1.7)
+    const L = (4 + ship.throttle * 8) * flick
+    ctx.save()
+    ctx.strokeStyle = ship.throttle > 1 ? '#ff8a75' : '#d8b34f'
+    ctx.globalAlpha = 0.75
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(stern, -1.5); ctx.lineTo(stern - L, 0); ctx.lineTo(stern, 1.5)
+    ctx.stroke()
+    ctx.restore()
   }
 
   /** navigační bóje/maják: šedý kosočtverec s křížkem a popiskem — vždy viditelná */
@@ -673,7 +695,30 @@ export class TacticalPlot {
     ctx.rotate(-ship.heading) // svět y nahoru → obrazovka y dolů
     ctx.lineWidth = 1.5
     ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
+    // poškození: pod 50 % trupu silueta bliká, pod 25 % jiskří
+    const hullPct = (SHIP_CLASSES[ship.classId]?.hullPoints ?? 1) > 0
+      ? Math.max(0, ship.hull / (SHIP_CLASSES[ship.classId]?.hullPoints ?? 1))
+      : 1
+    if (hullPct < 0.5) {
+      ctx.globalAlpha = 0.65 + 0.35 * Math.abs(Math.sin(performance.now() / 130 + ship.id))
+    }
     this.drawHullIcon(ctx, hull)
+    if (hullPct < 0.25) {
+      // jiskřící trhliny — deterministicky z render času a id lodi
+      const ph = Math.floor(performance.now() / 180) + ship.id * 13
+      ctx.strokeStyle = '#ffd27a'
+      ctx.lineWidth = 0.8
+      for (let i = 0; i < 2; i++) {
+        const a = ((ph * 37 + i * 71) % 100) / 100 * Math.PI * 2
+        ctx.beginPath()
+        ctx.moveTo(Math.cos(a) * 3, Math.sin(a) * 3)
+        ctx.lineTo(Math.cos(a) * 8, Math.sin(a) * 8)
+        ctx.stroke()
+      }
+      ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
+      ctx.lineWidth = 1.5
+    }
+    ctx.globalAlpha = 1
     // vybrané lodě: dvojitý obrys (primární — followId — silněji)
     const primary = ship.id === this.followId
     if (primary || this.selectedShipIds.includes(ship.id)) {
@@ -684,7 +729,8 @@ export class TacticalPlot {
       this.drawHullIcon(ctx, hull)
       ctx.restore()
     }
-    if (ship.wedgeOn) this.drawWedge(ctx)
+    this.drawDrive(ctx, ship, hull === 'DN' || hull === 'BC' ? -13 : -8)
+    if (ship.wedgeOn) this.drawWedge(ctx, ship.throttle)
     ctx.restore()
 
     ctx.fillStyle = CLR.label
@@ -724,17 +770,24 @@ export class TacticalPlot {
 
     this.drawVelVector(ctx, p, c.vel, color)
 
-    // značka: otevřený kosočtverec natočený po směru letu
+    // značka: klasifikovaný kontakt = silueta odhadnuté třídy (menší),
+    // neznámý = otevřený kosočtverec; natočení po směru letu
     const ang = Math.hypot(c.vel.x, c.vel.y) > 0.5 ? Math.atan2(c.vel.y, c.vel.x) : 0
+    const guessHull = c.idQuality >= 1 ? SHIP_CLASSES[c.classGuess]?.hullCode : undefined
     ctx.save()
     ctx.translate(p.x, p.y)
     ctx.rotate(-ang)
     ctx.lineWidth = 1.5
     ctx.strokeStyle = color
-    ctx.beginPath()
-    ctx.moveTo(6, 0); ctx.lineTo(0, 6); ctx.lineTo(-6, 0); ctx.lineTo(0, -6)
-    ctx.closePath()
-    ctx.stroke()
+    if (guessHull) {
+      ctx.scale(0.85, 0.85)
+      shipSilhouette(ctx, guessHull)
+    } else {
+      ctx.beginPath()
+      ctx.moveTo(6, 0); ctx.lineTo(0, 6); ctx.lineTo(-6, 0); ctx.lineTo(0, -6)
+      ctx.closePath()
+      ctx.stroke()
+    }
     ctx.restore()
 
     const cls = c.idQuality === 0 ? '???' : (SHIP_CLASSES[c.classGuess]?.hullCode ?? c.classGuess)
@@ -765,16 +818,32 @@ export class TacticalPlot {
     // vlastní rakety lze klikem vybrat (výběr celé salvy)
     if (own) this.pickables.push({ id: m.id, x: p.x, y: p.y })
     const color = own ? CLR.missileOwn : CLR.missileFoe
-    // stopa: 6 s zpět po vektoru
+    // stopa: 6 s zpět po vektoru — boost jasná, balistika dohasíná
+    const boost = m.phase === 'boost'
     const tail = this.worldToScreen({ x: ex.x - m.vel.x * 6, y: ex.y - m.vel.y * 6 })
     ctx.save()
-    ctx.globalAlpha = 0.5
+    ctx.globalAlpha = boost ? 0.6 : 0.3
     ctx.strokeStyle = color
     ctx.beginPath()
     ctx.moveTo(tail.x, tail.y)
     ctx.lineTo(p.x, p.y)
     ctx.stroke()
+    // plamen pohonu (jen boost): mihotavý klínek za hlavicí
+    if (boost) {
+      const dx = p.x - tail.x
+      const dy = p.y - tail.y
+      const dl = Math.hypot(dx, dy) || 1
+      const fl = (4 + 2 * Math.sin(performance.now() / 40 + m.id)) / dl
+      ctx.globalAlpha = 0.9
+      ctx.strokeStyle = own ? '#d9ffd0' : '#ffb37a'
+      ctx.lineWidth = 1.6
+      ctx.beginPath()
+      ctx.moveTo(p.x, p.y)
+      ctx.lineTo(p.x - dx * fl, p.y - dy * fl)
+      ctx.stroke()
+    }
     ctx.restore()
+    ctx.globalAlpha = boost ? 1 : 0.7
     ctx.fillStyle = color
     // zvýraznění vybrané salvy: větší bod + kroužek
     if (own && this.selectedSalvoId != null && m.salvoId === this.selectedSalvoId) {
@@ -787,6 +856,7 @@ export class TacticalPlot {
     } else {
       ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3)
     }
+    ctx.globalAlpha = 1
   }
 
   private drawSelectionMarker(ctx: CanvasRenderingContext2D): void {

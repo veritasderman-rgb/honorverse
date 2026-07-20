@@ -365,7 +365,7 @@ export function updateMissiles(state: SimState, dt: number): void {
       m.phase = 'dead'
       state.events.push({
         t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
-        cause: 'lost', salvoId: m.salvoId,
+        cause: 'lost', salvoId: m.salvoId, pos: { ...m.pos },
         text: 'raketa ztratila cíl (zničen)',
       })
       continue
@@ -377,7 +377,7 @@ export function updateMissiles(state: SimState, dt: number): void {
       m.phase = 'dead'
       state.events.push({
         t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
-        cause: 'expired', salvoId: m.salvoId,
+        cause: 'expired', salvoId: m.salvoId, pos: { ...m.pos },
         text: 'raketa na konci doletu — sebedestrukce',
       })
       continue
@@ -420,7 +420,7 @@ export function updateMissiles(state: SimState, dt: number): void {
       m.phase = 'dead'
       state.events.push({
         t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
-        cause: 'link', salvoId: m.salvoId,
+        cause: 'link', salvoId: m.salvoId, pos: { ...m.pos },
         text: 'raketa ztratila zámek',
       })
       continue
@@ -475,6 +475,7 @@ export function fireEnergy(state: SimState, shooter: ShipState, target: ShipStat
   shooter.energyCooldown = ENERGY_COOLDOWN
   state.events.push({
     t: state.t, kind: 'energyHit', shipId: target.id, side: target.side,
+    pos: { ...target.pos },
     // zásah do lodi hráče je důležitá událost (UI auto-zpomalení)
     slowdown: target.side === 'player',
     text: `${shooter.name}: energetická salva na ${target.name} (${mounts}× mount, ${aspect})`,
