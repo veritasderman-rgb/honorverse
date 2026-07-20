@@ -72,6 +72,7 @@ export const mission05: Scenario = {
     + 'S MUNICÍ — zásobníky nejsou bezedné a nikdo ti je uprostřed boje '
     + 'nedoplní. Znič nebo zažeň všechny nájezdníky.',
   seed: 19950307, // pevný seed — determinismus
+  ambient: '#102828', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimit soustavy: nájezdníci „přistávají" za čárou a najíždějí dovnitř
   hyperlimit: { kind: 'lineX', x: 45_000_000 },
@@ -87,6 +88,12 @@ export const mission05: Scenario = {
       classId: 'station-zeta', side: 'player', name: 'Stanice Zeta',
       pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0, nav: null,
+    },
+    {
+      // planeta pod stanicí Zeta — kosmetika mapy (fáze B)
+      classId: 'planet', side: 'neutral', name: 'Zeta IV',
+      pos: { x: 6_000_000, y: -9_000_000 }, vel: { x: 0, y: 0 },
+      doctrine: 'buoy', wedgeOn: false, throttle: 0,
     },
   ],
 

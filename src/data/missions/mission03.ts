@@ -21,6 +21,7 @@ export const mission03: Scenario = {
     + 'doprovodit — drž se do 2,5 mil. km, obchodník zvládne jen '
     + 'pomalé plutí. Zpravodajství nemá o lodi žádné záznamy.',
   seed: 19930411, // pevný seed — determinismus
+  ambient: '#26200e', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimit žluté hvězdy soustavy (stanice Sázava leží hluboko uvnitř)
   hyperlimit: { kind: 'circle', center: { x: 200_000_000, y: 0 }, radius: 360_000_000 },

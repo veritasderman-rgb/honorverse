@@ -11,7 +11,9 @@ import {
   drawEffects, drawWrecks, ingestEvents, shipSilhouette,
   type Effect, type Wreck,
 } from './fx'
-import type { Contact, Hyperlimit, MissileState, ShipState, SimState, Vec2 } from '../sim/types'
+import type {
+  Contact, DecorField, Hyperlimit, MissileState, ShipState, SimState, Vec2,
+} from '../sim/types'
 
 const ZOOM_MIN = 50        // km/px
 const ZOOM_MAX = 500_000   // km/px
@@ -261,6 +263,105 @@ export class TacticalPlot {
     this.hyperlimit = h
   }
 
+  /** kosmetika mapy (fáze B): pole asteroidů + nádech mlhoviny soustavy */
+  private decor: DecorField[] = []
+  private ambient: string | null = null
+  /** dlaždice hvězdného pozadí (2 paralaxní vrstvy) — kreslí se jednou */
+  private starTiles: HTMLCanvasElement[] = []
+
+  setEnvironment(decor: DecorField[] | undefined, ambient: string | undefined): void {
+    this.decor = decor ?? []
+    this.ambient = ambient ?? null
+  }
+
+  /** hash → [0,1) pro deterministické rozložení hvězd/balvanů */
+  private static h01(a: number, b: number): number {
+    let h = (Math.imul(a | 0, 2654435761) ^ Math.imul(b | 0, 40503)) >>> 0
+    h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0
+    return ((h ^ (h >>> 13)) >>> 0) / 4294967296
+  }
+
+  /** líné vytvoření hvězdných dlaždic 512×512 (jemná/hustá vrstva) */
+  private ensureStars(): void {
+    if (this.starTiles.length > 0) return
+    // mobil: poloviční hustota hvězd (fáze D — výkon)
+    const coarse = matchMedia('(pointer: coarse)').matches
+    for (const [layer, count] of [[0, coarse ? 42 : 85], [1, coarse ? 24 : 48]] as const) {
+      const tile = document.createElement('canvas')
+      tile.width = 512
+      tile.height = 512
+      const tctx = tile.getContext('2d')
+      if (!tctx) continue
+      for (let i = 0; i < count; i++) {
+        const x = TacticalPlot.h01(layer * 977 + i, 11) * 512
+        const y = TacticalPlot.h01(layer * 977 + i, 29) * 512
+        const b = TacticalPlot.h01(layer * 977 + i, 47)
+        tctx.fillStyle = b > 0.85 ? '#9fd8a0' : '#5a7a6a'
+        tctx.globalAlpha = 0.25 + b * (layer === 0 ? 0.35 : 0.6)
+        const s = layer === 1 && b > 0.9 ? 2 : 1
+        tctx.fillRect(x, y, s, s)
+      }
+      this.starTiles.push(tile)
+    }
+  }
+
+  /** paralaxní hvězdné pozadí + nádech mlhoviny soustavy */
+  private drawBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    this.ensureStars()
+    const c = this.camCenter()
+    const parallax = [0.05, 0.12] // vrstvy se hýbou zlomkem kamery
+    for (let i = 0; i < this.starTiles.length; i++) {
+      const tile = this.starTiles[i]
+      const px = (c.x / this.kmPerPx) * parallax[i]
+      const py = (-c.y / this.kmPerPx) * parallax[i]
+      const ox = -(((px % 512) + 512) % 512)
+      const oy = -(((py % 512) + 512) % 512)
+      for (let x = ox; x < w; x += 512) {
+        for (let y = oy; y < h; y += 512) ctx.drawImage(tile, x, y)
+      }
+    }
+    if (this.ambient) {
+      // nádech mlhoviny: velký radiální gradient, velmi nízká alfa
+      const g = ctx.createRadialGradient(w * 0.7, h * 0.3, 0, w * 0.7, h * 0.3, Math.max(w, h))
+      g.addColorStop(0, this.ambient)
+      g.addColorStop(1, 'transparent')
+      ctx.save()
+      ctx.globalAlpha = 0.16
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, w, h)
+      ctx.restore()
+    }
+  }
+
+  /** pole asteroidů: deterministické balvany s pomalým driftem (kosmetika) */
+  private drawDecor(ctx: CanvasRenderingContext2D): void {
+    if (this.decor.length === 0) return
+    const now = performance.now()
+    ctx.save()
+    ctx.fillStyle = '#5a7a5e'
+    for (let f = 0; f < this.decor.length; f++) {
+      const field = this.decor[f]
+      const seed = field.seed ?? f + 1
+      const n = field.count ?? 60
+      const rPx = field.radius / this.kmPerPx
+      if (rPx < 8) continue // moc daleko — pole splývá, nekreslit
+      for (let i = 0; i < n; i++) {
+        const a0 = TacticalPlot.h01(seed, i * 3) * Math.PI * 2
+        const rr = Math.sqrt(TacticalPlot.h01(seed, i * 3 + 1)) * field.radius
+        // pomalý orbitální drift — čistě vizuální
+        const a = a0 + (now / 1e6) * (0.5 + TacticalPlot.h01(seed, i * 3 + 2))
+        const p = this.worldToScreen({
+          x: field.center.x + Math.cos(a) * rr,
+          y: field.center.y + Math.sin(a) * rr,
+        })
+        const s = 1 + TacticalPlot.h01(seed + 7, i) * 2
+        ctx.globalAlpha = 0.3 + TacticalPlot.h01(seed + 13, i) * 0.35
+        ctx.fillRect(p.x, p.y, s, s)
+      }
+    }
+    ctx.restore()
+  }
+
   /** vycentruje kameru zpět na sledovanou loď */
   recenter(): void {
     this.pan = { x: 0, y: 0 }
@@ -342,7 +443,9 @@ export class TacticalPlot {
     ctx.font = '10px Consolas, Menlo, monospace'
 
     this.pickables = []
+    this.drawBackdrop(ctx, w, h)
     this.drawGrid(ctx, w, h)
+    this.drawDecor(ctx)
     this.drawHyperlimit(ctx, w, h)
 
     const s = this.state
@@ -635,18 +738,56 @@ export class TacticalPlot {
   /** navigační bóje/maják: šedý kosočtverec s křížkem a popiskem — vždy viditelná */
   private drawBuoy(ctx: CanvasRenderingContext2D, ship: ShipState): void {
     const p = this.worldToScreen(ship.pos)
-    // planeta: velký vyplněný kotouč s obrysem — pevný bod mapy
+    // planeta: gradientní kotouč s terminátorem a prstencem atmosféry
     if (ship.classId === 'planet') {
+      const R = 13
       ctx.save()
-      ctx.fillStyle = '#123a2a'
-      ctx.strokeStyle = CLR.gridLabel
-      ctx.lineWidth = 1.5
+      const g = ctx.createRadialGradient(p.x - R * 0.4, p.y - R * 0.4, R * 0.15, p.x, p.y, R)
+      g.addColorStop(0, '#2d7a54')
+      g.addColorStop(0.65, '#123a2a')
+      g.addColorStop(1, '#081a10')
+      ctx.fillStyle = g
       ctx.beginPath()
-      ctx.arc(p.x, p.y, 12, 0, Math.PI * 2)
+      ctx.arc(p.x, p.y, R, 0, Math.PI * 2)
       ctx.fill()
+      // terminátor: ztmavená odvrácená strana
+      ctx.globalAlpha = 0.45
+      ctx.fillStyle = '#02060a'
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, R, -Math.PI * 0.42, Math.PI * 0.58)
+      ctx.arc(p.x + R * 0.5, p.y + R * 0.18, R * 0.95, Math.PI * 0.58, -Math.PI * 0.42, true)
+      ctx.fill()
+      // prstenec atmosféry
+      ctx.globalAlpha = 0.5
+      ctx.strokeStyle = '#58e06a'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, R + 2.5, 0, Math.PI * 2)
       ctx.stroke()
+      ctx.globalAlpha = 1
       ctx.fillStyle = CLR.label
-      ctx.fillText(ship.name, p.x + 16, p.y + 3)
+      ctx.fillText(ship.name, p.x + R + 6, p.y + 3)
+      ctx.restore()
+      this.pickables.push({ id: ship.id, x: p.x, y: p.y })
+      return
+    }
+    // sonda/maják: drobný pulzující bod (kosmetický objekt mapy)
+    if (ship.classId === 'probe') {
+      const pulse = 0.4 + 0.6 * Math.abs(Math.sin(performance.now() / 600 + ship.id))
+      ctx.save()
+      ctx.globalAlpha = pulse
+      ctx.fillStyle = CLR.sensorRing
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.globalAlpha = 0.35
+      ctx.strokeStyle = CLR.sensorRing
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 5 + pulse * 3, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.globalAlpha = 0.55
+      ctx.fillStyle = CLR.label
+      ctx.fillText(ship.name, p.x + 8, p.y + 3)
       ctx.restore()
       this.pickables.push({ id: ship.id, x: p.x, y: p.y })
       return
@@ -773,7 +914,8 @@ export class TacticalPlot {
     // značka: klasifikovaný kontakt = silueta odhadnuté třídy (menší),
     // neznámý = otevřený kosočtverec; natočení po směru letu
     const ang = Math.hypot(c.vel.x, c.vel.y) > 0.5 ? Math.atan2(c.vel.y, c.vel.x) : 0
-    const guessHull = c.idQuality >= 1 ? SHIP_CLASSES[c.classGuess]?.hullCode : undefined
+    // silueta, jakmile je třída známa (plná identifikace NEBO revealClass)
+    const guessHull = SHIP_CLASSES[c.classGuess]?.hullCode
     ctx.save()
     ctx.translate(p.x, p.y)
     ctx.rotate(-ang)
@@ -790,7 +932,7 @@ export class TacticalPlot {
     }
     ctx.restore()
 
-    const cls = c.idQuality === 0 ? '???' : (SHIP_CLASSES[c.classGuess]?.hullCode ?? c.classGuess)
+    const cls = guessHull ?? (c.idQuality === 0 ? '???' : c.classGuess)
     ctx.fillStyle = color
     if (surrendered) {
       // vlajka kapitulace nad značkou

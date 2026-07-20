@@ -288,7 +288,7 @@ describe('AI doktríny', () => {
 describe('mise 1 — Hlídka u Strážné brány', () => {
   it('je registrovaná v SCENARIOS a má 3 lodě + 2 objectives', () => {
     expect(SCENARIOS['mission01']).toBe(mission01)
-    expect(mission01.ships).toHaveLength(3)
+    expect(mission01.ships).toHaveLength(7) // + planeta, 2× provoz, sonda (fáze B)
     expect(mission01.objectives).toHaveLength(2)
   })
 

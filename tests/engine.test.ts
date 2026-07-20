@@ -47,7 +47,7 @@ describe('determinismus', () => {
 describe('E2E mise 1 — Hlídka u Strážné brány', () => {
   it('intercept → zvrat → pronásledování → souboj → konec mise', () => {
     const state = sim.create(mission01)
-    expect(state.ships.map(s => s.id)).toEqual([1, 2, 3])
+    expect(state.ships.map(s => s.id)).toEqual([1, 2, 3, 4, 5, 6, 7]) // + planeta, provoz, sonda (fáze B)
     expect(state.outcome).toBe('running')
     openingOrders(state)
 

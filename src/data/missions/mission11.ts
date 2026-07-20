@@ -67,6 +67,7 @@ export const mission11: Scenario = {
     + 'pomalu, má štíty; stěna, která spěchá, hoří. Volitelný bonus: '
     + 'zásobovací základna za jejich stěnou.',
   seed: 20260719, // pevný seed — determinismus
+  ambient: '#101c30', // nádech mlhoviny soustavy (fáze B)
 
   hyperlimit: { kind: 'lineX', x: 120_000_000 },
 

@@ -30,6 +30,7 @@ export const mission01: Scenario = {
     + 'opustit soustavu přes hyperlimit. Pozor: jestli má ta loď co '
     + 'skrývat, poběží — a hyperlimit je jen 250 milionů km daleko.',
   seed: 19881003, // pevný seed — determinismus
+  ambient: '#0f2438', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimitní čára soustavy (plot ji kreslí jantarově); bóje zůstává pro triggery
   hyperlimit: { kind: 'lineX', x: 250_000_000 },
@@ -52,6 +53,39 @@ export const mission01: Scenario = {
       pos: { x: 250_000_000, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0,
     },
+    // --- kosmetika soustavy (fáze B): svět u Křižovatky žije ---
+    {
+      // planeta soustavy — pevný bod mapy (kreslí se trvale)
+      classId: 'planet', side: 'neutral', name: 'Gwynedd',
+      pos: { x: -30_000_000, y: -18_000_000 }, vel: { x: 0, y: 0 },
+      doctrine: 'buoy', wedgeOn: false, throttle: 0,
+    },
+    {
+      // civilní provoz Křižovatky — obchodník na trase (celní hlídka má co sledovat)
+      classId: 'merch-freighter', side: 'neutral', name: 'Carmarthen',
+      pos: { x: 8_000_000, y: 14_000_000 }, vel: { x: 180, y: -60 },
+      doctrine: 'freighter',
+      nav: { kind: 'course', dest: { x: 200_000_000, y: -50_000_000 }, arriveAtRest: false },
+      throttle: 0.5,
+    },
+    {
+      classId: 'merch-freighter', side: 'neutral', name: 'Powys',
+      pos: { x: 30_000_000, y: -12_000_000 }, vel: { x: -150, y: 40 },
+      doctrine: 'freighter',
+      nav: { kind: 'course', dest: { x: -60_000_000, y: 25_000_000 }, arriveAtRest: false },
+      throttle: 0.5,
+    },
+    {
+      // meteosonda — pulzující drobnost na plotu
+      classId: 'probe', side: 'neutral', name: 'Meteo-7',
+      pos: { x: 12_000_000, y: 8_000_000 }, vel: { x: 0, y: 0 },
+      doctrine: 'buoy', wedgeOn: false, throttle: 0,
+    },
+  ],
+
+  // pole asteroidů u vnitřního pásu — kosmetika (sim je ignoruje)
+  decor: [
+    { kind: 'asteroids', center: { x: 60_000_000, y: -28_000_000 }, radius: 14_000_000, count: 70, seed: 11 },
   ],
 
   objectives: [
@@ -60,6 +94,15 @@ export const mission01: Scenario = {
   ],
 
   triggers: [
+    {
+      // civilní provoz je v celní databázi — identifikace hned (žádný falešný zvrat)
+      id: 'trg-traffic-idents', once: true,
+      conditions: [{ kind: 'time', t: 2 }],
+      actions: [
+        { kind: 'revealClass', shipId: 5 },
+        { kind: 'revealClass', shipId: 6 },
+      ],
+    },
     {
       // úvodní komunikace: Kontrola Brány nařizuje Cygnu zastavit
       id: 'trg-comm-halt-order', once: true,

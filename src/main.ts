@@ -364,6 +364,7 @@ bridge.onReady = scenario => {
   currentMissionId = scenario.id
   panels.resetStats() // bojová statistika se počítá per mise
   plot.setHyperlimit(scenario.hyperlimit ?? null)
+  plot.setEnvironment(scenario.decor, scenario.ambient)
   showBriefing(scenario)
   plot.start()
 }

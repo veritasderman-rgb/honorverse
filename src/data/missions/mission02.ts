@@ -70,6 +70,10 @@ export const mission02: Scenario = {
     + 'a konvojem — intercepty trvají desítky minut a obchodníci se sami '
     + 'neubrání. Doveď k cíli aspoň tři ze čtyř lodí.',
   seed: 19920217, // pevný seed — determinismus
+  ambient: '#26200e', // nádech mlhoviny soustavy (fáze B)
+  decor: [
+    { kind: 'asteroids', center: { x: 70_000_000, y: 22_000_000 }, radius: 18_000_000, count: 90, seed: 2 },
+  ],
 
   // okraj soustavy: za cílovou bójí začíná hyperlimit (vizuální orientace)
   hyperlimit: { kind: 'lineX', x: 150_000_000 },

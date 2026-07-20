@@ -60,7 +60,7 @@ describe('registrace misí 9–10', () => {
     expect(SCENARIOS['mission09']).toBe(mission09)
     expect(SCENARIOS['mission10']).toBe(mission10)
     // M9: eskadra 5 lodí (s dreadnoughtem) + stanice; hyperlimit KRUŽNICE
-    expect(mission09.ships).toHaveLength(6)
+    expect(mission09.ships).toHaveLength(7) // + planeta (fáze B)
     expect(mission09.hyperlimit).toEqual({
       kind: 'circle', center: { x: 0, y: 0 }, radius: 220_000_000,
     })

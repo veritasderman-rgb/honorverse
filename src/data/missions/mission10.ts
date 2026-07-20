@@ -48,6 +48,7 @@ export const mission10: Scenario = {
     + 'základny čeká dreadnought Sevilla, poslední, který Impériu zbývá. '
     + 'Rozkaz Admirality zní: základna nesmí být nikdy dokončena.',
   seed: 20051123, // pevný seed — determinismus
+  ambient: '#2a1410', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimit Cádizu — svaz přistál na +x a padá dovnitř
   hyperlimit: { kind: 'lineX', x: 150_000_000 },

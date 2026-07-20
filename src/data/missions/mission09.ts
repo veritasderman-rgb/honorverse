@@ -102,6 +102,10 @@ export const mission09: Scenario = {
     + 'vlastní obranné pody, ale klíny mezi invazí a Křižovatkou jsou '
     + 'jen ty tvoje.',
   seed: 20040814, // pevný seed — determinismus
+  ambient: '#0f2438', // nádech mlhoviny soustavy (fáze B)
+  decor: [
+    { kind: 'asteroids', center: { x: 45_000_000, y: -30_000_000 }, radius: 16_000_000, count: 80, seed: 9 },
+  ],
 
   // hyperlimit domovské soustavy — kružnice kolem hvězdy [0,0]
   hyperlimit: { kind: 'circle', center: { x: 0, y: 0 }, radius: 220_000_000 },
@@ -133,6 +137,12 @@ export const mission09: Scenario = {
       classId: 'station-zeta', side: 'player', name: 'Křižovatka',
       pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 },
       doctrine: 'buoy', wedgeOn: false, throttle: 0, nav: null,
+    },
+    {
+      // domovská planeta — o ni se tu bojuje (kosmetika mapy, fáze B)
+      classId: 'planet', side: 'neutral', name: 'Avalon Prime',
+      pos: { x: -25_000_000, y: 12_000_000 }, vel: { x: 0, y: 0 },
+      doctrine: 'buoy', wedgeOn: false, throttle: 0,
     },
   ],
 

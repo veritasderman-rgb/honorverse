@@ -30,6 +30,7 @@ export const mission06: Scenario = {
     + 'návnady na jejich salvy a nenechat se stáhnout do boje. Každý zbytečný manévr '
     + 'tě stojí metry náskoku.',
   seed: 19960614, // pevný seed — determinismus
+  ambient: '#1c1226', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimit soustavy Tharsis — úniková čára na +x
   hyperlimit: { kind: 'lineX', x: 180_000_000 },

@@ -30,6 +30,7 @@ export const mission04: Scenario = {
     + 'jen manévrovací trysky (~5 g) — korekce dráhy plánuj hodiny dopředu. '
     + 'Zapnutí impeleru tě prozradí na celou soustavu.',
   seed: 19940829, // pevný seed — determinismus
+  ambient: '#2a1410', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimit soustavy Cádiz — úniková čára na +x (průlet soustavou)
   hyperlimit: { kind: 'lineX', x: 250_000_000 },

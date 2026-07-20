@@ -45,6 +45,7 @@ export const mission08: Scenario = {
     + 'formaci. Znič ji, ale pamatuj: Claymore ti nepodléhá. Kaledonci jsou '
     + 'stateční až k sebevraždě a jejich kapitán má padlého bratra k pomstění.',
   seed: 19980405, // pevný seed — determinismus
+  ambient: '#0e2418', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimit kaledonské hvězdy — hlídková linie leží těsně za kružnicí
   hyperlimit: { kind: 'circle', center: { x: -120_000_000, y: 0 }, radius: 100_000_000 },

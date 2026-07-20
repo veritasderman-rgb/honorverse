@@ -42,7 +42,7 @@ describe('registrace misí 5–8', () => {
     expect(SCENARIOS['mission06']).toBe(mission06)
     expect(SCENARIOS['mission07']).toBe(mission07)
     expect(SCENARIOS['mission08']).toBe(mission08)
-    expect(mission05.ships).toHaveLength(2)  // hráč + stanice (vlny spawnují triggery)
+    expect(mission05.ships).toHaveLength(3)  // hráč + stanice + planeta (vlny spawnují triggery)
     expect(mission06.ships).toHaveLength(5)  // hráč + 3 pronásledovatelé + bóje
     expect(mission07.ships).toHaveLength(9)  // hráč + 4 obchodníci + 3 eskorty + bóje
     expect(mission08.ships).toHaveLength(5)  // hráč + Claymore + 3 lodě stěny

@@ -420,6 +420,20 @@ export type Hyperlimit =
   | { kind: 'circle'; center: Vec2; radius: number }
   | { kind: 'lineX'; x: number }
 
+/**
+ * Kosmetická výbava mapy (fáze B grafického upgradu) — SIM JI IGNORUJE,
+ * kreslí ji jen plot. Deterministická (seed → rozložení bodů).
+ */
+export interface DecorField {
+  kind: 'asteroids'
+  center: Vec2
+  /** poloměr pole (km) */
+  radius: number
+  /** počet balvanů (výchozí 60) */
+  count?: number
+  seed?: number
+}
+
 export interface Scenario {
   id: string
   title: string
@@ -430,6 +444,10 @@ export interface Scenario {
   triggers: Trigger[]
   /** volitelný hyperlimit (plot ho vykresluje jantarovou čárou/kružnicí) */
   hyperlimit?: Hyperlimit
+  /** kosmetika mapy: pole asteroidů apod. (sim ignoruje, kreslí plot) */
+  decor?: DecorField[]
+  /** nádech mlhoviny soustavy (css barva) — atmosféra mise na pozadí plotu */
+  ambient?: string
 }
 
 // ---------- celkový stav ----------

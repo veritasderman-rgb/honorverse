@@ -49,6 +49,7 @@ export const mission07: Scenario = {
     + 'obchodníky a zmizet za hyperlimit dřív, než dorazí reakční svaz. '
     + 'Vybírej cíle chytře — eskortu nemusíš zničit, jen ji přežít.',
   seed: 19971022, // pevný seed — determinismus
+  ambient: '#241a0c', // nádech mlhoviny soustavy (fáze B)
 
   // hyperlimit soustavy Kerav — úniková čára na +x (směr příletu hráče)
   hyperlimit: { kind: 'lineX', x: 150_000_000 },
