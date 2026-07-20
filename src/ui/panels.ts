@@ -292,6 +292,11 @@ export class Panels {
     setTimeout(() => { el.classList.add('fade'); setTimeout(() => el.remove(), 600) }, ms)
   }
 
+  /** bojová statistika pro skórování (odpaly/zásahy vlastní strany) */
+  get combatStats(): { ourLaunched: number; ourHits: number } {
+    return { ourLaunched: this.stats.ourLaunched, ourHits: this.stats.ourHits }
+  }
+
   /** reset bojové statistiky a logů — volat při startu nové mise */
   resetStats(): void {
     this.stats = emptyStats()

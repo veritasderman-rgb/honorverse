@@ -9,6 +9,10 @@ import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
 import { SCENARIOS } from './data/missions'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
+import { scoreMission } from './sim/score'
+import {
+  fetchOverall, fetchRank, fetchTop, rankSummary, submitScore,
+} from './ui/leaderboard'
 import type { Scenario, SimState } from './sim/types'
 
 const canvas = document.getElementById('plot') as HTMLCanvasElement
@@ -161,7 +165,33 @@ function showMissionSelect(): void {
     + `<button id="btn-story-toggle">▸ PŘÍBĚH KAMPANĚ</button>`
     + `<div id="story-body" class="brief story" style="display:none">${esc(CAMPAIGN_INTRO)}</div>`
     + `</div>`
-  const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${rows}`)
+  const hall =
+    `<div class="story-section">`
+    + `<button id="btn-hall-toggle">▸ SÍŇ SLÁVY</button>`
+    + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">načítám…</span></div>`
+    + `</div>`
+  const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${hall}${rows}`)
+  // Síň slávy: celkové pořadí (součet nejlepších skóre per mise)
+  const hallToggle = el.querySelector<HTMLButtonElement>('#btn-hall-toggle')
+  const hallBody = el.querySelector<HTMLElement>('#hall-body')
+  let hallLoaded = false
+  onTap(hallToggle, () => {
+    const open = hallBody!.style.display !== 'none'
+    hallBody!.style.display = open ? 'none' : 'block'
+    hallToggle!.textContent = `${open ? '▸' : '▾'} SÍŇ SLÁVY`
+    if (open || hallLoaded) return
+    hallLoaded = true
+    void fetchOverall(10).then(rows => {
+      if (!rows || rows.length === 0) {
+        hallBody!.innerHTML = `<span class="dim">${rows ? 'Žebříček je zatím prázdný — buď první!' : 'Žebříček je nedostupný (offline?).'}</span>`
+        return
+      }
+      hallBody!.innerHTML = `<table class="lb-table"><tr><th>#</th><th>kapitán</th><th>body</th><th>misí</th></tr>`
+        + rows.map((r, i) =>
+          `<tr><td>${i + 1}.</td><td>${esc(r.nickname)}</td><td>${r.total}</td><td>${r.missions}</td></tr>`).join('')
+        + `</table>`
+    })
+  })
   const toggle = el.querySelector<HTMLButtonElement>('#btn-story-toggle')
   const body = el.querySelector<HTMLElement>('#story-body')
   onTap(toggle, () => {
@@ -209,12 +239,49 @@ function showBriefing(sc: Scenario): void {
   })
 }
 
+/** localStorage klíče formuláře žebříčku */
+const NICK_KEY = 'wob-nickname'
+const EMAIL_KEY = 'wob-email'
+
+const loadPref = (key: string): string => {
+  try { return localStorage.getItem(key) ?? '' } catch { return '' }
+}
+const savePref = (key: string, v: string): void => {
+  try { localStorage.setItem(key, v) } catch { /* noop */ }
+}
+
 function showOutcome(state: SimState): void {
   const win = state.outcome === 'win'
   const objs = state.objectives.map(o => {
     const mark = o.state === 'done' ? '■' : o.state === 'failed' ? '✗' : '□'
     return `<div class="obj ${o.state}">${mark} ${esc(o.text)}</div>`
   }).join('')
+
+  // skóre mise (jen výhra) — deterministické z průběhu
+  const stats = panels.combatStats
+  const score = scoreMission({
+    missionId: currentMissionId,
+    outcome: state.outcome === 'win' ? 'win' : 'lose',
+    t: state.t,
+    objectivesDone: state.objectives.filter(o => o.state === 'done').length,
+    ownLosses: state.ships.filter(s => s.side === 'player' && s.destroyed).length,
+    launched: stats.ourLaunched,
+    hits: stats.ourHits,
+  })
+  const scoreHtml = win
+    ? `<div class="score-block">`
+      + `<div class="score-total">SKÓRE: <b>${score.total}</b></div>`
+      + score.breakdown.map(l =>
+        `<div class="row"><span>${esc(l.label)}</span><span class="${l.points >= 0 ? 'ok' : 'bad'}">${l.points >= 0 ? '+' : ''}${l.points}</span></div>`).join('')
+      + `<div class="lb-form">`
+      + `<input id="lb-nick" maxlength="24" placeholder="přezdívka (2–24 znaků)" value="${esc(loadPref(NICK_KEY))}">`
+      + `<input id="lb-email" maxlength="254" placeholder="e-mail (nepovinný — celkové pořadí)" value="${esc(loadPref(EMAIL_KEY))}">`
+      + `<label class="lb-consent"><input type="checkbox" id="lb-consent"${loadPref(EMAIL_KEY) ? ' checked' : ''}> souhlasím s uložením e-mailu pro historické skóre</label>`
+      + `<button id="btn-lb-submit">ODESLAT DO ŽEBŘÍČKU</button>`
+      + `</div>`
+      + `<div id="lb-result" class="lb-box"></div>`
+      + `</div>`
+    : ''
   const story = MISSION_STORY[currentMissionId]
   let epilog = win ? story?.epilog : (story?.epilogLose ?? (story ? DEFEAT_GENERIC : undefined))
   // finále s více konci: epilog dle flagu stavu (ending-orders/-spirit/-clean)
@@ -227,12 +294,63 @@ function showOutcome(state: SimState): void {
     `<h2 class="${win ? 'win' : 'lose'}">${win ? 'VÍTĚZSTVÍ' : 'PORÁŽKA'}</h2>`
     + `<div class="brief">Mise ukončena v čase ${fmtTime(state.t)}.</div>`
     + objs
+    + scoreHtml
     + (epilog ? `<div class="brief story story-epilog">${esc(epilog)}</div>` : '')
     + `<div style="margin-top:14px">`
     + `<button id="btn-again">ZNOVU</button> `
     + `<button id="btn-menu">VÝBĚR MISE</button>`
     + `</div>`,
   )
+
+  // odeslání do žebříčku + top 10 + „chybí ti X bodů"
+  const submitBtn = el.querySelector<HTMLButtonElement>('#btn-lb-submit')
+  onTap(submitBtn, () => {
+    const result = el.querySelector<HTMLElement>('#lb-result')!
+    const nick = (el.querySelector<HTMLInputElement>('#lb-nick')?.value ?? '').trim()
+    const email = (el.querySelector<HTMLInputElement>('#lb-email')?.value ?? '').trim()
+    const consent = el.querySelector<HTMLInputElement>('#lb-consent')?.checked === true
+    if (nick.length < 2) {
+      result.innerHTML = `<span class="bad">Zadej přezdívku (aspoň 2 znaky).</span>`
+      return
+    }
+    if (email && !consent) {
+      result.innerHTML = `<span class="bad">E-mail uložíme jen se souhlasem — zaškrtni ho, nebo e-mail smaž.</span>`
+      return
+    }
+    savePref(NICK_KEY, nick)
+    savePref(EMAIL_KEY, consent ? email : '')
+    submitBtn!.disabled = true
+    result.innerHTML = `<span class="dim">odesílám…</span>`
+    void (async () => {
+      const ok = await submitScore({
+        mission_id: currentMissionId, nickname: nick,
+        email: consent && email ? email : null, consent,
+        score: score.total, time_s: Math.max(1, Math.round(state.t)),
+        losses: state.ships.filter(s => s.side === 'player' && s.destroyed).length,
+        launched: stats.ourLaunched, hits: stats.ourHits,
+      })
+      if (!ok) {
+        submitBtn!.disabled = false
+        result.innerHTML = `<span class="bad">Odeslání selhalo (offline?). Zkus to znovu.</span>`
+        return
+      }
+      const [top, rank] = await Promise.all([
+        fetchTop(currentMissionId, 10), fetchRank(currentMissionId, score.total),
+      ])
+      let html = `<div class="ok">Skóre uloženo.</div>`
+      if (top && rank) {
+        html += `<div class="lb-rank">${esc(rankSummary(score.total, top, rank.better, rank.total))}</div>`
+        html += `<table class="lb-table"><tr><th>#</th><th>kapitán</th><th>body</th><th>čas</th><th>ztráty</th></tr>`
+          + top.map((r, i) =>
+            `<tr><td>${i + 1}.</td><td>${esc(r.nickname)}</td><td>${r.score}</td>`
+            + `<td>${fmtTime(r.time_s)}</td><td>${r.losses}</td></tr>`).join('')
+          + `</table>`
+      } else {
+        html += `<span class="dim">Žebříček se nepodařilo načíst.</span>`
+      }
+      result.innerHTML = html
+    })()
+  })
   // ZNOVU = reload se stejnou misí; VÝBĚR MISE = reload bez parametru → menu
   onTap(el.querySelector('#btn-again'), () => {
     location.href = `${location.pathname}?mission=${encodeURIComponent(currentMissionId)}`
