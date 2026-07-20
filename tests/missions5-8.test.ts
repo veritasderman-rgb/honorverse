@@ -23,23 +23,16 @@ const objState = (state: SimState, id: string) => state.objectives.find(o => o.i
 
 const shipById = (state: SimState, id: number) => state.ships.find(s => s.id === id)
 
-/** obranné rolování hráče (id 1): klín proti nejbližší příchozí raketě */
-function playerRollDefense(state: SimState, range = 700_000): void {
+/**
+ * Obrana hráče (id 1) bez rollu (z UI zrušen): tažená návnada, když na
+ * loď letí rakety — zbytek nese CM/PDLC vrstva.
+ */
+function playerRollDefense(state: SimState): void {
   const p = state.ships[0]
   if (p.destroyed) return
-  let threat: number | null = null
-  let threatD = Infinity
-  for (const m of state.missiles) {
-    if (m.side !== 'enemy' || m.targetId !== 1 || m.phase === 'dead') continue
-    const md = dist(m.pos, p.pos)
-    if (md < range && md < threatD) { threatD = md; threat = angleOf(sub(m.pos, p.pos)) }
-  }
-  if (threat !== null) {
-    if (p.rolledTo === null || Math.abs(angleDiff(threat, p.rolledTo)) > 0.2) {
-      sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: threat })
-    }
-  } else if (p.rolledTo !== null) {
-    sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: null })
+  if (!p.decoyActive && p.decoys > 0
+    && state.missiles.some(m => m.side === 'enemy' && m.targetId === 1 && m.phase !== 'dead')) {
+    sim.applyOrder(state, { kind: 'deployDecoy', shipId: 1 })
   }
 }
 

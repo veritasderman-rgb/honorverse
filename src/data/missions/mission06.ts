@@ -2,7 +2,7 @@
  * Mise 6 — „Ústup od Tharsis" (running fight, poškozený CA).
  * Po ztraceném střetnutí ústup poškozené lodi před rychlejším imperiálním
  * svazem. Lekce: geometrie zadního aspektu, mikrořízení poškozených systémů,
- * krytí zádě rolováním. Zvrat: „záchranná" eskadra vysílá správné kódy…
+ * hospodaření s návnadami. Zvrat: „záchranná" eskadra vysílá správné kódy…
  * ale je to léčka — poznáš to jen z detailu v signálu.
  * Viz docs/GAME_DESIGN.md kap. 7.
  *
@@ -26,8 +26,8 @@ export const mission06: Scenario = {
     'Střetnutí u Tharsis jsme prohráli. ANS Resolute ustupuje s vyřazeným '
     + 'zadním impelerovým prstencem, potrhaným pravým bočním štítem a polovinou '
     + 'levobokých šachet — a za zádí visí imperiální svaz, který je '
-    + 'RYCHLEJŠÍ než ty. Jediná šance: udržet náskok do hyperlimitu, krýt '
-    + 'záď rolováním a nenechat se stáhnout do boje. Každý zbytečný manévr '
+    + 'RYCHLEJŠÍ než ty. Jediná šance: udržet náskok do hyperlimitu, šetřit '
+    + 'návnady na jejich salvy a nenechat se stáhnout do boje. Každý zbytečný manévr '
     + 'tě stojí metry náskoku.',
   seed: 19960614, // pevný seed — determinismus
 

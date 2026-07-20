@@ -149,6 +149,13 @@ const emptyStats = (): CombatStats => ({
 })
 
 /** české popisky příčin zániku rakety */
+/**
+ * Plný / krátký popisek tlačítka: telefonní CSS ukazuje krátký (.lbl-sm),
+ * ať se celé bojové menu vejde na obrazovku bez scrollování.
+ */
+const lbl = (full: string, short: string): string =>
+  `<span class="lbl-lg">${full}</span><span class="lbl-sm">${short}</span>`
+
 const LOSS_LABELS: Record<string, string> = {
   cm: 'protirakety', pdlc: 'PDLC', wedge: 'klín', ecm: 'ECM/decoye',
   decoy: 'návnada', link: 'ztráta zámku', dud: 'hlavice mimo',
@@ -926,9 +933,6 @@ export class Panels {
         + 's vypnutým klínem.',
       energy: `Lasery/grasery: plné poškození pod ${Math.round(ENERGY_DECISIVE_RANGE / 1000)} tis. km, `
         + `dosah ${Math.round(ENERGY_MAX_RANGE / 1000)} tis. km, nabíjení ${ENERGY_COOLDOWN} s.`,
-      rollThreat: 'Odvalí loď klínem k příchozí salvě — nepropustný štít, ale ODVALENÁ LOĎ NESTŘÍLÍ '
-        + '(rakety ani energetiku) a PDLC má oslabenou (klín cloní clustery). R',
-      rollBack: 'Vrátí loď do normální polohy — boky (šachty, energetika) jsou zase v akci. R',
       jammer: `+rušička: salva obětuje 1 raketu jako eskortní rušičku — zbytek salvy má proti `
         + `bodové obraně cíle Pk ×0,75. Vyžaduje salvu aspoň 3 raket.`,
       decoy: 'Vypustí taženou návnadu: příchozí raketa na ni může přeskočit (šance dle kvality '
@@ -971,10 +975,10 @@ export class Panels {
     const noneActive = canForm && selOthers.every(s => !s.formation)
     const formBtn = (act: string, label: string, active: boolean): string =>
       `<button data-act="formation:${act}" class="${active ? 'active' : ''}"${dis(canForm)}>${label}</button>`
-    const formationSeg = `<span class="obg" title="${esc(tip.formation)}">FORMACE:`
-      + formBtn('wall', 'Stěna', kindActive('wall'))
-      + formBtn('vee', 'Šíp', kindActive('vee'))
-      + formBtn('dispersed', 'Rozptyl', kindActive('dispersed'))
+    const formationSeg = `<span class="obg" title="${esc(tip.formation)}">${lbl('FORMACE:', 'F:')}`
+      + formBtn('wall', lbl('Stěna', 'Σ'), kindActive('wall'))
+      + formBtn('vee', lbl('Šíp', 'V'), kindActive('vee'))
+      + formBtn('dispersed', lbl('Rozptyl', '◦'), kindActive('dispersed'))
       + formBtn('none', '—', noneActive)
       + xN
       + `</span>`
@@ -988,40 +992,37 @@ export class Panels {
     return this.panel('orders', 'Rozkazy',
       `<div class="ob">`
       + `<span class="obg">`
-      + `<button data-act="intercept" title="${esc(tip.intercept)}"${dis(canFire)}>Intercept${xN}</button>`
-      + `<button data-act="course" title="${esc(tip.course)}" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? 'Kurz: klikni do plotu…' : `Kurz sem${xN}`}</button>`
+      + `<button data-act="intercept" title="${esc(tip.intercept)}"${dis(canFire)}>${lbl('Intercept', '⌖ Icpt')}${xN}</button>`
+      + `<button data-act="course" title="${esc(tip.course)}" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? lbl('Kurz: klikni do plotu…', 'Kurz…') : `${lbl('Kurz sem', 'Kurz')}${xN}`}</button>`
       + throttleSeg
       + `<button data-act="selectMode" class="${ui.selectMode ? 'active' : ''}" `
       + `title="Režim hromadného výběru (na dotyku nahrazuje Shift): tap přidá/odebere loď z výběru, tažení po plotu = obdélníkový výběr. Vypni pro běžný pan a výběr cílů.">Výběr ⊞</button>`
       + `</span>`
       + `<span class="obg">`
-      + `<button data-act="salvo2" title="${esc(tip.salvo('2'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 2</button>`
-      + `<button data-act="salvo4" title="${esc(tip.salvo('4'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva 4</button>`
+      + `<button data-act="salvo2" title="${esc(tip.salvo('2'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${lbl('Salva 2', 'S2')}</button>`
+      + `<button data-act="salvo4" title="${esc(tip.salvo('4'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${lbl('Salva 4', 'S4')}</button>`
       + `<button data-act="salvoFull" title="${esc(tip.salvo(`všechny (${tubes})`))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Plná</button>`
-      + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>Salva ${loC}+${hiC}</button>`
-      + `<button data-act="salvoDouble" title="${esc(tip.double)}"${dis(canFire && (own?.missiles ?? 0) > 0 && !rolled)}>Obě salvy</button>`
+      + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${lbl(`Salva ${loC}+${hiC}`, `${loC}+${hiC}`)}</button>`
+      + `<button data-act="salvoDouble" title="${esc(tip.double)}"${dis(canFire && (own?.missiles ?? 0) > 0 && !rolled)}>${lbl('Obě salvy', 'Obě')}</button>`
       + `<span title="${esc(tip.mode)}">`
       + `<button data-act="modeLo" class="${ui.salvoMode === 0 ? 'active' : ''}">LO</button>`
       + `<button data-act="modeHi" class="${ui.salvoMode === 1 ? 'active' : ''}">HI</button></span>`
       + `<button data-act="autonomous" class="${ui.autonomousMode ? 'active' : ''}" title="${esc(tip.autonomous)}"${dis(!noShip)}>`
-      + `${ui.autonomousMode ? 'autonomní' : 'řízené'}</button>`
-      + `<button data-act="escortJammer" class="${ui.escortJammerMode ? 'active' : ''}" title="${esc(tip.jammer)}"${dis(!noShip)}>+rušička</button>`
-      + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="${esc(tip.autoFire)}"${dis(canFire || auto)}>AUTO ${auto ? 'ZAP' : 'VYP'}${xN}</button>`
+      + `${ui.autonomousMode ? lbl('autonomní', 'auto.') : lbl('řízené', 'říz.')}</button>`
+      + `<button data-act="escortJammer" class="${ui.escortJammerMode ? 'active' : ''}" title="${esc(tip.jammer)}"${dis(!noShip)}>${lbl('+rušička', '+ruš')}</button>`
+      + `<button data-act="autoFire" class="${auto ? 'active' : ''}" title="${esc(tip.autoFire)}"${dis(canFire || auto)}>${lbl(`AUTO ${auto ? 'ZAP' : 'VYP'}`, 'AUTO')}${xN}</button>`
       + `</span>`
       + `<span class="obg">`
-      + `<button data-act="energy" title="${esc(tip.energy)}"${dis(canFire)}>Energie</button>`
-      + (rolled
-        ? `<button data-act="rollBack" class="active" title="${esc(tip.rollBack)}">Roll zpět${xN}</button>`
-        : `<button data-act="rollThreat" title="${esc(tip.rollThreat)}"${dis(!noShip)}>Roll${xN}</button>`)
+      + `<button data-act="energy" title="${esc(tip.energy)}"${dis(canFire)}>${lbl('Energie', '⚡')}</button>`
       + `<button data-act="deployDecoy" title="${esc(tip.decoy)}"${dis(!noShip && (own?.decoys ?? 0) > 0)}>`
-      + `Návnada (${own?.decoys ?? 0})</button>`
-      + `<button data-act="wedge" class="${own?.wedgeOn ? 'active' : ''}" title="${esc(tip.wedge)}"${dis(!noShip)}>Klín ${own?.wedgeOn ? 'ZAP' : 'VYP'}${xN}</button>`
-      + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}" title="${esc(tip.sensors)}"${dis(!noShip)}>Akt. senzory ${own?.activeSensors ? 'ZAP' : 'VYP'}${xN}</button>`
+      + `${lbl(`Návnada (${own?.decoys ?? 0})`, `◎${own?.decoys ?? 0}`)}</button>`
+      + `<button data-act="wedge" class="${own?.wedgeOn ? 'active' : ''}" title="${esc(tip.wedge)}"${dis(!noShip)}>${lbl(`Klín ${own?.wedgeOn ? 'ZAP' : 'VYP'}`, 'Klín')}${xN}</button>`
+      + `<button data-act="sensors" class="${own?.activeSensors ? 'active' : ''}" title="${esc(tip.sensors)}"${dis(!noShip)}>${lbl(`Akt. senzory ${own?.activeSensors ? 'ZAP' : 'VYP'}`, 'Senzor')}${xN}</button>`
       + `</span>`
       + formationSeg
       + `</div>`
       + cdLine,
-      'mezerník pauza · +/− komprese · R roll · A auto · H nápověda')
+      'mezerník pauza · +/− komprese · A auto · H nápověda')
   }
 
   private panelObjectives(state: SimState): string {

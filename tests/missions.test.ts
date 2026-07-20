@@ -207,10 +207,10 @@ describe('mise 2 — Konvoj Pomezím (E2E)', () => {
 })
 
 describe('mise 3 — Q-ship (E2E)', () => {
-  it('zvrat vyžaduje čas > 1800 s I přiblížení pod 800 tis. km (AND)', () => {
+  it('zvrat vyžaduje čas > 1800 s I přiblížení pod 2,6 mil. km (AND)', () => {
     const scenario = structuredClone(mission03)
     const state = sim.create(scenario)
-    state.ships[0].pos = { x: 1_500_000, y: 0 } // 500 tis. km od Mercatoru
+    state.ships[0].pos = { x: 500_000, y: 0 } // 1,5 mil. km od Mercatoru
     updateTriggers(state, scenario)
     expect(state.flags['qship-revealed']).toBeUndefined() // čas ještě neuplynul
     state.t = 1800
@@ -226,10 +226,10 @@ describe('mise 3 — Q-ship (E2E)', () => {
     sim.applyOrder(state, { kind: 'setCourse', shipId: 1, dest: { x: 7_000_000, y: 0 }, arriveAtRest: true })
     while (!state.flags['qship-revealed'] && state.t < 30_000) sim.tick(state, SIM_DT)
 
-    // (b) zvrat: čas > 1800 s a vzdálenost < 800 tis. km ⇒ hunter + odhalení
+    // (b) zvrat: čas > 1800 s a vzdálenost < 2,6 mil. km ⇒ hunter + odhalení
     expect(state.flags['qship-revealed']).toBe(true)
     expect(state.t).toBeGreaterThan(1800)
-    expect(dist(state.ships[0].pos, state.ships[1].pos)).toBeLessThan(800_000)
+    expect(dist(state.ships[0].pos, state.ships[1].pos)).toBeLessThan(2_600_000)
     expect(state.ships[1].doctrine).toBe('hunter')
     expect(objState(state, 'obj-escort')).toBe('failed')
     expect(objState(state, 'obj-destroy')).toBe('open') // nový úkol přidán za běhu
@@ -250,33 +250,17 @@ describe('mise 3 — Q-ship (E2E)', () => {
       } else if (d > 4_500_000 && !(p.nav?.kind === 'intercept')) {
         sim.applyOrder(state, { kind: 'intercept', shipId: 1, targetId: 2 })
       }
-      // roll ↔ palba sekvenčně: odvalená loď nestřílí, takže palba má přednost
-      // — když jsou šachty nabité a cíl v dosahu, vrať se do normální polohy,
-      // vystřel a teprve pak zase kryj klínem
-      const wantFire = p.tubeCooldown <= 0 && p.missiles > 0 && d < 5_500_000
-      if (wantFire) {
-        if (p.rolledTo !== null) {
-          sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: null })
-        }
+      // palba (roll je z UI zrušený — hráčská strategie se bez něj obejde:
+      // obranu nesou CM/PDLC/návnady)
+      if (p.tubeCooldown <= 0 && p.missiles > 0 && d < 5_500_000) {
         sim.applyOrder(state, { kind: 'launchSalvo', shipId: 1, targetId: 2, count: 6, mode: d < 1_500_000 ? 1 : 0 })
       }
-      if (p.energyCooldown <= 0 && d < 350_000 && p.rolledTo === null) {
+      if (p.energyCooldown <= 0 && d < 350_000) {
         sim.applyOrder(state, { kind: 'fireEnergy', shipId: 1, targetId: 2 })
       }
-      // rolování: klín proti nejbližší příchozí raketě (jen když zrovna nepálíme)
-      let threat: number | null = null
-      let threatD = Infinity
-      for (const m of state.missiles) {
-        if (m.side !== 'enemy' || m.targetId !== 1 || m.phase === 'dead') continue
-        const md = dist(m.pos, p.pos)
-        if (md < 500_000 && md < threatD) { threatD = md; threat = angleOf(sub(m.pos, p.pos)) }
-      }
-      if (threat !== null && !wantFire) {
-        if (p.rolledTo === null || Math.abs(angleDiff(threat, p.rolledTo)) > 0.2) {
-          sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: threat })
-        }
-      } else if (threat === null && p.rolledTo !== null) {
-        sim.applyOrder(state, { kind: 'roll', shipId: 1, towards: null })
+      if (!p.decoyActive && p.decoys > 0
+        && state.missiles.some(m => m.side === 'enemy' && m.targetId === 1 && m.phase !== 'dead')) {
+        sim.applyOrder(state, { kind: 'deployDecoy', shipId: 1 })
       }
     }
 

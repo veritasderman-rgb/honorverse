@@ -156,60 +156,17 @@ describe('rolování blokuje palbu (odvalený nestřílí)', () => {
 
 // ---------- AI: rolování s hlavou ----------
 
-describe('AI rolování — bez vševědoucnosti, s od-rolováním', () => {
-  /** stát: odvalený nepřátelský hunter + volitelné příchozí rakety hráče */
-  function hunterState(over: Partial<ShipState> = {}): SimState {
+describe('AI rolování — reaktivní roll ZRUŠEN', () => {
+  it('AI neroluje ani na viditelnou salvu těsně před dopadem (nefér mechanika pryč)', () => {
     const state = makeState(11)
     state.ships.push(makeShip(1, 'cl-sokol', {
-      side: 'enemy', doctrine: 'hunter', activeSensors: false, ...over,
+      side: 'enemy', doctrine: 'hunter', activeSensors: false,
     }))
-    return state
-  }
-
-  it('nereaguje na čerstvě odpálenou salvu (letí < SENSOR_UPDATE_INTERVAL)', () => {
-    const state = hunterState()
     state.t = 100
     state.missiles.push(makeMissile(50, 1, {
-      side: 'player', pos: vec(300_000, 0), launchedAt: 100 - SENSOR_UPDATE_INTERVAL + 1,
+      side: 'player', pos: vec(300_000, 0), launchedAt: 0,
     }))
     expect(collectAIOrders(state).some(o => o.kind === 'roll')).toBe(false)
-
-    // po senzorovém intervalu už salvu vidí a roluje
-    state.missiles[0].launchedAt = 100 - SENSOR_UPDATE_INTERVAL - 1
-    const orders = collectAIOrders(state)
-    expect(orders.some(o => o.kind === 'roll' && o.towards !== null)).toBe(true)
-  })
-
-  it('odvalená AI se vrátí, když je nejbližší salva dál než 1.5×ROLL_RANGE nebo žádná', () => {
-    // žádná salva → roll zpět
-    const state = hunterState({ rolledTo: 0.3 })
-    expect(collectAIOrders(state).some(o => o.kind === 'roll' && o.towards === null)).toBe(true)
-
-    // salva v hysterezním pásmu (500k–750k) → drží roll (žádný rozkaz)
-    const state2 = hunterState({ rolledTo: 0 })
-    state2.t = 100
-    state2.missiles.push(makeMissile(50, 1, { side: 'player', pos: vec(600_000, 0), launchedAt: 0 }))
-    expect(collectAIOrders(state2).some(o => o.kind === 'roll')).toBe(false)
-
-    // salva daleko (> 750k) → roll zpět
-    state2.missiles[0].pos = vec(800_000, 0)
-    expect(collectAIOrders(state2).some(o => o.kind === 'roll' && o.towards === null)).toBe(true)
-  })
-
-  it('od-rolovaná AI obnoví palbu (E2E přes engine)', () => {
-    const scenario = makeScenario({
-      ships: [
-        { classId: 'cl-sokol', side: 'player', name: 'CL', pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } },
-        {
-          classId: 'cl-sokol', side: 'enemy', name: 'E', doctrine: 'hunter',
-          pos: { x: 4_000_000, y: 0 }, vel: { x: 0, y: 0 }, rolledTo: 3.14,
-        },
-      ],
-    })
-    const state = sim.create(scenario)
-    for (let i = 0; i < 30; i++) sim.tick(state, SIM_DT)
-    expect(state.ships[1].rolledTo).toBeNull() // žádná hrozba → vrátila se
-    expect(state.missiles.some(m => m.side === 'enemy')).toBe(true) // a pálí
   })
 })
 

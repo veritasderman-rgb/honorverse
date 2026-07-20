@@ -314,19 +314,6 @@ export class UIController {
         // výzva ke kapitulaci — odpověď dorazí po 2·vzdálenost/c (sim čas)
         if (t != null) this.send({ kind: 'demandSurrender', shipId: own.id, targetId: t })
         break
-      case 'rollThreat': {
-        // směr hrozby per loď (každá se odvalí ke SVÉ nejbližší hrozbě/cíli)
-        for (const sh of this.selectedShips()) {
-          const dir = this.threatDir(sh)
-          if (dir != null) this.send({ kind: 'roll', shipId: sh.id, towards: dir })
-        }
-        break
-      }
-      case 'rollBack':
-        for (const sh of this.selectedShips()) {
-          this.send({ kind: 'roll', shipId: sh.id, towards: null })
-        }
-        break
       case 'wedge': {
         const on = !own.wedgeOn // sjednoceno dle primární lodi
         for (const sh of this.selectedShips()) {
@@ -478,12 +465,6 @@ export class UIController {
       case '-': case '_':
         this.stepCompression(-1)
         break
-      case 'r': case 'R': {
-        const own = this.state?.ships.find(sh => sh.id === this.ownShipId)
-        if (!own) break
-        this.doOrder(own.rolledTo != null ? 'rollBack' : 'rollThreat')
-        break
-      }
       case 'a': case 'A':
         this.doOrder('autoFire')
         break
@@ -523,7 +504,6 @@ export class UIController {
       <div class="help-grid">
         <b>mezerník</b><span>pauza / pokračovat</span>
         <b>+ / −</b><span>komprese času (1× až 10 000×)</span>
-        <b>R</b><span>rolování lodi (klín k hrozbě / zpět)</span>
         <b>A</b><span>AUTO palba na vybraný cíl</span>
         <b>1–9</b><span>přepnutí aktivní lodi flotily (panel FLOTILA)</span>
         <b>H nebo ?</b><span>tato nápověda</span>
@@ -543,7 +523,6 @@ export class UIController {
         <b>Obě salvy</b><span>dvojitá boční salva: levobok LO, otočka (8 s, bez palby), pravobok HI na společný dopad — dvojnásobná vlna</span>
         <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce — a řídí i ENERGETICKÉ baterie (pálí na cíl či nejbližšího nepřítele v dosahu 500 tis. km)</span>
         <b>Energie</b><span>lasery/grasery — drtivé pod 100 tis. km, max. 500 tis. km</span>
-        <b>Roll</b><span>vloží nepropustný klín mezi loď a salvu — ale ODVALENÝ NESTŘÍLÍ (klín maskuje boky) a PDLC je oslabená; protirakety fungují dál</span>
         <b>Návnada</b><span>tažená návnada: příchozí raketa na ni může přeskočit (šance dle kvality ECM lodi, víc při slabém zámku) a návnadu ZNIČÍ — jedna návnada ≈ jedna raketa, další lze vypustit hned; omezená zásoba</span>
         <b>+rušička</b><span>salva obětuje 1 raketu jako eskortní rušičku — zbytek má proti bodové obraně cíle Pk ×0,75 (min. 3 rakety)</span>
         <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočních štítů</span>

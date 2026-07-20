@@ -2,7 +2,7 @@
  * Mise 3 — „Q-ship" (souboj 1v1, DD vs. maskovaný pomocný křižník).
  * Doprovod „poškozeného" obchodníka Mercator ke stanici; po půl hodině
  * plavby bok po boku odhodí kontejnery a odhalí raketová lůžka.
- * Boj zblízka: rolování, energetický dosah. Viz docs/GAME_DESIGN.md kap. 7.
+ * Lekce: kiting — drž si past od těla, rychlost je tvůj pancíř. Viz docs/GAME_DESIGN.md kap. 7.
  *
  * Id lodí (pořadí pole ships, od 1):
  *   1 = ANS Dauntless (hráč), 2 = Mercator, 3 = stanice (bóje)
@@ -18,7 +18,7 @@ export const mission03: Scenario = {
   briefing:
     'Obchodní loď Mercator hlásí poškození impelerového prstence a žádá '
     + 'o doprovod ke stanici Sázava (~80 mil. km). ANS Dauntless ji má '
-    + 'doprovodit — drž se do 800 tisíc km, obchodník zvládne jen '
+    + 'doprovodit — drž se do 2,5 mil. km, obchodník zvládne jen '
     + 'pomalé plutí. Zpravodajství nemá o lodi žádné záznamy.',
   seed: 19930411, // pevný seed — determinismus
 
@@ -33,9 +33,13 @@ export const mission03: Scenario = {
     },
     {
       // „poškozený obchodník" — ve skutečnosti imperiální Q-ship;
-      // bez nav plánu jen driftuje ~200 km/s ke stanici
+      // bez nav plánu jen driftuje ~200 km/s ke stanici.
+      // Pohotovostní munice 90 raket (ne plné zásobníky třídy): past je
+      // přestavěný obchodník s improvizovanými zásobníky — a po zrušení
+      // rollu z UI by plných 140 raket DD bez klínové obrany neustál.
       classId: 'merch-qship', side: 'enemy', name: 'Mercator',
       pos: { x: 2_000_000, y: 0 }, vel: { x: 200, y: 0 }, doctrine: 'freighter',
+      missiles: 90,
     },
     {
       // stanice Sázava — statická bóje (klín vypnut, AI ji ignoruje)
@@ -46,7 +50,7 @@ export const mission03: Scenario = {
   ],
 
   objectives: [
-    { id: 'obj-escort', text: 'Doprovoď obchodníka ke stanici Sázava (drž se do 800 tis. km)', state: 'open' },
+    { id: 'obj-escort', text: 'Doprovoď obchodníka ke stanici Sázava (drž se do 2,5 mil. km)', state: 'open' },
   ],
 
   triggers: [
@@ -66,7 +70,10 @@ export const mission03: Scenario = {
       id: 'trg-qship-reveal', once: true,
       conditions: [
         { kind: 'time', t: 1800 },
-        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: MERCATOR, distance: 800_000 },
+        // past sklapne na 2,6 mil. km: odhalení z bodového doletu (< 1M km)
+        // bylo po zrušení rollu nepřežitelné — salva zblízka nedá obraně
+        // ŽÁDNÝ interceptní pokus (CM budget 0)
+        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: MERCATOR, distance: 2_600_000 },
       ],
       actions: [
         { kind: 'message', text: 'Kontejnery odhozeny — raketová lůžka! Je to imperiální pomocný křižník!' },

@@ -15,8 +15,6 @@ const SALVO_RANGE_LO = 6_000_000
 const ESCORT_SALVO_RANGE = 5_000_000
 /** dosah energetické palby AI, km */
 const ENERGY_FIRE_RANGE = 400_000
-/** vzdálenost příchozí salvy, při které loď roluje, km */
-const ROLL_RANGE = 500_000
 /** runner: vzdálenost pro obrannou salvu, km */
 const RUNNER_SALVO_RANGE = 3_000_000
 /** hyperlimitní čára mise 1 (x > +250 mil. km) */
@@ -63,49 +61,13 @@ function fireOrders(ship: ShipState, near: Near, salvoRange: number, mode: Drive
   }
 }
 
-/** hystereze od-rolování: klín zpět, až je nejbližší salva dál než 1.5×ROLL_RANGE */
-const UNROLL_RANGE = ROLL_RANGE * 1.5
-
-/**
- * Rolování: AI nereaguje na pravdu, ale jen na salvy, které její strana stihla
- * ZAHLÉDNOUT — salva musí letět aspoň SENSOR_UPDATE_INTERVAL sekund (žádná
- * okamžitá vševědoucnost při odpalu). Odvalená loď nemůže pálit, proto se
- * s hysterezí vrací: když je nejbližší příchozí salva dál než ROLL_RANGE×1.5
- * (nebo žádná neletí), roll zpět a palba se obnoví — vznikají okna pro
- * vrstvené salvy útočníka.
- */
-function rollOrders(state: SimState, ship: ShipState, orders: Order[]): void {
-  let bestD = Infinity
-  let threat: { x: number; y: number } | null = null
-  for (const m of state.missiles) {
-    if (m.phase === 'dead' || m.side === ship.side || m.targetId !== ship.id) continue
-    // salva letí méně než senzorový interval — strana ji ještě „nevidí"
-    if (m.launchedAt !== undefined && state.t - m.launchedAt < SENSOR_UPDATE_INTERVAL) continue
-    const d = dist(m.pos, ship.pos)
-    if (d < bestD) { bestD = d; threat = m.pos }
-  }
-
-  if (ship.rolledTo === null) {
-    if (threat && bestD < ROLL_RANGE) {
-      orders.push({ kind: 'roll', shipId: ship.id, towards: angleOf(sub(threat, ship.pos)) })
-    }
-  } else if (!threat || bestD > UNROLL_RANGE) {
-    // odvalená loď nestřílí — vrať se a obnov palbu
-    orders.push({ kind: 'roll', shipId: ship.id, towards: null })
-  } else if (bestD < ROLL_RANGE) {
-    const ang = angleOf(sub(threat!, ship.pos))
-    if (Math.abs(angleDiff(ang, ship.rolledTo)) > 0.2) {
-      orders.push({ kind: 'roll', shipId: ship.id, towards: ang })
-    }
-  }
-}
-
-/** práh nasazení tažené návnady AI: příchozí salva aspoň N raket */
+/** návnada: minimální velikost příchozí salvy, na kterou AI reaguje */
 const AI_DECOY_SALVO = 6
 
 /**
- * Návnada: salva ≥ 6 raket na tuto loď v CM pásmu, máme zásobu a žádná
- * neběží — tedy i ZNOVU, když o návnadu přijde a salva stále letí.
+ * Návnady AI: vypustí taženou návnadu, když na loď letí salva aspoň
+ * AI_DECOY_SALVO raket a nejbližší je v CM pásmu (viditelnost přes
+ * SENSOR_UPDATE_INTERVAL zpoždění — žádná vševědoucnost).
  */
 function decoyOrders(state: SimState, ship: ShipState, orders: Order[]): void {
   if (ship.decoys <= 0 || ship.decoyActive) return
@@ -122,10 +84,13 @@ function decoyOrders(state: SimState, ship: ShipState, orders: Order[]): void {
   }
 }
 
-
-/** obranné rozkazy společné všem bojovým doktrínám: rolování + návnady */
+/**
+ * Obranné rozkazy společné všem bojovým doktrínám: návnady.
+ * (Reaktivní rolování ZRUŠENO: AI ho uměla načasovat těsně před dopad,
+ * což lidský hráč při kompresi času nedokáže — nefér mechanika pryč
+ * z obou stran. Klínem se dál točí jen choreografie dvojité salvy.)
+ */
 function defenseOrders(state: SimState, ship: ShipState, orders: Order[]): void {
-  rollOrders(state, ship, orders)
   decoyOrders(state, ship, orders)
 }
 
