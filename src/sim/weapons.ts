@@ -457,7 +457,7 @@ export function updateMissiles(state: SimState, dt: number): void {
       continue
     }
 
-    // čisté pronásledování s predikcí: miř na extrapolovanou pozici cíle
+    // pronásledování s predikcí: miř na extrapolovanou pozici cíle
     const d0 = dist(m.pos, target.pos)
     const tLead = Math.min(d0 / Math.max(len(m.vel), 1), 120)
     const aim = add(target.pos, scale(target.vel, tLead))
@@ -465,7 +465,16 @@ export function updateMissiles(state: SimState, dt: number): void {
 
     if (m.phase === 'boost') {
       const accel = def.accelG[m.mode] * G
-      m.vel = add(m.vel, scale(dir, accel * dt))
+      // Navádění „stoč vektor na cíl": tah NEmíří slepě na záměrný bod —
+      // míří tak, aby se SKUTEČNÁ relativní rychlost rakety otočila k němu.
+      // Čistý tah na cíl totiž nikdy neruší zděděný boční vektor lodi:
+      // raketa odpálená z rychle manévrující lodi pak letěla obloukem
+      // KOLEM cíle a expirovala („střely totálně přeletí").
+      const vRel = sub(m.vel, target.vel)
+      const desired = add(target.vel, scale(dir, len(vRel) + accel * dt))
+      const thrust = norm(sub(desired, m.vel))
+      const dirT = thrust.x === 0 && thrust.y === 0 ? dir : thrust
+      m.vel = add(m.vel, scale(dirT, accel * dt))
       m.driveRemaining -= dt
       if (m.driveRemaining <= 0) {
         m.driveRemaining = 0

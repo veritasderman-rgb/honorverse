@@ -11,7 +11,7 @@ import type { Contact, ShipState, Subsystems, SimState } from '../src/sim/types'
 import { PODS_PER_POD, PDLC_MIN_READINESS, PDLC_TRACK_TIME } from '../src/sim/constants'
 import { SHIP_CLASSES } from '../src/data/defs'
 import { vec } from '../src/sim/vec'
-import { autoDriveMode, launchPods, launchSalvo } from '../src/sim/weapons'
+import { autoDriveMode, launchPods, launchSalvo, updateMissiles } from '../src/sim/weapons'
 import { pdlcReadiness } from '../src/sim/defense'
 import { spawnShip } from '../src/sim/scenario'
 
@@ -165,6 +165,71 @@ describe('koučovací hlášky (jednou za misi)', () => {
     state.ships.push(shooter, target)
     launchSalvo(state, shooter, 2, 4, 'auto')
     expect(state.events.some(e => e.kind === 'message' && e.text?.includes('ŠKOLA'))).toBe(false)
+  })
+})
+
+describe('navádění — zděděný boční vektor lodi (regrese „střely přeletí")', () => {
+  /**
+   * Raketa odpálená z lodi s velkým BOČNÍM vektorem musí boční rychlost
+   * aktivně vyrušit a doletět. Staré čisté pronásledování (tah slepě NA
+   * cíl) ji nechalo letět obloukem kolem cíle: při 10 000 km/s do boku
+   * minula o ~530 tis. km a expirovala, při 30 000 km/s se k cíli vůbec
+   * nepřiblížila.
+   */
+  function probe(lateral: number): { resolved: number; expired: number } {
+    const state = makeState(11)
+    const shooter = makeShip(1, 'ca-bastion', { vel: vec(0, lateral) })
+    const target = makeShip(2, 'merch-freighter', {
+      side: 'enemy', pos: vec(2_000_000, 0),
+      subsystems: fullSubsystems(0), cms: 0, hull: 1e9,
+    })
+    state.ships.push(shooter, target)
+    launchSalvo(state, shooter, 2, 4, 'auto')
+    let resolved = 0
+    let expired = 0
+    for (let i = 0; i < 4000 && state.missiles.length > 0; i++) {
+      state.t += 0.5
+      updateMissiles(state, 0.5)
+      for (const e of state.events) {
+        if (e.kind === 'missileMiss' && e.cause === 'expired') expired++
+        if (e.kind === 'missileHit' || (e.kind === 'missileMiss' && e.cause === 'dud')) resolved++
+      }
+      state.events = []
+    }
+    return { resolved, expired }
+  }
+
+  it('rakety doletí i při bočním vektoru 10/30/60 tis. km/s', () => {
+    for (const lateral of [10_000, 30_000, 60_000]) {
+      const r = probe(lateral)
+      expect(r.resolved, `boční ${lateral} km/s`).toBe(4)
+      expect(r.expired, `boční ${lateral} km/s`).toBe(0)
+    }
+  })
+
+  it('odpal „přes rameno" (cíl za zádí) se otočí a doletí', () => {
+    const r = (() => {
+      const state = makeState(12)
+      // loď letí 20 000 km/s OD cíle
+      const shooter = makeShip(1, 'ca-bastion', { vel: vec(-20_000, 0) })
+      const target = makeShip(2, 'merch-freighter', {
+        side: 'enemy', pos: vec(1_500_000, 0),
+        subsystems: fullSubsystems(0), cms: 0, hull: 1e9,
+      })
+      state.ships.push(shooter, target)
+      launchSalvo(state, shooter, 2, 4, 0) // LO — dost paliva na otočku
+      let resolved = 0
+      for (let i = 0; i < 4000 && state.missiles.length > 0; i++) {
+        state.t += 0.5
+        updateMissiles(state, 0.5)
+        for (const e of state.events) {
+          if (e.kind === 'missileHit' || (e.kind === 'missileMiss' && e.cause === 'dud')) resolved++
+        }
+        state.events = []
+      }
+      return resolved
+    })()
+    expect(r).toBe(4)
   })
 })
 

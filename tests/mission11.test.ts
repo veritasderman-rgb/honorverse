@@ -4,8 +4,10 @@
  *   1. celá stěna do formace WALL za vlajkovou lodí, tah 0,6 (plné štíty),
  *   2. usadit se (arriveAtRest) a nechat imperiální stěnu nabíhat,
  *   3. palbu otevřít až pod 7 mil. km — žhavé zámky s řídicím spojem,
- *   4. KONCENTRACE: celá stěna na jeden cíl (saturace obrany), DN první,
- *   5. návnady při příchozích salvách; energetické baterie řeší AUTO.
+ *   4. ALFA ÚDER: při otevření palby odhodit raketové plošiny, rozdělené
+ *      po čtvrtinách stěny na 4 imperiální DN (saturační první vlna),
+ *   5. KONCENTRACE: celá stěna na jeden cíl (saturace obrany), DN první,
+ *   6. návnady při příchozích salvách; energetické baterie řeší AUTO.
  */
 import { describe, expect, it } from 'vitest'
 import { sim } from '../src/sim/engine'
@@ -69,6 +71,10 @@ describe('mise 11 — E2E hratelnost (vítězná doktrína stěny)', () => {
         if (foe && Math.hypot(foe.pos.x - flag.pos.x, foe.pos.y - flag.pos.y) < 7_000_000) {
           engaged = true
           engageAll()
+          // (4) alfa úder plošinami: čtvrtiny stěny na čtyři imperiální DN
+          CORE.forEach((id, i) => {
+            sim.applyOrder(state, { kind: 'launchPods', shipId: id, targetId: DNS[i % 4] })
+          })
         }
       }
       if (engaged && t - lastCheck > 30) {
