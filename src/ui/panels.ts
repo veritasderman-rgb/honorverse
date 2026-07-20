@@ -424,8 +424,10 @@ export class Panels {
   }
 
   private renderTopbar(state: SimState, ui: UiState): void {
+    // tb-cb-<f>: telefonní CSS schovává mezistupně (10×, 1000×) — topbar
+    // se jinak na šířku 844 px nevejde a překrývá audio ovládání
     const btns = COMP_BTNS
-      .map(b => `<button data-comp="${b.f}" class="${b.f === ui.compression ? 'active' : ''}">${b.label}</button>`)
+      .map(b => `<button data-comp="${b.f}" class="tb-cb tb-cb-${b.f}${b.f === ui.compression ? ' active' : ''}">${b.label}</button>`)
       .join('')
     const autoSlowTip = 'Auto-zpomalování: u důležitých událostí (zásah do naší lodi, nový kontakt, '
       + 'komunikace, cíle mise) spadne komprese na 1×. Vypnuto: událost jen blikne v liště.'

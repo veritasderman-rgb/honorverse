@@ -419,7 +419,9 @@ export class TacticalPlot {
       ctx.stroke()
       ctx.fillText(fmtDist(wy), 4, sy - 3)
     }
-    ctx.fillText('dílek = ' + fmtDist(step) + '   měřítko ' + fmtDist(this.kmPerPx) + '/px', 4, 14)
+    // popisek měřítka pod topbarem (y=64) — v y=14 ho překrýval topbar,
+    // na mobilu (vyšší tlačítka) úplně
+    ctx.fillText('dílek = ' + fmtDist(step) + '   měřítko ' + fmtDist(this.kmPerPx) + '/px', 4, 64)
   }
 
   /** čárkovaná jantarová hyperlimitní čára/kružnice s popiskem */

@@ -181,8 +181,18 @@
 
     /* telefon (šířka ≤ 900 px): HUD sloupce jako výsuvné šuplíky */
     @media (max-width: 900px) {
+      /* kompaktní topbar: bez posuvníků hlasitosti (mute stačí), bez
+         mezistupňů komprese a bez textu zpomalení — jinak se prvky
+         překrývají; nic nesmí přetéct do druhé řady */
+      #topbar { flex-wrap: nowrap; overflow: hidden; gap: 6px; }
+      .tb-main { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+      .tb-time { min-width: 0; }
+      .tb-cb-10, .tb-cb-1000 { display: none; }
+      .tb-audio label { display: none; }
+      .tb-audio { gap: 4px; }
+      .tb-slow { display: none; }
       #hud-tl, #hud-tr {
-        top: 44px; bottom: 76px; width: min(340px, 86vw);
+        top: 60px; bottom: 76px; width: min(340px, 86vw);
         background: #05080af2; z-index: 12;
         transition: transform .2s ease; padding: 6px;
       }
@@ -190,7 +200,7 @@
       #hud-tr { right: 0; transform: translateX(100%); border-left: 1px solid #1c3a1e; }
       #hud-tl.open, #hud-tr.open { transform: translateX(0); }
       .hud-tab {
-        display: block; position: absolute; z-index: 13; top: 48px;
+        display: block; position: absolute; z-index: 13; top: 64px;
         min-width: 44px; min-height: 52px; font-size: 16px;
         background: #081008ee; border: 1px solid #2a5a2e; color: #9fd8a0;
       }
