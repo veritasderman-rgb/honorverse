@@ -583,6 +583,8 @@ export class UIController {
       </div>
       <h4>Výkon pohonu a rozpočet reaktoru</h4>
       <div class="help-grid">
+        <b>Akcelerace, ne rychlost</b><span>klín dává ZRYCHLENÍ — rychlost se střádá (torpédoborec na 100 % ≈ +300 km/s každou minutu) a otočka/brzdění trvá stejně dlouho jako rozjezd; kdo zrychlí dřív, jeho náskok roste kvadraticky — honičky se vyhrávají v prvních minutách</span>
+        <b>Vektor jako zbraň</b><span>rakety DĚDÍ vektor lodi: odpal po směru letu doletí dál a dorazí rychleji (obálka na plotu se natahuje) — někdy je cílem se NEPOTKAT: prolétnout kolem s převýšením rychlosti, udeřit po směru a nenechat se zatáhnout do boje za podmínek pomalejšího</span>
         <b>tah 20–120 %</b><span>stupňovitý přepínač v liště rozkazů; 80 % je standard s bezpečnostní rezervou kompenzátoru</span>
         <b>100 %</b><span>plný projektovaný výkon — bez rizika, ale bez rezervy</span>
         <b>120 % (červeně)</b><span>NOUZOVÝ výkon „za červenou čarou": +20 % akcelerace, ale se zapnutým klínem hrozí poškození impelerového prstence (v průměru ~1× za 33 minut) — inženýr varuje</span>

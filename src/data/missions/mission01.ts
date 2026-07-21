@@ -29,8 +29,10 @@ export const mission01: Scenario = {
     + 'proveďte kontrolu: přibližte se na 1 milion km a nedovolte jí '
     + 'opustit soustavu přes hyperlimit. Pozor: jestli má ta loď co '
     + 'skrývat, poběží — a hyperlimit je jen 250 milionů km daleko. '
-    + 'VÝCVIK: rozpočet reaktoru (tah vs. boční štíty) a první pravidlo '
-    + 'raketového boje — nestřílet na dálku, ale DOHNAT a udeřit zblízka.',
+    + 'VÝCVIK: akcelerace (klín nedává rychlost, ale zrychlení — rychlost '
+    + 'se střádá), rozpočet reaktoru (tah vs. boční štíty) a vektor jako '
+    + 'zbraň: někdy není cílem se potkat, ale PROLÉTNOUT kolem s výhodou '
+    + 'rychlosti a udeřit po směru letu.',
   seed: 19881003, // pevný seed — determinismus
   ambient: '#0f2438', // nádech mlhoviny soustavy (fáze B)
 
@@ -158,6 +160,42 @@ export const mission01: Scenario = {
           // callback na předzvěst + automatická výzva ke kapitulaci
           kind: 'comm', speaker: 'comms',
           text: 'Říkal jsem, že ta vysílačka smrdí! Vysílám výzvu: „Cygnusi, zastavte a vypněte klín, nebo zahájíme palbu." …Neodpovídají, kapitáne.',
+        },
+      ],
+    },
+    {
+      // ŠKOLA AKCELERACE: klín dává zrychlení, ne rychlost — rychlost se
+      // střádá a náskok roste kvadraticky (proto se honičky vyhrávají hned)
+      id: 'trg-tut-accel', once: true,
+      conditions: [{ kind: 'flag', flag: 'runner-fleeing' }, { kind: 'time', t: 70 }],
+      actions: [
+        {
+          kind: 'comm', speaker: 'tactical',
+          text: 'ŠKOLA MANÉVRU: impelerový klín nedává rychlost, dává ZRYCHLENÍ — rychlost se '
+            + 'STŘÁDÁ. Na plný výkon nabíráme přes tři sta kilometrů za sekundu KAŽDOU MINUTU '
+            + 'a on taky; kdo zrychlí dřív a víc, jeho náskok neroste lineárně, ale kvadraticky. '
+            + 'Honičky se vyhrávají v prvních minutách, ne na konci — každá vteřina zaváhání teď '
+            + 'znamená stovky tisíc kilometrů u hyperlimitu.',
+        },
+      ],
+    },
+    {
+      // ŠKOLA VEKTORU: nebrzdit — cílem není se potkat, ale prolétnout
+      // s převýšením rychlosti; salva po směru letu vektor dědí
+      id: 'trg-tut-vector', once: true,
+      conditions: [
+        { kind: 'flag', flag: 'runner-fleeing' },
+        { kind: 'distanceBelow', shipA: DAUNTLESS, shipB: CYGNUS, distance: 6_000_000 },
+      ],
+      actions: [
+        {
+          kind: 'comm', speaker: 'xo',
+          text: 'První důstojník: „Doháníme ho s velkým převýšením rychlosti — a NEBRZDÍME. '
+            + 'Cílem není se s ním potkat, ale PROLÉTNOUT kolem: brzdění by trvalo stejně dlouho '
+            + 'jako celý rozjezd a vyrovnat rychlosti znamená bít se za jeho podmínek. Naše salvy '
+            + 'náš vektor ZDĚDÍ — odpal po směru letu doletí dál, dorazí rychleji a jeho obraně '
+            + 'nedá skoro žádný čas. Vyšší rychlost a správný směr JSOU zbraň: rychlejší loď si '
+            + 'vybírá, kdy a kde se bojuje — a jestli vůbec."',
         },
       ],
     },
