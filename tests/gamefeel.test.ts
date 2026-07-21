@@ -291,8 +291,50 @@ describe('polní opravy (damage control)', () => {
       for (const ev of state.events) events.push(ev.text)
       state.events.length = 0
     }
-    expect(state.ships[0].subsystems.tubesPort).toBe(REPAIR_CAP)
+    // dosažení provizorního stropu 0.7 hlásí inženýr; dolaďování pak
+    // pokračuje polovičním tempem nad něj (strop 0.9)
+    expect(state.ships[0].subsystems.tubesPort).toBeGreaterThanOrEqual(REPAIR_CAP)
+    expect(state.ships[0].subsystems.tubesPort).toBeLessThanOrEqual(0.9)
     expect(events.some(t => t.includes('znovu online'))).toBe(true)
+  })
+
+  it('lehké poškození (nad 70 %) se dolaďuje polovičním tempem do 90 %', () => {
+    const scenario = makeScenario({
+      ships: [{
+        classId: 'dd-vichr', side: 'player', name: 'DD',
+        pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 },
+        subsystems: { ...fullSubsystems(), pdlc: 0.8, sensors: 0.92 },
+      }],
+    })
+    const state = sim.create(scenario)
+    // 100 s: 0.8 + 0.0006·100 = 0.86 (poloviční tempo)
+    for (let i = 0; i < 200; i++) sim.tick(state, SIM_DT)
+    expect(state.ships[0].subsystems.pdlc).toBeCloseTo(0.86, 2)
+    expect(state.ships[0].subsystems.sensors).toBe(0.92) // nad 90 % jen dok
+    // dlouhý běh: dolaďování končí na 0.9, výš polní oprava nejde
+    for (let i = 0; i < 400; i++) sim.tick(state, SIM_DT)
+    expect(state.ships[0].subsystems.pdlc).toBe(0.9)
+  })
+
+  it('priorita oprav: skupina ×3, ostatní ×0,5 (rozkaz setRepairFocus)', () => {
+    const scenario = makeScenario({
+      ships: [{
+        classId: 'dd-vichr', side: 'player', name: 'DD',
+        pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 },
+        subsystems: { ...fullSubsystems(), tubesPort: 0.3, impellerFwd: 0.3 },
+      }],
+    })
+    const state = sim.create(scenario)
+    sim.applyOrder(state, { kind: 'setRepairFocus', shipId: 1, focus: 'weapons' })
+    // 100 s: šachty 0.3 + 0.0036·100 = 0.66; impeler 0.3 + 0.0006·100 = 0.36
+    for (let i = 0; i < 200; i++) sim.tick(state, SIM_DT)
+    expect(state.ships[0].subsystems.tubesPort).toBeCloseTo(0.66, 2)
+    expect(state.ships[0].subsystems.impellerFwd).toBeCloseTo(0.36, 2)
+    // přepnutí na pohon: teď letí nahoru impeler (přes 0.7 do dolaďování)
+    sim.applyOrder(state, { kind: 'setRepairFocus', shipId: 1, focus: 'drive' })
+    for (let i = 0; i < 200; i++) sim.tick(state, SIM_DT)
+    expect(state.ships[0].subsystems.impellerFwd).toBeGreaterThanOrEqual(0.7)
+    expect(state.ships[0].subsystems.tubesPort).toBeGreaterThanOrEqual(0.66)
   })
 
   it('poškození subsystému hráče vyvolá hlášení inženýra s odhadem opravy', () => {

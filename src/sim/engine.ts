@@ -106,6 +106,10 @@ function applyOrder(state: SimState, order: Order): void {
       // alfa úder z tažených plošin (všechny najednou, mimo šachty)
       launchPods(state, ship, order.targetId)
       break
+    case 'setRepairFocus':
+      // priorita polních oprav (koncentrace damage-control čet)
+      ship.repairFocus = order.focus
+      break
     case 'deployDecoy':
       deployDecoy(state, ship)
       break

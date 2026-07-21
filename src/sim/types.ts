@@ -148,6 +148,13 @@ export interface ShipBuffs {
   repairUntil: number
 }
 
+/**
+ * Priorita polních oprav (volí hráč): 'balanced' = rovnoměrně (výchozí),
+ * jinak koncentrace čet na skupinu — zbraně (šachty + energetika),
+ * pohon (impelery), obrana (boční štíty + PDLC + protirakety).
+ */
+export type RepairFocus = 'balanced' | 'weapons' | 'drive' | 'defense'
+
 /** Druh formace eskadry (jen hráčem ovladatelné lodě). */
 export type FormationKind = 'wall' | 'vee' | 'dispersed'
 
@@ -284,6 +291,8 @@ export interface ShipState {
    * klasifikace (idQuality ≥ 1).
    */
   desc?: string
+  /** priorita polních oprav (chybí = 'balanced') */
+  repairFocus?: RepairFocus
 }
 
 /** Senzorový kontakt — co daná strana VÍ (ne pravda). */
@@ -343,6 +352,8 @@ export type Order =
   | { kind: 'launchSalvo'; shipId: number; targetId: number; count: number; mode: DriveModeOrder; autonomous?: boolean; escortJammer?: boolean }
   /** odpal VŠECH tažených raketových plošin najednou (PODS_PER_POD raket/ks) — alfa úder */
   | { kind: 'launchPods'; shipId: number; targetId: number }
+  /** priorita polních oprav (koncentrace damage-control čet) */
+  | { kind: 'setRepairFocus'; shipId: number; focus: RepairFocus }
   /** vypuštění tažené návnady (aktivní, dokud ji svedená raketa nezničí) */
   | { kind: 'deployDecoy'; shipId: number }
   /** dvojitá boční salva: LO z levoboku, otočka, HI z pravoboku na společný dopad */

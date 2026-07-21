@@ -209,6 +209,17 @@ export class UIController {
       this.refresh()
       return
     }
+    // priorita polních oprav — platí pro celý hromadný výběr
+    if (act.startsWith('repair:')) {
+      const f = act.slice('repair:'.length)
+      if (f === 'balanced' || f === 'weapons' || f === 'drive' || f === 'defense') {
+        for (const sh of this.selectedShips()) {
+          this.send({ kind: 'setRepairFocus', shipId: sh.id, focus: f })
+        }
+      }
+      this.refresh()
+      return
+    }
     // formace: primární loď = leader, ostatní vybrané dostanou sloty 1..n dle id
     if (act.startsWith('formation:')) {
       const kind = act.slice('formation:'.length)
@@ -596,7 +607,8 @@ export class UIController {
         <b>Boční štíty tlumí, neblokují</b><span>boční zásah VŽDY něco prosákne (silný boční štít slabý paprsek čtvrtí); absorbovaná energie navíc generátory bočního štítu opotřebovává — soustavná palba štít postupně mele</span>
         <b>Umírání po částech</b><span>loď vydrží řádově 10–15 zásahů; každý prošlý paprsek má slušnou šanci vyřadit kus vybavení (šachty, impelery, senzory…) — bojeschopnost klesá dřív, než dojde trup</span>
         <b>Poškozené impelery</b><span>akcelerace klesá s průměrem obou prstenců — loď se zásahem do pohonu reálně zpomaluje v manévru</span>
-        <b>Polní opravy</b><span>poškozené subsystémy se BĚHEM boje samy opravují (~7 % za minutu, provizorně do 70 %); buff inženýra opravy ×4 — o vyřazený boční štít či šachty se dá přetahovat</span>
+        <b>Polní opravy</b><span>poškozené subsystémy se BĚHEM boje samy opravují (~7 % za minutu do 70 %, pak dolaďování polovičním tempem do 90 % — plných 100 % vrátí jen dok); šipka ↗ u baru = čety na systému pracují; buff inženýra opravy ×4</span>
+        <b>Priorita oprav</b><span>v panelu VLASTNÍ LOĎ (řádek „opravy:"): Rovnoměrně / Zbraně / Pohon / Obrana — prioritní skupina se opravuje ×3, ostatní ×0,5 (čety nejsou nafukovací); TRUP se v poli opravit nedá — strukturální poškození spraví jen loděnice</span>
       </div>
       <h4>Eskadra a formace</h4>
       <div class="help-grid">

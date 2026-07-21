@@ -300,7 +300,9 @@ describe('mise 6 — Ústup od Tharsis', () => {
     expect(state.outcome).toBe('win')
     expect(objState(state, 'obj-escape')).toBe('done')
     expect(state.ships[0].destroyed).toBe(false)
-    expect(minGap).toBeLessThan(32_000_000) // pronásledovatelé skutečně doháněli
+    // pronásledovatelé skutečně doháněli (34 M km: poškozený Resolute si
+    // nově polními opravami dolaďuje impelery nad 70 % a ujíždí o chlup líp)
+    expect(minGap).toBeLessThan(34_000_000)
   })
 })
 

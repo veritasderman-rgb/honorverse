@@ -38,7 +38,7 @@ describe('mise 11 — struktura', () => {
 })
 
 describe('mise 11 — E2E hratelnost (vítězná doktrína stěny)', () => {
-  it('koncentrovaná stěna rozbije imperiální stěnu (win, ztráty ≤ 10)', () => {
+  it('koncentrovaná stěna rozbije imperiální stěnu (win, ztráty ≤ 12)', () => {
     const state = sim.create(mission11)
     // (1) stěna: tah 0,6, formace za vlajkovou lodí
     for (const id of CORE) {
@@ -46,6 +46,11 @@ describe('mise 11 — E2E hratelnost (vítězná doktrína stěny)', () => {
     }
     for (let i = 1; i < CORE.length; i++) {
       sim.applyOrder(state, { kind: 'setFormation', shipId: CORE[i], leaderId: 1, slot: i, formation: 'wall' })
+    }
+    // priorita oprav OBRANA: stěna v raketové výměně žije z bočních štítů,
+    // PDLC a protiraket — čety je drží nahoře na úkor šachet a pohonu
+    for (const id of CORE) {
+      sim.applyOrder(state, { kind: 'setRepairFocus', shipId: id, focus: 'defense' })
     }
     // (2) usadit se na x = 12 mil. km — nabíhat budou oni
     sim.applyOrder(state, { kind: 'setCourse', shipId: 1, dest: { x: 12_000_000, y: 0 }, arriveAtRest: true })
@@ -102,7 +107,7 @@ describe('mise 11 — E2E hratelnost (vítězná doktrína stěny)', () => {
     // všechny 4 DN zničeny, stěna zlomena (≥ 14), naše ztráty snesitelné
     expect(state.ships.filter(s => DNS.includes(s.id) && s.destroyed)).toHaveLength(4)
     expect(state.ships.filter(s => s.side === 'enemy' && s.destroyed).length).toBeGreaterThanOrEqual(14)
-    expect(state.ships.filter(s => s.side === 'player' && s.destroyed).length).toBeLessThanOrEqual(10)
+    expect(state.ships.filter(s => s.side === 'player' && s.destroyed).length).toBeLessThanOrEqual(12) // symetricky silnější polní opravy zvedly opotřebení obou stěn
     expect(state.ships[0].destroyed).toBe(false) // vlajková loď přežila
   }, 120_000)
 })

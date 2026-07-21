@@ -244,6 +244,20 @@ export const TURN_RATE = 0.15
  */
 export const REPAIR_RATE = 0.0012
 export const REPAIR_CAP = 0.7
+/**
+ * Lehká poškození (nad REPAIR_CAP) se dolaďují ZA PROVOZU polovičním
+ * tempem až do REPAIR_CAP_LIGHT — dřív se subsystém na 85 % neopravoval
+ * vůbec („nic se neděje") a bary stály. Plných 100 % vrátí jen dok.
+ */
+export const REPAIR_CAP_LIGHT = 0.9
+export const REPAIR_LIGHT_FACTOR = 0.5
+/**
+ * Priorita oprav (volí hráč): koncentrace damage-control čet na skupinu —
+ * prioritní subsystémy ×REPAIR_FOCUS_BOOST, ostatní ×REPAIR_FOCUS_OTHERS
+ * (čety nejsou nafukovací — soustředění jinde znamená jinde pomaleji).
+ */
+export const REPAIR_FOCUS_BOOST = 3
+export const REPAIR_FOCUS_OTHERS = 0.5
 
 /** náhodné události posádky: střední doba mezi událostmi za boje (s) */
 export const CREW_EVENT_MEAN_TIME = 240

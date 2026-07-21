@@ -11,7 +11,7 @@
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
 import {
   CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
-  ENERGY_MAX_RANGE, G, ROLL_TIME, SURRENDER_COOLDOWN, TUBE_COOLDOWN,
+  ENERGY_MAX_RANGE, G, REPAIR_CAP_LIGHT, ROLL_TIME, SURRENDER_COOLDOWN, TUBE_COOLDOWN,
 } from '../sim/constants'
 import { effectiveTubes, sidewallPowerFactor } from '../sim/damage'
 import { estimatePenetration } from '../sim/estimate'
@@ -578,10 +578,26 @@ export class Panels {
     const rows = SUBSYS.map(s => {
       const v = own.subsystems[s.key]
       const cls = pctClass(v)
+      // ↗ = damage-control čety na subsystému pracují (polní oprava běží)
+      const fixing = v < REPAIR_CAP_LIGHT && !own.destroyed
+        ? `<span class="ok" title="polní oprava běží (~7 %/min do 70 %, pak dolaďování do 90 %)">↗</span>`
+        : ''
       return `<div class="subsys ${cls}"><span class="nm">${s.label}</span>`
         + `<span class="bar"><i style="width:${Math.round(v * 100)}%"></i></span>`
-        + `<span class="pc ${cls}">${Math.round(v * 100)}%</span></div>`
+        + `<span class="pc ${cls}">${Math.round(v * 100)}%${fixing}</span></div>`
     }).join('')
+    // priorita oprav: koncentrace damage-control čet (×3 skupina, ×0,5 zbytek)
+    const anyDamage = SUBSYS.some(s => own.subsystems[s.key] < 1)
+    const rf = own.repairFocus ?? 'balanced'
+    const rBtn = (f: string, label: string, tip: string): string =>
+      `<button data-act="repair:${f}" class="${rf === f ? 'active' : ''}" title="${esc(tip)}"${own.destroyed ? ' disabled' : ''}>${label}</button>`
+    const repairRow = anyDamage
+      ? `<div class="row"><span title="Polní opravy: plné tempo do 70 %, doladění do 90 % (víc dá jen dok). Priorita soustředí čety: skupina ×3, ostatní ×0,5. Trup se v poli opravit nedá — strukturální poškození spraví jen loděnice.">opravy:</span>`
+        + `<span>${rBtn('balanced', 'Rovnom.', 'Rovnoměrné opravy všech subsystémů (výchozí).')}`
+        + `${rBtn('weapons', 'Zbraně', 'Priorita: raketové šachty a energetické baterie ×3, ostatní ×0,5.')}`
+        + `${rBtn('drive', 'Pohon', 'Priorita: impelerové prstence ×3 (akcelerace!), ostatní ×0,5.')}`
+        + `${rBtn('defense', 'Obrana', 'Priorita: boční štíty, PDLC a protirakety ×3, ostatní ×0,5.')}</span></div>`
+      : ''
     const status = own.destroyed
       ? `<div class="bad">LOĎ ZNIČENA</div>`
       : `<div class="row"><span>klín: <b class="${own.wedgeOn ? 'ok' : 'amber'}">${own.wedgeOn ? 'ZAP' : 'VYP'}</b></span>`
@@ -657,6 +673,7 @@ export class Panels {
       + energyRow
       + fireRow
       + waveRow
+      + repairRow
       + `<div class="subsys-grid">${rows}</div>`)
   }
 

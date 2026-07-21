@@ -4,12 +4,13 @@
  *   2. náhodné události posádky za boje (taktik / inženýr / spojař) —
  *      deterministicky ze state.rng, hlášky přes eventy se speaker.
  */
-import type { Contact, ShipState, Side, SimState, Subsystems } from './types'
+import type { Contact, RepairFocus, ShipState, Side, SimState, Subsystems } from './types'
 import {
   CREW_COMBAT_RANGE, CREW_EVENT_MEAN_TIME,
   EMERGENCY_DAMAGE_MAX, EMERGENCY_DAMAGE_MIN, EMERGENCY_DAMAGE_RATE,
   LOCK_BUFF, LOCK_BUFF_TIME,
-  REPAIR_BUFF, REPAIR_BUFF_TIME, REPAIR_CAP, REPAIR_RATE,
+  REPAIR_BUFF, REPAIR_BUFF_TIME, REPAIR_CAP, REPAIR_CAP_LIGHT,
+  REPAIR_FOCUS_BOOST, REPAIR_FOCUS_OTHERS, REPAIR_LIGHT_FACTOR, REPAIR_RATE,
 } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
 import { SUBSYSTEM_NAMES } from './damage'
@@ -40,15 +41,33 @@ function inCombat(state: SimState, ship: ShipState): boolean {
   return false
 }
 
-/** Polní opravy: pomalý růst poškozených subsystémů do stropu REPAIR_CAP. */
+/** skupiny subsystémů pro prioritu oprav (koncentrace damage-control čet) */
+export const REPAIR_GROUPS: Record<Exclude<RepairFocus, 'balanced'>, (keyof Subsystems)[]> = {
+  weapons: ['tubesPort', 'tubesStbd', 'energyPort', 'energyStbd'],
+  drive: ['impellerFwd', 'impellerAft'],
+  defense: ['sidewallPort', 'sidewallStbd', 'pdlc', 'cm'],
+}
+
+/**
+ * Polní opravy: těžká poškození plným tempem do provizorního stropu
+ * REPAIR_CAP (0.7), lehká se dolaďují za provozu polovičním tempem až do
+ * REPAIR_CAP_LIGHT (0.9) — plných 100 % vrátí jen dok. Priorita oprav
+ * (ship.repairFocus) koncentruje čety: prioritní skupina ×3, ostatní ×0.5.
+ */
 function updateRepairs(state: SimState, ship: ShipState, dt: number): void {
   const boost = state.t < ship.buffs.repairUntil ? ship.buffs.repairBonus : 1
+  const focus = ship.repairFocus ?? 'balanced'
+  const focusKeys = focus === 'balanced' ? null : REPAIR_GROUPS[focus]
   for (const key of SUBSYSTEM_KEYS) {
     const v = ship.subsystems[key]
-    if (v >= REPAIR_CAP) continue // nad strop polní oprava nedosáhne
-    const nv = Math.min(REPAIR_CAP, v + REPAIR_RATE * boost * dt)
+    if (v >= REPAIR_CAP_LIGHT) continue // víc než 90 % polní oprava nedá
+    let rate = REPAIR_RATE * boost
+    if (focusKeys) rate *= focusKeys.includes(key) ? REPAIR_FOCUS_BOOST : REPAIR_FOCUS_OTHERS
+    if (v >= REPAIR_CAP) rate *= REPAIR_LIGHT_FACTOR // dolaďování za provozu
+    const cap = v < REPAIR_CAP ? REPAIR_CAP : REPAIR_CAP_LIGHT
+    const nv = Math.min(cap, v + rate * dt)
     ship.subsystems[key] = nv
-    if (nv >= REPAIR_CAP && ship.side === 'player') {
+    if (v < REPAIR_CAP && nv >= REPAIR_CAP && ship.side === 'player') {
       state.events.push({
         t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'engineer',
         text: `Inženýr: ${SUBSYSTEM_NAMES[key]} znovu online — máme ${Math.round(REPAIR_CAP * 100)} % výkonu!`,
