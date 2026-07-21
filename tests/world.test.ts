@@ -37,7 +37,7 @@ describe('spawnShip', () => {
     expect(state.ships.map(s => s.id)).toEqual([1, 2])
     const dd = state.ships[0]
     expect(dd.hull).toBe(120)                    // hullPoints dd-vichr (zdvojeno — lodě umírají po částech)
-    expect(dd.missiles).toBe(90)                 // magazineMissiles
+    expect(dd.missiles).toBe(180)                // magazineMissiles (avalonské ×2)
     expect(dd.throttle).toBe(STANDARD_THROTTLE)
     expect(dd.wedgeOn).toBe(true)
     expect(dd.nav).toBeNull()

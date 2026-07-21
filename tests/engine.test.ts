@@ -74,7 +74,7 @@ describe('E2E mise 1 — Hlídka u Strážné brány', () => {
       sim.tick(state, SIM_DT)
       fightStep(state)
     }
-    expect(state.ships[0].missiles).toBeLessThan(90) // salvy odešly
+    expect(state.ships[0].missiles).toBeLessThan(180) // salvy odešly
     expect(
       state.outcome !== 'running' || state.ships[1].hull < cygnusFullHull,
     ).toBe(true)
@@ -124,6 +124,6 @@ describe('applyOrder — validace', () => {
     state.ships[1].destroyed = true
     sim.applyOrder(state, { kind: 'launchSalvo', shipId: DAUNTLESS, targetId: CYGNUS, count: 6, mode: 0 })
     expect(state.missiles).toHaveLength(0)
-    expect(state.ships[0].missiles).toBe(90)
+    expect(state.ships[0].missiles).toBe(180)
   })
 })

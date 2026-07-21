@@ -19,7 +19,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 520, sidewallStrength: 12, hullPoints: 120,
     tubesPerBroadside: 3, cmLaunchers: 4, pdlcClusters: 6,
     energyMountsPerBroadside: 2, energyDamage: 30,
-    magazineMissiles: 90, magazineCMs: 260,
+    magazineMissiles: 180, magazineCMs: 260,
     wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35, decoyCount: 4,
     missileQuality: 1.08, podCapacity: 1,
     lore: 'Páteřní torpédoborec Královského námořnictva, pojmenovaný po náhlých '
@@ -33,7 +33,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 505, sidewallStrength: 16, hullPoints: 180,
     tubesPerBroadside: 5, cmLaunchers: 6, pdlcClusters: 8,
     energyMountsPerBroadside: 3, energyDamage: 38,
-    magazineMissiles: 150, magazineCMs: 340,
+    magazineMissiles: 300, magazineCMs: 340,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4, decoyCount: 6,
     missileQuality: 1.08, podCapacity: 2,
     lore: 'Lehký křižník pro samostatné operace daleko od domovských přístavů — '
@@ -47,7 +47,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 490, sidewallStrength: 22, hullPoints: 300,
     tubesPerBroadside: 8, cmLaunchers: 10, pdlcClusters: 12,
     energyMountsPerBroadside: 4, energyDamage: 55,
-    magazineMissiles: 280, magazineCMs: 420,
+    magazineMissiles: 560, magazineCMs: 420,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45, decoyCount: 8,
     missileQuality: 1.08, podCapacity: 4,
     lore: 'Těžký křižník stavěný jako pohyblivá pevnost — odtud jméno. Osm šachet '
@@ -105,7 +105,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 475, sidewallStrength: 26, hullPoints: 440,
     tubesPerBroadside: 10, cmLaunchers: 14, pdlcClusters: 14,
     energyMountsPerBroadside: 5, energyDamage: 65,
-    magazineMissiles: 400, magazineCMs: 500,
+    magazineMissiles: 800, magazineCMs: 500,
     wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5, decoyCount: 10,
     missileQuality: 1.08, podCapacity: 6,
     lore: 'Bitevní křižník — pod praporcem (odtud jméno) se v avalonské doktríně '
@@ -120,7 +120,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     maxAccelG: 435, sidewallStrength: 34, hullPoints: 900,
     tubesPerBroadside: 14, cmLaunchers: 22, pdlcClusters: 22,
     energyMountsPerBroadside: 7, energyDamage: 80,
-    magazineMissiles: 700, magazineCMs: 900,
+    magazineMissiles: 1400, magazineCMs: 900,
     wedgeDetectionRange: 170_000_000, activeSensorRange: 10_000_000, ecm: 0.55, decoyCount: 14,
     missileQuality: 1.08, podCapacity: 8,
     lore: 'Dreadnought — stěna bitvy vtělená do šesti milionů tun. Vladař je '
@@ -143,7 +143,7 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     lore: 'Imperiální dreadnought — hora oceli pojmenovaná po staré císařské '
       + 'metropoli. Doktrína Toleda je doktrínou celého caudillova námořnictva: '
       + 'tonáž nadevše a šestnáct šachet na bok vynahradí, co elektronika neumí. '
-      + 'Jeho salvy jsou širší než avalonské a zásobníky hlubší; senzory a ECM '
+      + 'Jeho salvy jsou širší než avalonské; senzory a ECM '
       + 'ale zůstávají o generaci pozadu. Toledo nevyhrává elegancí — vyhrává '
       + 'tím, že stojí, sype boční salvy a čeká, až protivníkovi dojdou rakety '
       + 'dřív než jemu trup.',

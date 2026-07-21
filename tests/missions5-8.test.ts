@@ -55,7 +55,7 @@ describe('registrace misí 5–8', () => {
   it('nové třídy lodí: bc-praporec a station-zeta jdou spawnout', () => {
     const state = sim.create(mission07)
     expect(state.ships[0].classId).toBe('bc-praporec')
-    expect(state.ships[0].missiles).toBe(400)
+    expect(state.ships[0].missiles).toBe(800)
     const m5 = sim.create(mission05)
     expect(m5.ships[1].classId).toBe('station-zeta')
     expect(m5.ships[1].wedgeOn).toBe(false)

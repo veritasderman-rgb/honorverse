@@ -83,7 +83,7 @@ describe('fire control — AUTO režim', () => {
     sim.tick(state, SIM_DT)
     expect(state.events.some(e => e.kind === 'message' && e.text.includes('Palebné řešení'))).toBe(true)
     expect(state.missiles.length).toBe(2)
-    expect(state.ships[0].missiles).toBe(148)
+    expect(state.ships[0].missiles).toBe(298)
     state.events.length = 0
 
     // po uplynutí cooldownu odpálí sám další salvu
@@ -94,7 +94,7 @@ describe('fire control — AUTO režim', () => {
       state.events.length = 0
     }
     expect(launches).toBeGreaterThanOrEqual(1)
-    expect(state.ships[0].missiles).toBeLessThanOrEqual(146)
+    expect(state.ships[0].missiles).toBeLessThanOrEqual(296)
   })
 
   it('cíl mimo poháněnou obálku: žádný odpal, žádné „Palebné řešení"', () => {
