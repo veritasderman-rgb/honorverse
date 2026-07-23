@@ -80,3 +80,28 @@ Salva dostane jemné společné halo, ať jde na plotu číst jako JEDNA vlna.
 Doporučené pořadí: **A → C → B** (nejdřív ať boj „mluví", pak šťáva,
 pak svět) — nebo A a B prohodit, jestli chceš dřív atmosféru než efekty.
 Každá fáze je samostatně nasaditelná a krytá smoke screenshoty.
+
+---
+
+## Fáze E — „Homeworld" režim (pseudo-3D shora + soumraková atmosféra)
+
+Volitelný vzhled `renderMode = 'hw'` (přepínač ◈ v topbaru, výchozí zapnuto,
+persist `wob-gfx3d`). Zůstává čistě canvas 2D + render hodiny (determinismus
+netknut), ale posouvá dojem k rendrované 3D flotile v atmosféře:
+
+- **Objemové trupy** (`src/ui/hull3d.ts`): vyplněné nasvícené těleso místo
+  tenké siluety. Světlo je PEVNÉ ve světě (hvězda vlevo nahoře) — když se loď
+  otočí, odlesk po ní přejede. Vrstvy: extruze (bok trupu = výška nad rovinou),
+  gradient horní paluby, fasetový přísvit, panelové linky, řádka svítících oken,
+  specular hřbet + hotspot, teplý sluneční rim, vyvýšená nadstavba/můstek na
+  větších trupech, blikající poziční světla, kontaktní stín.
+- **Pohonná záře** (`enginePlume`): aditivní horký kotouč u trysky + zužující
+  se vlečka (Homeworld přesvit), délka/jas dle tahu, mihotání časem.
+- **Soumraková atmosféra** (`drawNebula`): hvězda s korónou vlevo nahoře
+  (souhlasí se směrem světla), teplý atmosférický opar (nahoře teplý → dole
+  chladná hloubka), mlhovinové obláčky, vinětace.
+- **Bloom zbraní/explozí** (`fx.ts` `softGlow`): aditivní přesvit na zásazích,
+  energii, protiraketách a explozích; hlavice raket v boostu svítí.
+- Trupy se v HW režimu kreslí `HW_SCALE`× větší, ať čtou jako modely.
+- Mobil: poloviční hustota mlhoviny; klasický CIC vzhled zůstává v `renderMode
+  = 'cic'` (přepínač) pro maximální čitelnost/výkon.
