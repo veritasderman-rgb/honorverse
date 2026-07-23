@@ -4,6 +4,7 @@
  */
 import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
+import { startFleetView } from './ui/fleetview'
 import { Panels, esc, fmtTime } from './ui/panels'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -30,6 +31,16 @@ const controller = new UIController(bridge, plot, panels)
 
 // hook pro smoke testy (Playwright) — čtení stavu plotu a ovládání zvenku
 Object.assign(window, { __wob: { plot, controller } })
+
+// kinematické pozadí menu (flotila za soumraku) — běží jen když je vidět
+const menuBgCanvas = document.getElementById('menu-bg') as HTMLCanvasElement | null
+let stopFleetView: (() => void) | null = null
+function setMenuBg(on: boolean): void {
+  if (!menuBgCanvas) return
+  menuBgCanvas.classList.toggle('on', on)
+  if (on && !stopFleetView) stopFleetView = startFleetView(menuBgCanvas)
+  else if (!on && stopFleetView) { stopFleetView(); stopFleetView = null }
+}
 
 // ---------- odolnost na iOS Safari ----------
 
@@ -144,6 +155,8 @@ function showCampaignIntro(onDone: () => void): void {
     + `<div class="brief story">${esc(CAMPAIGN_INTRO)}</div>`
     + `<button id="btn-intro-continue">POKRAČOVAT</button>`,
   )
+  el.classList.add('menu')
+  setMenuBg(true)
   onTap(el.querySelector('#btn-intro-continue'), () => {
     markIntroSeen()
     el.remove()
@@ -171,6 +184,8 @@ function showMissionSelect(): void {
     + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">načítám…</span></div>`
     + `</div>`
   const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${hall}${rows}`)
+  el.classList.add('menu')
+  setMenuBg(true)
   // Síň slávy: celkové pořadí (součet nejlepších skóre per mise)
   const hallToggle = el.querySelector<HTMLButtonElement>('#btn-hall-toggle')
   const hallBody = el.querySelector<HTMLElement>('#hall-body')
@@ -202,6 +217,7 @@ function showMissionSelect(): void {
   el.querySelectorAll<HTMLButtonElement>('button[data-mission]').forEach(btn => {
     onTap(btn, () => {
       el.remove()
+      setMenuBg(false)
       bridge.start(btn.dataset.mission!)
     })
   })

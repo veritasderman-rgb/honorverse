@@ -92,6 +92,12 @@
     #log { max-height: 110px; overflow-y: auto; font-size: 10px; line-height: 1.4; color: #6fae74; }
     #log .ev-warn { color: #d8b34f; }
     .overlay { position: fixed; inset: 0; background: #05080aee; display: flex; align-items: center; justify-content: center; z-index: 30; font-size: 13px; }
+    /* kinematické pozadí menu (flotila za soumraku) */
+    #menu-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 20; display: none; }
+    #menu-bg.on { display: block; }
+    /* menu overlaye (úvod + výběr mise) prosvítí flotilu; briefing/výsledek zůstávají tmavé */
+    .overlay.menu { background: radial-gradient(ellipse at 50% 40%, #05080a44 0%, #05080abb 100%); }
+    .overlay.menu .box { background: #060d08e8; box-shadow: 0 0 60px #0f5a1450, 0 8px 40px #00000080; }
     .overlay .box { border: 1px solid #2a5a2e; background: #081008; padding: 20px 26px; max-width: min(620px, 94vw); max-height: 92vh; overflow-y: auto; box-shadow: 0 0 40px #0f5a1430; }
     /* dotyk: čitelnější overlaye bez nutnosti zoomovat stránku */
     @media (pointer: coarse) {
@@ -242,6 +248,7 @@
   </style>
 </head>
 <body>
+  <canvas id="menu-bg"></canvas>
   <div id="app">
     <div id="plot-container">
       <canvas id="plot"></canvas>
