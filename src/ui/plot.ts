@@ -88,7 +88,10 @@ const HULL_PAL: Record<string, HullPalette> = {
   },
 }
 
-interface Pickable { id: number; x: number; y: number }
+interface Pickable { id: number; x: number; y: number; r?: number }
+
+/** stylizovaný poloměr planety (px) — velké těleso na světové pozici */
+const PLANET_R = 58
 
 const trimNum = (v: number): string => {
   const s = v.toFixed(1)
@@ -505,7 +508,7 @@ export class TacticalPlot {
     for (const body of s.ships) {
       if (body.classId !== 'planet' || body.destroyed) continue
       const p = this.worldToScreen(body.pos)
-      const R = 58   // stylizovaný poloměr tělesa (px), pevný bod mapy
+      const R = PLANET_R   // stylizovaný poloměr tělesa (px), pevný bod mapy
       // mimo obraz? přeskoč
       if (p.x < -R * 2 || p.x > this.canvas.clientWidth + R * 2
         || p.y < -R * 2 || p.y > this.canvas.clientHeight + R * 2) continue
@@ -636,11 +639,13 @@ export class TacticalPlot {
   }
 
   private pick(sx: number, sy: number): number | null {
+    // nejbližší střed vyhrává; každý pickable má vlastní práh (velká tělesa
+    // jako planeta = poloměr vykresleného tělesa, ne globálních 15 px)
     let best: number | null = null
-    let bd = PICK_PX
+    let bd = Infinity
     for (const p of this.pickables) {
       const d = Math.hypot(p.x - sx, p.y - sy)
-      if (d <= bd) { bd = d; best = p.id }
+      if (d <= (p.r ?? PICK_PX) && d < bd) { bd = d; best = p.id }
     }
     return best
   }
@@ -1029,8 +1034,9 @@ export class TacticalPlot {
     // tady zůstane jen popisek + pickable (bez malého kotouče).
     if (ship.classId === 'planet' && this.renderMode === 'hw') {
       ctx.fillStyle = CLR.label
-      ctx.fillText(ship.name, p.x + 60, p.y + 3)
-      this.pickables.push({ id: ship.id, x: p.x, y: p.y })
+      ctx.fillText(ship.name, p.x + PLANET_R + 4, p.y + 3)
+      // hitbox pokrývá celé vykreslené těleso (drawCelestials, poloměr PLANET_R)
+      this.pickables.push({ id: ship.id, x: p.x, y: p.y, r: PLANET_R })
       return
     }
     if (ship.classId === 'planet') {
