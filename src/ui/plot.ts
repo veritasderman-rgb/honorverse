@@ -12,8 +12,9 @@ import {
   type Effect, type Wreck,
 } from './fx'
 import {
-  enginePlume, hullLights, hullShadow, shipBody, type HullPalette,
+  enginePlume, hullLights, hullShadow, setLightDir, shipBody, type HullPalette,
 } from './hull3d'
+import { sceneFor, type SceneDef } from './scenes'
 import type {
   Contact, DecorField, Hyperlimit, MissileState, ShipState, SimState, Vec2,
 } from '../sim/types'
@@ -336,9 +337,18 @@ export class TacticalPlot {
   /** dlaždice hvězdného pozadí (2 paralaxní vrstvy) — kreslí se jednou */
   private starTiles: HTMLCanvasElement[] = []
 
+  /** vizuální scéna aktuální mise (hvězda, mlhovina, atmosféra) */
+  private scene: SceneDef | null = null
+
   setEnvironment(decor: DecorField[] | undefined, ambient: string | undefined): void {
     this.decor = decor ?? []
     this.ambient = ambient ?? null
+  }
+
+  /** nastaví scénu mise + srovná směr světla trupů s hvězdou na pozadí */
+  setScene(scene: SceneDef): void {
+    this.scene = scene
+    setLightDir(0.5 - scene.star.x, 0.5 - scene.star.y)
   }
 
   /** hash → [0,1) pro deterministické rozložení hvězd/balvanů */
@@ -412,18 +422,17 @@ export class TacticalPlot {
   private drawNebula(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     const coarse = matchMedia('(pointer: coarse)').matches
     const c = this.camCenter()
-    // barvy odvozené z ambientu soustavy (fallback chladná noční modř)
-    const tint = this.ambient ?? '#22405a'
-    const sunX = w * 0.26
-    const sunY = h * 0.16
+    const sc = this.scene ?? sceneFor(this.fxScenario, this.ambient ?? undefined)
+    const sunX = w * sc.star.x
+    const sunY = h * sc.star.y
 
-    // 1) atmosférický opar: teplý nahoře u slunce → chladná hloubka dole
+    // 1) atmosférický opar mise: nahoře → dole
     const atm = ctx.createLinearGradient(0, 0, 0, h)
-    atm.addColorStop(0, '#3a2a1e')
-    atm.addColorStop(0.35, '#241d24')
-    atm.addColorStop(1, '#050a12')
+    atm.addColorStop(0, sc.atmTop)
+    atm.addColorStop(0.5, sc.nebA)
+    atm.addColorStop(1, sc.atmBot)
     ctx.save()
-    ctx.globalAlpha = 0.5
+    ctx.globalAlpha = 0.45
     ctx.fillStyle = atm
     ctx.fillRect(0, 0, w, h)
     ctx.restore()
@@ -439,38 +448,43 @@ export class TacticalPlot {
       const cy = ((TacticalPlot.h01(i, 19) * 1.4 - 0.2) * h - py) % (h * 1.4)
       const R = (0.35 + TacticalPlot.h01(i, 31) * 0.45) * Math.max(w, h)
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R)
-      g.addColorStop(0, i % 2 === 0 ? tint : '#5a3320')
-      g.addColorStop(0.5, i % 2 === 0 ? '#122430' : '#2a1420')
+      g.addColorStop(0, i % 2 === 0 ? sc.nebA : sc.nebB)
+      g.addColorStop(0.5, i % 2 === 0 ? sc.nebB : sc.nebA)
       g.addColorStop(1, 'transparent')
-      ctx.globalAlpha = 0.08
+      ctx.globalAlpha = 0.09
       ctx.fillStyle = g
       ctx.beginPath()
       ctx.arc(cx, cy, R, 0, Math.PI * 2)
       ctx.fill()
     }
-    // 3) hvězda + korónový přesvit
+    // 3) hvězda soustavy + korónový přesvit (barva dle scény)
     const halo = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, Math.max(w, h) * 0.6)
-    halo.addColorStop(0, '#ffe9c2')
-    halo.addColorStop(0.12, '#ffb15a')
-    halo.addColorStop(0.4, '#7a3a1e')
+    halo.addColorStop(0, sc.starCore)
+    halo.addColorStop(0.12, sc.starHalo)
+    halo.addColorStop(0.4, sc.nebA)
     halo.addColorStop(1, 'transparent')
     ctx.globalAlpha = 0.5
     ctx.fillStyle = halo
     ctx.beginPath()
     ctx.arc(sunX, sunY, Math.max(w, h) * 0.6, 0, Math.PI * 2)
     ctx.fill()
-    // jádro hvězdy
-    const core = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 22)
-    core.addColorStop(0, '#fffdf5')
+    // jádro hvězdy (jemné chvění)
+    const rc = 20 + Math.sin(performance.now() / 900) * 2
+    const core = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, rc)
+    core.addColorStop(0, '#ffffff')
+    core.addColorStop(0.5, sc.starCore)
     core.addColorStop(1, 'transparent')
     ctx.globalAlpha = 0.95
     ctx.fillStyle = core
     ctx.beginPath()
-    ctx.arc(sunX, sunY, 22, 0, Math.PI * 2)
+    ctx.arc(sunX, sunY, rc, 0, Math.PI * 2)
     ctx.fill()
     ctx.restore()
 
-    // 4) vinětace: ztmavení okrajů (drží čitelnost středu)
+    // 4) planety a další velká tělesa na SVĚTOVÝCH pozicích (mapa mise)
+    this.drawCelestials(ctx, sc, sunX, sunY)
+
+    // 5) vinětace: ztmavení okrajů (drží čitelnost středu)
     const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.78)
     vg.addColorStop(0, 'transparent')
     vg.addColorStop(1, '#02040688')
@@ -478,6 +492,67 @@ export class TacticalPlot {
     ctx.fillStyle = vg
     ctx.fillRect(0, 0, w, h)
     ctx.restore()
+  }
+
+  /**
+   * Velká nebeská tělesa (planety) na svých světových pozicích — kreslí se
+   * za mřížkou i loděmi. Nasvícená z hvězdy scény (terminátor na odvrácené
+   * straně), s atmosférickým prstencem. Marker/label řeší drawBuoy.
+   */
+  private drawCelestials(ctx: CanvasRenderingContext2D, sc: SceneDef, sunX: number, sunY: number): void {
+    const s = this.state
+    if (!s) return
+    for (const body of s.ships) {
+      if (body.classId !== 'planet' || body.destroyed) continue
+      const p = this.worldToScreen(body.pos)
+      const R = 58   // stylizovaný poloměr tělesa (px), pevný bod mapy
+      // mimo obraz? přeskoč
+      if (p.x < -R * 2 || p.x > this.canvas.clientWidth + R * 2
+        || p.y < -R * 2 || p.y > this.canvas.clientHeight + R * 2) continue
+      // směr ke hvězdě (osvětlená strana)
+      let lx = sunX - p.x, ly = sunY - p.y
+      const lm = Math.hypot(lx, ly) || 1
+      lx /= lm; ly /= lm
+      ctx.save()
+      // atmosférický prstenec (halo)
+      const atm = ctx.createRadialGradient(p.x, p.y, R * 0.9, p.x, p.y, R * 1.28)
+      atm.addColorStop(0, 'transparent')
+      atm.addColorStop(0.6, sc.starHalo)
+      atm.addColorStop(1, 'transparent')
+      ctx.globalAlpha = 0.4
+      ctx.fillStyle = atm
+      ctx.beginPath(); ctx.arc(p.x, p.y, R * 1.28, 0, Math.PI * 2); ctx.fill()
+      // těleso: gradient od osvětlené strany (ke hvězdě) do terminátoru
+      const g = ctx.createRadialGradient(p.x + lx * R * 0.5, p.y + ly * R * 0.5, R * 0.15,
+        p.x, p.y, R)
+      g.addColorStop(0, sc.planet)
+      g.addColorStop(0.55, this.mix(sc.planet, '#000000', 0.35))
+      g.addColorStop(1, '#04060a')
+      ctx.globalAlpha = 1
+      ctx.fillStyle = g
+      ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI * 2); ctx.fill()
+      // jasný okraj (limb) na straně ke hvězdě
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.globalAlpha = 0.5
+      ctx.lineWidth = 1.5
+      ctx.strokeStyle = sc.starCore
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, R - 0.5, Math.atan2(ly, lx) - 1.2, Math.atan2(ly, lx) + 1.2)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
+  /** lineární míchání dvou #rrggbb barev (t=0 → a, t=1 → b) */
+  private mix(a: string, b: string, t: number): string {
+    if (a[0] !== '#' || b[0] !== '#') return a // jen #rrggbb; jinak vrať základ
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16)
+    const ar = (pa >> 16) & 255, ag = (pa >> 8) & 255, ab = pa & 255
+    const br = (pb >> 16) & 255, bg = (pb >> 8) & 255, bb = pb & 255
+    const r = Math.round(ar + (br - ar) * t)
+    const gg = Math.round(ag + (bg - ag) * t)
+    const bl = Math.round(ab + (bb - ab) * t)
+    return `rgb(${r},${gg},${bl})`
   }
 
   /** pole asteroidů: deterministické balvany s pomalým driftem (kosmetika) */
@@ -949,7 +1024,15 @@ export class TacticalPlot {
   /** navigační bóje/maják: šedý kosočtverec s křížkem a popiskem — vždy viditelná */
   private drawBuoy(ctx: CanvasRenderingContext2D, ship: ShipState): void {
     const p = this.worldToScreen(ship.pos)
-    // planeta: gradientní kotouč s terminátorem a prstencem atmosféry
+    // planeta: gradientní kotouč s terminátorem a prstencem atmosféry.
+    // V HW režimu velké těleso kreslí drawCelestials na světové pozici —
+    // tady zůstane jen popisek + pickable (bez malého kotouče).
+    if (ship.classId === 'planet' && this.renderMode === 'hw') {
+      ctx.fillStyle = CLR.label
+      ctx.fillText(ship.name, p.x + 60, p.y + 3)
+      this.pickables.push({ id: ship.id, x: p.x, y: p.y })
+      return
+    }
     if (ship.classId === 'planet') {
       const R = 13
       ctx.save()
