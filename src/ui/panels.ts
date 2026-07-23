@@ -409,7 +409,8 @@ export class Panels {
     const bar = document.createElement('span')
     bar.className = 'tb-audio'
     bar.innerHTML =
-      `<button class="tb-crt" title="CRT vzhled: scanlines + vinětace (jen kosmetika)">📺</button>`
+      `<button class="tb-gfx" title="Vzhled plotu: objemové (3D shora, Homeworld) ⟷ klasické vektorové siluety">◈</button>`
+      + `<button class="tb-crt" title="CRT vzhled: scanlines + vinětace (jen kosmetika)">📺</button>`
       + `<button class="tb-info" title="režim nápovědy (dotyk): klepnutí na prvek ukáže jeho vysvětlení místo akce">ⓘ</button>`
       + `<button class="tb-mute" title="ztlumit / zapnout zvuk">${audio.muted ? '🔇' : '🔊'}</button>`
       + `<label title="hlasitost hudby">♪ <input class="tb-vol-music" type="range" min="0" max="100"`
@@ -430,6 +431,18 @@ export class Panels {
       crtOn = !crtOn
       try { localStorage.setItem('wob-crt', crtOn ? '1' : '0') } catch { /* noop */ }
       applyCrt()
+    })
+    // přepínač vzhledu (objemový HW ⟷ klasický CIC); stav drží plot v localStorage
+    const gfx = bar.querySelector<HTMLButtonElement>('.tb-gfx')!
+    let gfxHw = true
+    try { gfxHw = localStorage.getItem('wob-gfx3d') !== '0' } catch { /* noop */ }
+    const applyGfx = (): void => { gfx.classList.toggle('active', gfxHw) }
+    applyGfx()
+    gfx.addEventListener('click', () => {
+      gfxHw = !gfxHw
+      const plot = (window as unknown as { __wob?: { plot?: { setRenderMode(m: 'hw' | 'cic'): void } } }).__wob?.plot
+      plot?.setRenderMode(gfxHw ? 'hw' : 'cic')
+      applyGfx()
     })
     const info = bar.querySelector<HTMLButtonElement>('.tb-info')!
     info.addEventListener('click', () => {

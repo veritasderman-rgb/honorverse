@@ -103,6 +103,24 @@ export function ingestEvents(
   while (effects.length > MAX_EFFECTS) effects.shift()
 }
 
+/** měkký aditivní přesvit (bloom) — světlo se sčítá s pozadím */
+function softGlow(
+  ctx: CanvasRenderingContext2D, x: number, y: number,
+  r: number, color: string, alpha: number,
+): void {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+  g.addColorStop(0, color)
+  g.addColorStop(1, 'transparent')
+  ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
 /** vykreslení + úklid prošlých efektů (mutuje pole) */
 export function drawEffects(
   ctx: CanvasRenderingContext2D, effects: Effect[], now: number,
@@ -122,6 +140,7 @@ export function drawEffects(
     switch (e.kind) {
       case 'cmHit': {
         // linka protiraketa (od obránce) + křížová jiskra
+        softGlow(ctx, p.x, p.y, 5 + t * 5, '#d9ffe0', fade * 0.5)
         ctx.globalAlpha = fade * 0.7
         if (e.from) {
           const f = w2s(e.from)
@@ -174,6 +193,7 @@ export function drawEffects(
       case 'hit': {
         // expandující prstenec + 4 jiskry; barva dle strany rakety
         const col = e.side === 'player' ? '#9fe08a' : '#ff705c'
+        softGlow(ctx, p.x, p.y, 10 + t * 12, col, fade * 0.5)
         ctx.globalAlpha = fade
         ctx.strokeStyle = col
         ctx.lineWidth = 1.5
@@ -193,6 +213,7 @@ export function drawEffects(
       }
       case 'energy': {
         // ostrý zákmit: dvě zkřížené čepele + malý prstenec
+        softGlow(ctx, p.x, p.y, 9 + t * 6, '#d9ffe0', fade * 0.55)
         ctx.globalAlpha = fade
         ctx.strokeStyle = '#eaffea'
         ctx.lineWidth = 1.5
@@ -222,7 +243,9 @@ export function drawEffects(
         break
       }
       case 'boom': {
-        // dvojitý expandující prstenec + úlomky letící ven
+        // záblesk jádra + dvojitý expandující prstenec + úlomky letící ven
+        softGlow(ctx, p.x, p.y, 14 + t * 26, '#ffd9a0', fade * 0.8)
+        softGlow(ctx, p.x, p.y, 6 + t * 10, '#ffffff', fade * fade * 0.9)
         ctx.globalAlpha = fade
         ctx.strokeStyle = '#ffb37a'
         ctx.lineWidth = 2

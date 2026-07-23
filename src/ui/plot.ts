@@ -11,6 +11,9 @@ import {
   drawEffects, drawWrecks, ingestEvents, shipSilhouette,
   type Effect, type Wreck,
 } from './fx'
+import {
+  enginePlume, hullLights, hullShadow, shipBody, type HullPalette,
+} from './hull3d'
 import type {
   Contact, DecorField, Hyperlimit, MissileState, ShipState, SimState, Vec2,
 } from '../sim/types'
@@ -55,6 +58,33 @@ const CLR = {
   hyperlimit: '#d8b34f',
   nav: '#3f7f8f',
   navSel: '#7fd0e0',
+}
+
+/** zvětšení objemových trupů v HW režimu (čtou pak jako modely, ne ikonky) */
+const HW_SCALE = 1.5
+
+/** palety objemových trupů pro „Homeworld" režim (viz hull3d.ts) */
+const HULL_PAL: Record<string, HullPalette> = {
+  own: {
+    light: '#b8e8c4', mid: '#3f6f5a', dark: '#0d2018', spec: '#eafff2',
+    lights: '#8ff6ff', sun: '#ffc49a', window: '#bfeaff',
+  },
+  rolled: {
+    light: '#ffe6a0', mid: '#9a7a3a', dark: '#241a06', spec: '#fff6d8',
+    lights: '#ffd27a', sun: '#ffd9a0', window: '#ffe8bf',
+  },
+  hostile: {
+    light: '#e8a68c', mid: '#7a4030', dark: '#1f0d08', spec: '#ffe2d6',
+    lights: '#ff8a75', sun: '#ffd0a0', window: '#ffcf9a',
+  },
+  unknown: {
+    light: '#e8cf94', mid: '#75632e', dark: '#211a08', spec: '#fff4cf',
+    lights: '#ffe08a', sun: '#ffd9a0', window: '#ffe8bf',
+  },
+  surrendered: {
+    light: '#eef2f0', mid: '#7a877f', dark: '#252d29', spec: '#ffffff',
+    lights: '#cfd8d4', sun: '#ffd9c0', window: '#dfe8e4',
+  },
 }
 
 interface Pickable { id: number; x: number; y: number }
@@ -111,9 +141,21 @@ export class TacticalPlot {
    */
   multiSelectMode = false
 
+  /**
+   * Vzhled plotu: 'hw' = objemové nasvícené trupy + mlhovina + přesvit
+   * (Homeworld dojem), 'cic' = klasické tenké vektorové siluety.
+   * Výchozí HW; persist v localStorage, přepínač v topbaru.
+   */
+  renderMode: 'hw' | 'cic' = 'hw'
+
   /** aktuální měřítko (km/px) — čtení pro testy/smoke */
   get zoom(): number {
     return this.kmPerPx
+  }
+
+  setRenderMode(mode: 'hw' | 'cic'): void {
+    this.renderMode = mode
+    try { localStorage.setItem('wob-gfx3d', mode === 'hw' ? '1' : '0') } catch { /* noop */ }
   }
 
   constructor(canvas: HTMLCanvasElement) {
@@ -121,6 +163,8 @@ export class TacticalPlot {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('canvas 2d nedostupný')
     this.ctx = ctx
+    // vzhled z předvolby (výchozí HW/objemový)
+    try { if (localStorage.getItem('wob-gfx3d') === '0') this.renderMode = 'cic' } catch { /* noop */ }
 
     const canvasXY = (e: PointerEvent): Vec2 => {
       const r = canvas.getBoundingClientRect()
@@ -343,17 +387,97 @@ export class TacticalPlot {
         for (let y = oy; y < h; y += 512) ctx.drawImage(tile, x, y)
       }
     }
+    const hw = this.renderMode === 'hw'
     if (this.ambient) {
       // nádech mlhoviny: velký radiální gradient, velmi nízká alfa
       const g = ctx.createRadialGradient(w * 0.7, h * 0.3, 0, w * 0.7, h * 0.3, Math.max(w, h))
       g.addColorStop(0, this.ambient)
       g.addColorStop(1, 'transparent')
       ctx.save()
-      ctx.globalAlpha = 0.16
+      ctx.globalAlpha = hw ? 0.2 : 0.16
       ctx.fillStyle = g
       ctx.fillRect(0, 0, w, h)
       ctx.restore()
     }
+    // HW režim: vrstvená mlhovina (pár velkých měkkých obláčků) + prachový
+    // pás + vinětace — vesmír dostane hloubku a barvu jako v Homeworldu
+    if (hw) this.drawNebula(ctx, w, h)
+  }
+
+  /**
+   * Soumraková atmosféra (jen HW režim): hvězda v levém horním rohu (souhlasí
+   * se směrem světla na trupech), teplý opar planety dole, mlhovinové obláčky
+   * a vinětace. Cíl = kinematický „Homeworld za soumraku" dojem.
+   */
+  private drawNebula(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const coarse = matchMedia('(pointer: coarse)').matches
+    const c = this.camCenter()
+    // barvy odvozené z ambientu soustavy (fallback chladná noční modř)
+    const tint = this.ambient ?? '#22405a'
+    const sunX = w * 0.26
+    const sunY = h * 0.16
+
+    // 1) atmosférický opar: teplý nahoře u slunce → chladná hloubka dole
+    const atm = ctx.createLinearGradient(0, 0, 0, h)
+    atm.addColorStop(0, '#3a2a1e')
+    atm.addColorStop(0.35, '#241d24')
+    atm.addColorStop(1, '#050a12')
+    ctx.save()
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = atm
+    ctx.fillRect(0, 0, w, h)
+    ctx.restore()
+
+    // 2) mlhovinové obláčky (aditivně, pomalá paralaxa)
+    const clouds = coarse ? 2 : 4
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    for (let i = 0; i < clouds; i++) {
+      const px = (c.x / this.kmPerPx) * 0.03
+      const py = (-c.y / this.kmPerPx) * 0.03
+      const cx = ((TacticalPlot.h01(i, 7) * 1.4 - 0.2) * w - px) % (w * 1.4)
+      const cy = ((TacticalPlot.h01(i, 19) * 1.4 - 0.2) * h - py) % (h * 1.4)
+      const R = (0.35 + TacticalPlot.h01(i, 31) * 0.45) * Math.max(w, h)
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R)
+      g.addColorStop(0, i % 2 === 0 ? tint : '#5a3320')
+      g.addColorStop(0.5, i % 2 === 0 ? '#122430' : '#2a1420')
+      g.addColorStop(1, 'transparent')
+      ctx.globalAlpha = 0.08
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.arc(cx, cy, R, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    // 3) hvězda + korónový přesvit
+    const halo = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, Math.max(w, h) * 0.6)
+    halo.addColorStop(0, '#ffe9c2')
+    halo.addColorStop(0.12, '#ffb15a')
+    halo.addColorStop(0.4, '#7a3a1e')
+    halo.addColorStop(1, 'transparent')
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = halo
+    ctx.beginPath()
+    ctx.arc(sunX, sunY, Math.max(w, h) * 0.6, 0, Math.PI * 2)
+    ctx.fill()
+    // jádro hvězdy
+    const core = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 22)
+    core.addColorStop(0, '#fffdf5')
+    core.addColorStop(1, 'transparent')
+    ctx.globalAlpha = 0.95
+    ctx.fillStyle = core
+    ctx.beginPath()
+    ctx.arc(sunX, sunY, 22, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+
+    // 4) vinětace: ztmavení okrajů (drží čitelnost středu)
+    const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.78)
+    vg.addColorStop(0, 'transparent')
+    vg.addColorStop(1, '#02040688')
+    ctx.save()
+    ctx.fillStyle = vg
+    ctx.fillRect(0, 0, w, h)
+    ctx.restore()
   }
 
   /** pole asteroidů: deterministické balvany s pomalým driftem (kosmetika) */
@@ -919,22 +1043,58 @@ export class TacticalPlot {
     this.drawTrail(ctx, p, ship.vel, CLR.ownDim)
     this.drawVelVector(ctx, p, ship.vel, CLR.ownDim)
 
-    ctx.save()
-    ctx.translate(p.x, p.y)
-    ctx.rotate(-ship.heading) // svět y nahoru → obrazovka y dolů
-    ctx.lineWidth = 1.5
-    ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
+    const hw = this.renderMode === 'hw'
+    const now = performance.now()
     // poškození: pod 50 % trupu silueta bliká, pod 25 % jiskří
     const hullPct = (SHIP_CLASSES[ship.classId]?.hullPoints ?? 1) > 0
       ? Math.max(0, ship.hull / (SHIP_CLASSES[ship.classId]?.hullPoints ?? 1))
       : 1
-    if (hullPct < 0.5) {
-      ctx.globalAlpha = 0.65 + 0.35 * Math.abs(Math.sin(performance.now() / 130 + ship.id))
+    const primary = ship.id === this.followId
+    const selected = primary || this.selectedShipIds.includes(ship.id)
+    // výběr (HW): měkký přesvitový prstenec kolem lodi (screen souřadnice)
+    if (hw && selected) {
+      const gr = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, primary ? 22 : 18)
+      gr.addColorStop(0, 'transparent')
+      gr.addColorStop(0.7, 'transparent')
+      gr.addColorStop(1, primary ? '#eaffea' : '#8fe08a')
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.globalAlpha = primary ? 0.5 : 0.32
+      ctx.fillStyle = gr
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, primary ? 22 : 18, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
     }
-    this.drawHullIcon(ctx, hull)
+
+    ctx.save()
+    ctx.translate(p.x, p.y)
+    ctx.rotate(-ship.heading) // svět y nahoru → obrazovka y dolů
+    if (hullPct < 0.5) {
+      ctx.globalAlpha = 0.65 + 0.35 * Math.abs(Math.sin(now / 130 + ship.id))
+    }
+    if (hw) {
+      const pal = ship.surrendered ? HULL_PAL.surrendered
+        : ship.rolledTo != null ? HULL_PAL.rolled : HULL_PAL.own
+      ctx.save()
+      ctx.scale(HW_SCALE, HW_SCALE)
+      hullShadow(ctx, hull, ship.heading)
+      // pohon pod trupem, ať vlečka nepřekrývá siluetu
+      if (ship.wedgeOn && ship.throttle > 0) {
+        enginePlume(ctx, hull === 'DN' || hull === 'BC' ? -12 : -8,
+          ship.throttle, now, ship.id, '#eaffff', '#3fb0d8')
+      }
+      shipBody(ctx, hull, ship.heading, pal)
+      if (hullPct >= 0.5) hullLights(ctx, hull, pal, now, ship.id)
+      ctx.restore()
+    } else {
+      ctx.lineWidth = 1.5
+      ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
+      this.drawHullIcon(ctx, hull)
+    }
     if (hullPct < 0.25) {
       // jiskřící trhliny — deterministicky z render času a id lodi
-      const ph = Math.floor(performance.now() / 180) + ship.id * 13
+      const ph = Math.floor(now / 180) + ship.id * 13
       ctx.strokeStyle = '#ffd27a'
       ctx.lineWidth = 0.8
       for (let i = 0; i < 2; i++) {
@@ -944,21 +1104,19 @@ export class TacticalPlot {
         ctx.lineTo(Math.cos(a) * 8, Math.sin(a) * 8)
         ctx.stroke()
       }
-      ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
-      ctx.lineWidth = 1.5
     }
     ctx.globalAlpha = 1
-    // vybrané lodě: dvojitý obrys (primární — followId — silněji)
-    const primary = ship.id === this.followId
-    if (primary || this.selectedShipIds.includes(ship.id)) {
+    // vybrané lodě (CIC): dvojitý obrys (primární — followId — silněji)
+    if (!hw && selected) {
       ctx.save()
       ctx.scale(primary ? 1.6 : 1.45, primary ? 1.6 : 1.45)
       ctx.lineWidth = primary ? 1 : 0.7
       ctx.globalAlpha = primary ? 0.8 : 0.55
+      ctx.strokeStyle = ship.rolledTo != null ? CLR.rolled : CLR.own
       this.drawHullIcon(ctx, hull)
       ctx.restore()
     }
-    this.drawDrive(ctx, ship, hull === 'DN' || hull === 'BC' ? -13 : -8)
+    if (!hw) this.drawDrive(ctx, ship, hull === 'DN' || hull === 'BC' ? -13 : -8)
     if (ship.wedgeOn) this.drawWedge(ctx, ship.throttle)
     ctx.restore()
 
@@ -1005,15 +1163,41 @@ export class TacticalPlot {
     const ang = Math.hypot(c.vel.x, c.vel.y) > 0.5 ? Math.atan2(c.vel.y, c.vel.x) : 0
     // silueta, jakmile je třída známa (plná identifikace NEBO revealClass)
     const guessHull = SHIP_CLASSES[c.classGuess]?.hullCode
+    const hw = this.renderMode === 'hw'
     ctx.save()
     ctx.translate(p.x, p.y)
     ctx.rotate(-ang)
     ctx.lineWidth = 1.5
     ctx.strokeStyle = color
-    if (guessHull) {
+    if (guessHull && hw) {
+      // objemový nepřátelský/neznámý trup, nasvícený a s pohonem
+      const pal = surrendered ? HULL_PAL.surrendered
+        : c.idQuality === 0 ? HULL_PAL.unknown : HULL_PAL.hostile
+      ctx.scale(HW_SCALE, HW_SCALE)
+      if (!memory) {
+        hullShadow(ctx, guessHull, ang)
+        if (Math.hypot(c.vel.x, c.vel.y) > 0.5 && !surrendered) {
+          enginePlume(ctx, guessHull === 'DN' || guessHull === 'BC' ? -12 : -8,
+            0.7, performance.now(), c.shipId, '#ffe6d8', '#c85a3a')
+        }
+      }
+      shipBody(ctx, guessHull, ang, pal)
+    } else if (guessHull) {
       ctx.scale(0.85, 0.85)
       shipSilhouette(ctx, guessHull)
     } else {
+      if (hw) {
+        // neznámý kontakt: kosočtverec s jemným přesvitem
+        const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 9)
+        gr.addColorStop(0, color)
+        gr.addColorStop(1, 'transparent')
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.globalAlpha = 0.35
+        ctx.fillStyle = gr
+        ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill()
+        ctx.restore()
+      }
       ctx.beginPath()
       ctx.moveTo(6, 0); ctx.lineTo(0, 6); ctx.lineTo(-6, 0); ctx.lineTo(0, -6)
       ctx.closePath()
@@ -1065,6 +1249,16 @@ export class TacticalPlot {
       const dy = p.y - tail.y
       const dl = Math.hypot(dx, dy) || 1
       const fl = (4 + 2 * Math.sin(performance.now() / 40 + m.id)) / dl
+      if (this.renderMode === 'hw') {
+        // aditivní přesvit: hlavice svítí a plamen se sčítá s pozadím
+        ctx.globalCompositeOperation = 'lighter'
+        const gl = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 4)
+        gl.addColorStop(0, own ? '#d9ffd0' : '#ffcf9a')
+        gl.addColorStop(1, 'transparent')
+        ctx.globalAlpha = 0.8
+        ctx.fillStyle = gl
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill()
+      }
       ctx.globalAlpha = 0.9
       ctx.strokeStyle = own ? '#d9ffd0' : '#ffb37a'
       ctx.lineWidth = 1.6
