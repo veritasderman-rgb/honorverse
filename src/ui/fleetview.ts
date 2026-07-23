@@ -380,5 +380,11 @@ export function startFleetView(canvas: HTMLCanvasElement): () => void {
     raf = requestAnimationFrame(loop)
   }
   raf = requestAnimationFrame(loop)
-  return () => cancelAnimationFrame(raf)
+  return () => {
+    cancelAnimationFrame(raf)
+    // uvolni DPR-scaled backing bitmap, ať nedrží druhý full-screen buffer
+    // během mise (na hi-DPI mobilu ~10–25 MB); při restartu se obnoví v loop()
+    canvas.width = 0
+    canvas.height = 0
+  }
 }
