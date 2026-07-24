@@ -37,14 +37,26 @@ self.addEventListener('fetch', (e) => {
     return
   }
 
+  // media/range požadavky (video briefingy) NEcachovat — server je servíruje
+  // po částech (HTTP 206) a Cache API partial odpovědi neumí; jinak by
+  // cache.put selhal a video by se nepřehrálo (fallback na obrázek)
+  if (req.headers.has('range')) {
+    e.respondWith(fetch(req))
+    return
+  }
+
   // statika: cache-first s doplňováním cache ze sítě
   e.respondWith((async () => {
     const hit = await caches.match(req)
     if (hit) return hit
     const res = await fetch(req)
-    if (res.ok) {
-      const cache = await caches.open(CACHE)
-      cache.put(req, res.clone())
+    // cachuj jen PLNÉ 200 odpovědi; selhání cache (206/opaque/kvóta) nesmí
+    // nikdy shodit vrácení síťové odpovědi
+    if (res.status === 200) {
+      try {
+        const cache = await caches.open(CACHE)
+        await cache.put(req, res.clone())
+      } catch { /* necachovatelná odpověď — vrať ji rovnou */ }
     }
     return res
   })())
