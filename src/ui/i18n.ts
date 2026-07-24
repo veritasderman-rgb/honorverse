@@ -62,6 +62,9 @@ const DICT: Record<string, { cs: string; en: string }> = {
   // úvod kampaně
   'intro.title': { cs: 'WALL OF BATTLE — KAMPAŇ', en: 'WALL OF BATTLE — CAMPAIGN' },
   'intro.continue': { cs: 'POKRAČOVAT', en: 'CONTINUE' },
+  // voiceover (namluvené prology/epilogy)
+  'vo.play': { cs: '🔊 ▶ komentář', en: '🔊 ▶ voiceover' },
+  'vo.pause': { cs: '🔊 ⏸ komentář', en: '🔊 ⏸ voiceover' },
   // hall of fame
   'hall.loading': { cs: 'načítám…', en: 'loading…' },
   'hall.empty': { cs: 'Žebříček je zatím prázdný — buď první!', en: 'Leaderboard is empty — be the first!' },

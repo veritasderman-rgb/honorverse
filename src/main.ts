@@ -8,7 +8,7 @@ import { startFleetView } from './ui/fleetview'
 import { sceneFor } from './ui/scenes'
 import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
-import { t, toggleLang } from './ui/i18n'
+import { getLang, t, toggleLang } from './ui/i18n'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -24,7 +24,7 @@ import {
   applyLoadout, LOADOUTS, loadPreset, presetById, savePreset, type LoadoutId,
 } from './data/loadout'
 import { applyBonusRewards } from './data/rewards'
-import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
+import { campaignIntro, defeatGeneric, missionStory } from './data/story'
 import {
   CAMPAIGN_NODES, GALAXY, GALAXY_TILT, isMissionUnlocked, NEBULAE, podReward,
   shipRewards, type CampaignNode,
@@ -251,12 +251,15 @@ function missionAvailable(id: string, cleared: readonly string[]): boolean {
 function showCampaignIntro(onDone: () => void): void {
   const el = overlay(
     `<h2>${t('intro.title')}</h2>`
-    + `<div class="brief story">${esc(CAMPAIGN_INTRO)}</div>`
+    + `<div class="brief story">${esc(campaignIntro())}</div>`
     + `<button id="btn-intro-continue">${t('intro.continue')}</button>`,
   )
   el.classList.add('menu')
   setMenuBg(true)
+  // namluvený úvod kampaně (existuje-li nahrávka)
+  el.querySelector('h2')?.after(voPlayer('intro'))
   onTap(el.querySelector('#btn-intro-continue'), () => {
+    stopVo()
     markIntroSeen()
     el.remove()
     onDone()
@@ -373,7 +376,7 @@ function showStarMap(): void {
     + `<button id="btn-unlock-all" class="${unlocked ? 'active' : 'dim'}">`
     + `${unlocked ? t('menu.unlockedAll') : t('menu.unlockAll')}</button>`
     + `</div>`
-    + `<div id="story-body" class="brief story" style="display:none">${esc(CAMPAIGN_INTRO)}</div>`
+    + `<div id="story-body" class="brief story" style="display:none">${esc(campaignIntro())}</div>`
     + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">${t('hall.loading')}</span></div>`
   const el = overlay(
     `<h2>${t('map.title')}</h2>`
@@ -632,6 +635,62 @@ function briefingMedia(id: string): HTMLElement | null {
   return makeImg()
 }
 
+// ---------- voiceover (namluvené prology/epilogy misí) ----------
+
+/** právě hrající VO — nový přehrávač či zavření overlaye ho zastaví */
+let activeVo: HTMLAudioElement | null = null
+
+/** zastaví aktuální voiceover (volat při START/ZPĚT/odchodu z overlaye) */
+function stopVo(): void {
+  activeVo?.pause()
+  activeVo = null
+}
+
+/**
+ * Voiceover přehrávač: zkusí `audio/vo/<name>-<lang>.mp3`; dokud soubor
+ * neexistuje, nezobrazí se nic (stejný vzor jako video briefing). Po
+ * načtení se přehraje sám (overlay se otvírá po uživatelském gestu)
+ * a nabídne ⏸/▶ přepínač. Názvy souborů viz docs/VO_SCRIPT.md.
+ */
+function voPlayer(name: string): HTMLElement {
+  const wrap = document.createElement('div')
+  wrap.className = 'vo-row'
+  wrap.style.display = 'none'
+  // <audio> s více <source> — prohlížeč si vybere první přehratelný formát
+  // (mp3 preferovaný; m4a/wav pro pohodlí při nahrávání)
+  const audio = document.createElement('audio')
+  audio.preload = 'auto'
+  let lastSource: HTMLSourceElement | null = null
+  for (const ext of ['mp3', 'm4a', 'wav']) {
+    const s = document.createElement('source')
+    s.src = `audio/vo/${name}-${getLang()}.${ext}`
+    audio.appendChild(s)
+    lastSource = s
+  }
+  const btn = document.createElement('button')
+  btn.className = 'vo-btn'
+  const setLabel = (): void => { btn.textContent = audio.paused ? t('vo.play') : t('vo.pause') }
+  audio.addEventListener('canplaythrough', () => {
+    if (wrap.style.display !== 'none') return
+    stopVo()
+    activeVo = audio
+    wrap.style.display = 'block'
+    void audio.play().catch(() => { /* autoplay blokován — zůstane ▶ */ })
+    setLabel()
+  }, { once: true })
+  for (const ev of ['play', 'pause', 'ended']) audio.addEventListener(ev, setLabel)
+  // selhání VŠECH zdrojů hlásí error na posledním <source> — řádek se uklidí
+  lastSource?.addEventListener('error', () => wrap.remove())
+  btn.addEventListener('click', () => {
+    if (audio.paused) { stopVo(); activeVo = audio; void audio.play().catch(() => { /* noop */ }) }
+    else audio.pause()
+  })
+  setLabel()
+  audio.load()
+  wrap.appendChild(btn)
+  return wrap
+}
+
 /** briefing skirmishe (bez loadoutu — výzbroj řeší stavba bitvy) */
 function showBriefing(sc: Scenario): void {
   const el = overlay(
@@ -654,7 +713,7 @@ function showBriefing(sc: Scenario): void {
 function showMissionPrep(id: string): void {
   const sc = SCENARIOS[id]
   if (!sc) { startCampaignMission(id); return }
-  const prolog = MISSION_STORY[id]?.prolog
+  const prolog = missionStory(id)?.prolog
   let sel: LoadoutId = loadPreset()
   const btns = LOADOUTS.map(l =>
     `<button class="ld-btn${l.id === sel ? ' active' : ''}" data-ld="${l.id}">${esc(l.label)}</button>`).join('')
@@ -671,6 +730,8 @@ function showMissionPrep(id: string): void {
   // video briefing (nebo statická scéna jako fallback)
   const media = briefingMedia(id)
   if (media) el.querySelector('#prep-media')?.appendChild(media)
+  // namluvený prolog (existuje-li nahrávka — viz docs/VO_SCRIPT.md)
+  el.querySelector('h2')?.after(voPlayer(`${id}-prolog`))
   el.addEventListener('click', e => {
     const t = (e.target as Element).closest<HTMLElement>('[data-ld]')
     if (!t) return
@@ -679,8 +740,9 @@ function showMissionPrep(id: string): void {
       b.classList.toggle('active', b.getAttribute('data-ld') === sel))
     el.querySelector('#ld-desc')!.textContent = presetById(sel).desc
   })
-  onTap(el.querySelector('#btn-prep-back'), () => { el.remove(); showStarMap() })
+  onTap(el.querySelector('#btn-prep-back'), () => { stopVo(); el.remove(); showStarMap() })
   onTap(el.querySelector('#btn-start'), () => {
+    stopVo()
     savePreset(sel)
     el.remove()
     setMenuBg(false)
@@ -790,12 +852,15 @@ function showOutcome(state: SimState): void {
         + `<div id="lb-result" class="lb-box"></div>`)
       + `</div>`
     : ''
-  const story = MISSION_STORY[currentMissionId]
-  let epilog = win ? story?.epilog : (story?.epilogLose ?? (story ? DEFEAT_GENERIC : undefined))
+  const story = missionStory(currentMissionId)
+  let epilog = win ? story?.epilog : (story?.epilogLose ?? (story ? defeatGeneric() : undefined))
+  // jméno VO nahrávky epilogu (viz docs/VO_SCRIPT.md): výhra/porážka/konec dle flagu
+  let epilogVo = win ? `${currentMissionId}-epilog`
+    : (story?.epilogLose ? `${currentMissionId}-epiloglose` : 'defeat-generic')
   // finále s více konci: epilog dle flagu stavu (ending-orders/-spirit/-clean)
   if (win && story?.epilogByFlag) {
     for (const [flag, text] of Object.entries(story.epilogByFlag)) {
-      if (state.flags[flag]) { epilog = text; break }
+      if (state.flags[flag]) { epilog = text; epilogVo = `${currentMissionId}-epilog-${flag}`; break }
     }
   }
   const el = overlay(
@@ -810,6 +875,8 @@ function showOutcome(state: SimState): void {
     + `<button id="btn-menu">VÝBĚR MISE</button>`
     + `</div>`,
   )
+  // namluvený epilog (existuje-li nahrávka)
+  if (epilog) el.querySelector('.story-epilog')?.before(voPlayer(epilogVo))
 
   // odeslání do žebříčku + top 10 + „chybí ti X bodů"
   const submitBtn = el.querySelector<HTMLButtonElement>('#btn-lb-submit')
