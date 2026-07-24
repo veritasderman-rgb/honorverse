@@ -9,7 +9,9 @@
  */
 import type { ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { HudView, UiState } from './panels'
+import { fmtKm } from './panels'
 import { SHIP_CLASSES } from '../data/defs'
+import { mobileContactChips, type MobileContactChip } from './mobileContacts'
 
 /** 12 subsystémů v pořadí kolem prstence (od horní osy po směru hodin) */
 const SUBS: { key: keyof Subsystems; label: string }[] = [
@@ -49,12 +51,20 @@ function health(v: number): string {
 
 export class MobileHud implements HudView {
   private el: HTMLElement
+  /** M2: palcový proužek kontaktů (pravý okraj) */
+  private contactsEl: HTMLElement
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div')
     this.el.id = 'mobile-hud'
     this.el.style.display = 'none'
     root.appendChild(this.el)
+
+    this.contactsEl = document.createElement('div')
+    this.contactsEl.id = 'mobile-contacts'
+    this.contactsEl.style.display = 'none'
+    root.appendChild(this.contactsEl)
+    this.wireLongPress()
   }
 
   // prstenec čte stav přímo ze snapshotu; eventy (log/statistika) nepotřebuje
@@ -63,9 +73,77 @@ export class MobileHud implements HudView {
   update(state: SimState, ui: UiState, _force?: boolean): void {
     const active = document.body.classList.contains('phone') && ui.ownShipId != null
     const ship = active ? state.ships.find(s => s.id === ui.ownShipId) : undefined
-    if (!ship || ship.destroyed) { this.el.style.display = 'none'; return }
+    if (!ship || ship.destroyed) {
+      this.el.style.display = 'none'
+      this.contactsEl.style.display = 'none'
+      return
+    }
     this.el.style.display = 'block'
     this.el.innerHTML = this.ring(ship)
+
+    const chips = mobileContactChips(state, ui)
+    if (chips.length === 0) {
+      this.contactsEl.style.display = 'none'
+    } else {
+      this.contactsEl.style.display = 'flex'
+      this.contactsEl.innerHTML = chips.map(c => this.chip(c)).join('')
+    }
+  }
+
+  /** jeden čip kontaktu; `data-sel` zaměří přes stávající delegaci Panels */
+  private chip(c: MobileContactChip): string {
+    const mark = c.surrendered ? '▽' : '◆'
+    const cls = c.surrendered ? 'mc-surr' : `mc-t-${c.threat}`
+    const arrow = c.surrendered ? '' : c.threat === 'closing' ? '▲' : c.threat === 'opening' ? '▽' : '·'
+    // pips kvality identifikace (0–2 vyplněné z 2)
+    const pips = [0, 1].map(i => `<i class="${i < c.quality ? 'on' : ''}"></i>`).join('')
+    return `<div class="mc-chip ${cls}${c.selected ? ' sel' : ''}" data-sel="${c.shipId}"`
+      + ` role="button" tabindex="0" aria-label="Kontakt ${c.code} #${c.shipId}, ${fmtKm(c.rangeKm)}">`
+      + `<div class="mc-top"><span class="mc-mark">${mark}</span>`
+      + `<span class="mc-code">${c.code}</span><span class="mc-arr">${arrow}</span></div>`
+      + `<div class="mc-rng">${fmtKm(c.rangeKm)}</div>`
+      + `<div class="mc-pips">${pips}</div>`
+      + `</div>`
+  }
+
+  /**
+   * Podržení čipu (≥ 420 ms bez pohybu) otevře pravý šuplík s detailem cíle.
+   * Klepnutí necháváme na delegaci Panels (`data-sel` → zaměření). Časovač
+   * rušíme na pohybu/uvolnění, aby scroll proužku detail neotvíral.
+   */
+  private wireLongPress(): void {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let sx = 0, sy = 0
+    const clear = (): void => { if (timer) { clearTimeout(timer); timer = null } }
+    this.contactsEl.addEventListener('pointerdown', e => {
+      const chip = (e.target as Element | null)?.closest('.mc-chip')
+      if (!chip) return
+      sx = e.clientX; sy = e.clientY
+      clear()
+      timer = setTimeout(() => {
+        // otevři pravý šuplík (kde je detail cíle), zavři levý
+        document.getElementById('hud-tr')?.classList.add('open')
+        document.getElementById('tab-tr')?.classList.add('active')
+        document.getElementById('hud-tl')?.classList.remove('open')
+        document.getElementById('tab-tl')?.classList.remove('active')
+      }, 420)
+    })
+    this.contactsEl.addEventListener('pointermove', e => {
+      if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) clear()
+    })
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
+      this.contactsEl.addEventListener(ev, clear)
+    }
+    // klávesnice / asistivní technologie: čipy jsou role="button" + tabindex="0",
+    // ale delegace Panels poslouchá jen pointerdown. Enter/mezerník proto
+    // převedeme na bublající pointerdown na čipu → stejná cesta zaměření.
+    this.contactsEl.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      const chip = (e.target as Element | null)?.closest('.mc-chip')
+      if (!chip) return
+      e.preventDefault()
+      chip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    })
   }
 
   private ring(ship: ShipState): string {
