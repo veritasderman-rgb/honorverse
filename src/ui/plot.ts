@@ -1316,8 +1316,11 @@ export class TacticalPlot {
     } else {
       ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
       // TELEGRAF ZÁMĚRU (D2): u sledovaného nepřítele čti jeho postoj, ať je
-      // protikrok „zasloužený". Jen dobrý track (idQuality ≥ 1) — tvé senzory.
-      if (foe && foe.side !== 'player' && c.idQuality >= 1) {
+      // protikrok „zasloužený". Jen dobrý track (idQuality ≥ 1) a AKTUÁLNÍ
+      // data (c.age ≈ 0) — u zpožděného EM kontaktu bychom četli živý stav
+      // dřív, než by světlorychlostní senzorové zpoždění dovolilo (respekt
+      // k senzorovému modelu).
+      if (foe && foe.side !== 'player' && c.idQuality >= 1 && c.age < 0.5) {
         const tg = telegraph(foe)
         if (tg) {
           ctx.save()
