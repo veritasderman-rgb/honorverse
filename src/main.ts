@@ -8,6 +8,7 @@ import { startFleetView } from './ui/fleetview'
 import { sceneFor } from './ui/scenes'
 import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
+import { t, toggleLang } from './ui/i18n'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -243,9 +244,9 @@ function missionAvailable(id: string, cleared: readonly string[]): boolean {
 /** úvod kampaně (první spuštění): CAMPAIGN_INTRO + POKRAČOVAT → výběr mise */
 function showCampaignIntro(onDone: () => void): void {
   const el = overlay(
-    `<h2>WALL OF BATTLE — KAMPAŇ</h2>`
+    `<h2>${t('intro.title')}</h2>`
     + `<div class="brief story">${esc(CAMPAIGN_INTRO)}</div>`
-    + `<button id="btn-intro-continue">POKRAČOVAT</button>`,
+    + `<button id="btn-intro-continue">${t('intro.continue')}</button>`,
   )
   el.classList.add('menu')
   setMenuBg(true)
@@ -320,7 +321,7 @@ function starMapSvg(cleared: ReadonlySet<string>): string {
   const hereMark = here
     ? `<g class="here"><circle class="pulse" cx="${here.x}" cy="${here.y}" r="18"/>`
       + `<path class="ship" d="M0,-9 L6,7 L0,3 L-6,7 Z" transform="translate(${here.x},${here.y - 34})"/>`
-      + `<text class="here-lbl" x="${here.x}" y="${here.y - 44}" text-anchor="middle">JSI ZDE</text></g>`
+      + `<text class="here-lbl" x="${here.x}" y="${here.y - 44}" text-anchor="middle">${t('map.youAreHere')}</text></g>`
     : ''
 
   return `<svg class="starmap-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" `
@@ -350,27 +351,28 @@ function showStarMap(): void {
   const pods = podReward([...cleared])
   const prizeShips = shipRewards([...cleared])
   const rewardBits: string[] = []
-  if (pods > 0) rewardBits.push(`+${pods} plošin`)
+  if (pods > 0) rewardBits.push(`+${pods} ${t('map.pods')}`)
   for (const s of prizeShips) rewardBits.push(esc(s.name))
   const rewardHint = rewardBits.length > 0
-    ? ` · <b class="ok">★ ${rewardBits.join(', ')}</b> z bočních operací`
+    ? ` · <b class="ok">★ ${rewardBits.join(', ')}</b> ${t('map.fromSideops')}`
     : ''
   const unlocked = unlockAllOn()
   const actions =
     `<div class="sm-actions">`
-    + `<button id="btn-story-toggle">▸ PŘÍBĚH</button>`
-    + `<button id="btn-hall-toggle">▸ SÍŇ SLÁVY</button>`
-    + `<button id="btn-skirmish">⚔ VOLNÁ BITVA</button>`
-    + `<button id="btn-fleet">⚓ SÍŇ FLOTILY</button>`
+    + `<button id="btn-story-toggle">${t('menu.story')}</button>`
+    + `<button id="btn-hall-toggle">${t('menu.hall')}</button>`
+    + `<button id="btn-skirmish">${t('menu.skirmish')}</button>`
+    + `<button id="btn-fleet">${t('menu.fleet')}</button>`
+    + `<button id="btn-lang" class="dim">${t('menu.lang')}</button>`
     + `<button id="btn-unlock-all" class="${unlocked ? 'active' : 'dim'}">`
-    + `${unlocked ? '🔓 VŠE ODEMČENO (test)' : '🔓 ODEMKNOUT VŠE (test)'}</button>`
+    + `${unlocked ? t('menu.unlockedAll') : t('menu.unlockAll')}</button>`
     + `</div>`
     + `<div id="story-body" class="brief story" style="display:none">${esc(CAMPAIGN_INTRO)}</div>`
-    + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">načítám…</span></div>`
+    + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">${t('hall.loading')}</span></div>`
   const el = overlay(
-    `<h2>HVĚZDNÁ MAPA</h2>`
-    + `<div class="sm-progress">Postup kampaně: <b>${doneCount}/${total}</b> soustav${rewardHint} — `
-    + `klepni na svítící soustavu a vpluj do mise. ★ = boční operace (odměnou plošiny).</div>`
+    `<h2>${t('map.title')}</h2>`
+    + `<div class="sm-progress">${t('map.progress')} <b>${doneCount}/${total}</b> ${t('map.systems')}${rewardHint} — `
+    + `${t('map.tapHint')} ${t('map.bonusHint')}</div>`
     + `<div class="starmap">${starMapSvg(cleared)}</div>`
     + actions,
   )
@@ -379,6 +381,8 @@ function showStarMap(): void {
 
   onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
   onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
+  // přepínač jazyka (CS ⟷ EN) — překreslí menu v novém jazyce
+  onTap(el.querySelector('#btn-lang'), () => { toggleLang(); el.remove(); showStarMap() })
   // testovací přepínač: odemkne/zamkne všechny soustavy a překreslí mapu
   onTap(el.querySelector('#btn-unlock-all'), () => {
     setUnlockAll(!unlockAllOn())
@@ -393,15 +397,15 @@ function showStarMap(): void {
   onTap(hallToggle, () => {
     const open = hallBody!.style.display !== 'none'
     hallBody!.style.display = open ? 'none' : 'block'
-    hallToggle!.textContent = `${open ? '▸' : '▾'} SÍŇ SLÁVY`
+    hallToggle!.textContent = open ? t('menu.hall') : t('menu.hallOpen')
     if (open || hallLoaded) return
     hallLoaded = true
     void fetchOverall(10).then(rows => {
       if (!rows || rows.length === 0) {
-        hallBody!.innerHTML = `<span class="dim">${rows ? 'Žebříček je zatím prázdný — buď první!' : 'Žebříček je nedostupný (offline?).'}</span>`
+        hallBody!.innerHTML = `<span class="dim">${rows ? t('hall.empty') : t('hall.offline')}</span>`
         return
       }
-      hallBody!.innerHTML = `<table class="lb-table"><tr><th>#</th><th>kapitán</th><th>body</th><th>misí</th></tr>`
+      hallBody!.innerHTML = `<table class="lb-table"><tr><th>#</th><th>${t('hall.captain')}</th><th>${t('hall.points')}</th><th>${t('hall.missions')}</th></tr>`
         + rows.map((r, i) =>
           `<tr><td>${i + 1}.</td><td>${esc(r.nickname)}</td><td>${r.total}</td><td>${r.missions}</td></tr>`).join('')
         + `</table>`
@@ -413,7 +417,7 @@ function showStarMap(): void {
   onTap(toggle, () => {
     const open = body!.style.display !== 'none'
     body!.style.display = open ? 'none' : 'block'
-    toggle!.textContent = `${open ? '▸' : '▾'} PŘÍBĚH`
+    toggle!.textContent = open ? t('menu.story') : t('menu.storyOpen')
   })
 
   // klepnutí / Enter / mezerník na odemčené soustavě → příprava mise. SVG <g>
