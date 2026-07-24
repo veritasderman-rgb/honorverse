@@ -10,6 +10,10 @@ import { Panels, esc, fmtTime, type CombatStats } from './ui/panels'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
 import { SCENARIOS } from './data/missions'
+import { SHIP_CLASSES } from './data/defs'
+import {
+  buildSkirmish, fleetTotal, RANGE_PRESETS, SKIRMISH_CLASSES, type SkirmishConfig,
+} from './data/skirmish'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
 import { scoreMission } from './sim/score'
 import {
@@ -184,7 +188,12 @@ function showMissionSelect(): void {
     + `<button id="btn-hall-toggle">▸ SÍŇ SLÁVY</button>`
     + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">načítám…</span></div>`
     + `</div>`
-  const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${hall}${rows}`)
+  const skirmish =
+    `<div class="story-section">`
+    + `<button id="btn-skirmish">⚔ VOLNÁ BITVA — slož vlastní střet</button>`
+    + `</div>`
+  const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${hall}${skirmish}${rows}`)
+  onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
   el.classList.add('menu')
   setMenuBg(true)
   // Síň slávy: celkové pořadí (součet nejlepších skóre per mise)
@@ -222,6 +231,92 @@ function showMissionSelect(): void {
       bridge.start(btn.dataset.mission!)
     })
   })
+}
+
+/** Stavba volné bitvy (E1): steppery flotil, vzdálenost, seed → BOJ. */
+function showSkirmishBuilder(): void {
+  const cfg: SkirmishConfig = {
+    player: { 'ca-bastion': 1, 'dd-vichr': 2 },
+    enemy: { 'ca-bastion': 1, 'dd-vichr': 2 },
+    rangeKm: 6_000_000,
+    seed: Math.floor(Math.random() * 1e9),
+  }
+  const clsRow = (side: 'player' | 'enemy', cls: string): string => {
+    const hull = SHIP_CLASSES[cls]?.hullCode ?? '?'
+    const nm = SHIP_CLASSES[cls]?.name ?? cls
+    return `<div class="sk-row">`
+      + `<span class="sk-name" title="${esc(nm)}">${esc(hull)}</span>`
+      + `<button class="sk-step" data-sk="dec" data-side="${side}" data-cls="${cls}">−</button>`
+      + `<span class="sk-n" id="sk-${side}-${cls}">${cfg[side][cls] ?? 0}</span>`
+      + `<button class="sk-step" data-sk="inc" data-side="${side}" data-cls="${cls}">+</button>`
+      + `</div>`
+  }
+  const col = (side: 'player' | 'enemy', title: string): string =>
+    `<div class="sk-col"><div class="sk-col-h">${title}</div>`
+    + SKIRMISH_CLASSES.map(c => clsRow(side, c)).join('')
+    + `<div class="sk-total">celkem <b id="sk-total-${side}">${fleetTotal(cfg[side])}</b></div></div>`
+  const ranges = RANGE_PRESETS.map(r =>
+    `<button class="sk-range${r.km === cfg.rangeKm ? ' active' : ''}" data-km="${r.km}">${esc(r.label)}</button>`).join('')
+
+  const el = overlay(
+    `<h2>VOLNÁ BITVA</h2>`
+    + `<div class="sk-grid">${col('player', 'TVOJE FLOTILA')}${col('enemy', 'NEPŘÍTEL')}</div>`
+    + `<div class="sk-opts"><span>Vzdálenost:</span> ${ranges}</div>`
+    + `<div class="sk-opts"><span>Seed:</span> <b id="sk-seed">${cfg.seed}</b> `
+    + `<button id="sk-dice" title="náhodný seed">🎲</button></div>`
+    + `<div style="margin-top:14px">`
+    + `<button id="sk-fight">⚔ BOJ</button> `
+    + `<button id="sk-back">ZPĚT</button></div>`
+    + `<div id="sk-warn" class="dim" style="margin-top:8px"></div>`,
+  )
+
+  const refresh = (): void => {
+    for (const side of ['player', 'enemy'] as const) {
+      for (const c of SKIRMISH_CLASSES) {
+        const n = el.querySelector(`#sk-${side}-${c}`)
+        if (n) n.textContent = String(cfg[side][c] ?? 0)
+      }
+      const tot = el.querySelector(`#sk-total-${side}`)
+      if (tot) tot.textContent = String(fleetTotal(cfg[side]))
+    }
+    const ok = fleetTotal(cfg.player) > 0 && fleetTotal(cfg.enemy) > 0
+    const fight = el.querySelector<HTMLButtonElement>('#sk-fight')!
+    fight.disabled = !ok
+    el.querySelector('#sk-warn')!.textContent = ok ? '' : 'Obě flotily potřebují aspoň jednu loď.'
+  }
+
+  // delegace kliknutí (steppery, vzdálenost) — jeden posluchač na overlay
+  el.addEventListener('click', e => {
+    const t = (e.target as Element).closest<HTMLElement>('[data-sk],[data-km]')
+    if (!t) return
+    const km = t.getAttribute('data-km')
+    if (km) {
+      cfg.rangeKm = Number(km)
+      el.querySelectorAll('.sk-range').forEach(b =>
+        b.classList.toggle('active', b.getAttribute('data-km') === km))
+      return
+    }
+    const sk = t.getAttribute('data-sk')
+    if (sk === 'inc' || sk === 'dec') {
+      const side = t.getAttribute('data-side') as 'player' | 'enemy'
+      const cls = t.getAttribute('data-cls')!
+      const cur = cfg[side][cls] ?? 0
+      cfg[side][cls] = Math.max(0, Math.min(12, cur + (sk === 'inc' ? 1 : -1)))
+      refresh()
+    }
+  })
+  onTap(el.querySelector('#sk-dice'), () => {
+    cfg.seed = Math.floor(Math.random() * 1e9)
+    el.querySelector('#sk-seed')!.textContent = String(cfg.seed)
+  })
+  onTap(el.querySelector('#sk-back'), () => { el.remove(); showMissionSelect() })
+  onTap(el.querySelector('#sk-fight'), () => {
+    if (fleetTotal(cfg.player) === 0 || fleetTotal(cfg.enemy) === 0) return
+    el.remove()
+    setMenuBg(false)
+    bridge.startScenario(buildSkirmish(cfg))
+  })
+  refresh()
 }
 
 /** úvodní scéna mise (public/img/<hodnota>.png) */
@@ -338,18 +433,21 @@ function showOutcome(state: SimState): void {
     launched: stats.ourLaunched,
     hits: stats.ourHits,
   })
+  // volná bitva nemá skóre do žebříčku (jen rozbor + skóre pro info)
+  const isSkirmish = currentMissionId === 'skirmish'
   const scoreHtml = win
     ? `<div class="score-block">`
       + `<div class="score-total">SKÓRE: <b>${score.total}</b></div>`
       + score.breakdown.map(l =>
         `<div class="row"><span>${esc(l.label)}</span><span class="${l.points >= 0 ? 'ok' : 'bad'}">${l.points >= 0 ? '+' : ''}${l.points}</span></div>`).join('')
-      + `<div class="lb-form">`
-      + `<input id="lb-nick" maxlength="24" placeholder="přezdívka (2–24 znaků)" value="${esc(loadPref(NICK_KEY))}">`
-      + `<input id="lb-email" maxlength="254" placeholder="e-mail (nepovinný — celkové pořadí)" value="${esc(loadPref(EMAIL_KEY))}">`
-      + `<label class="lb-consent"><input type="checkbox" id="lb-consent"${loadPref(EMAIL_KEY) ? ' checked' : ''}> souhlasím s uložením e-mailu pro historické skóre</label>`
-      + `<button id="btn-lb-submit">ODESLAT DO ŽEBŘÍČKU</button>`
-      + `</div>`
-      + `<div id="lb-result" class="lb-box"></div>`
+      + (isSkirmish ? '' :
+        `<div class="lb-form">`
+        + `<input id="lb-nick" maxlength="24" placeholder="přezdívka (2–24 znaků)" value="${esc(loadPref(NICK_KEY))}">`
+        + `<input id="lb-email" maxlength="254" placeholder="e-mail (nepovinný — celkové pořadí)" value="${esc(loadPref(EMAIL_KEY))}">`
+        + `<label class="lb-consent"><input type="checkbox" id="lb-consent"${loadPref(EMAIL_KEY) ? ' checked' : ''}> souhlasím s uložením e-mailu pro historické skóre</label>`
+        + `<button id="btn-lb-submit">ODESLAT DO ŽEBŘÍČKU</button>`
+        + `</div>`
+        + `<div id="lb-result" class="lb-box"></div>`)
       + `</div>`
     : ''
   const story = MISSION_STORY[currentMissionId]
@@ -422,8 +520,10 @@ function showOutcome(state: SimState): void {
       result.innerHTML = html
     })()
   })
-  // ZNOVU = reload se stejnou misí; VÝBĚR MISE = reload bez parametru → menu
+  // ZNOVU = reload se stejnou misí (skirmish znovu otevře stavbu bitvy);
+  // VÝBĚR MISE = reload bez parametru → menu
   onTap(el.querySelector('#btn-again'), () => {
+    if (isSkirmish) { el.remove(); showSkirmishBuilder(); return }
     location.href = `${location.pathname}?mission=${encodeURIComponent(currentMissionId)}`
   })
   onTap(el.querySelector('#btn-menu'), () => {

@@ -541,7 +541,8 @@ export interface SimApi {
 // ---------- worker bridge (UI <-> worker) ----------
 
 export type WorkerInMsg =
-  | { kind: 'init'; scenarioId: string }
+  /** scenario přítomen = custom bitva (skirmish); jinak lookup dle scenarioId */
+  | { kind: 'init'; scenarioId: string; scenario?: Scenario }
   | { kind: 'order'; order: Order }
   | { kind: 'setCompression'; factor: number }  // 0 = pauza
   | { kind: 'snapshotRequest' }
