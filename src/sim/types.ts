@@ -293,6 +293,12 @@ export interface ShipState {
   desc?: string
   /** priorita polních oprav (chybí = 'balanced') */
   repairFocus?: RepairFocus
+  /**
+   * Cíl mise: plot loď pojmenuje na mapě (jméno z briefingu) i před klasifikací
+   * senzory — hráč vidí „tohle je Cygnus". Třída/detaily zůstávají skryté dle
+   * idQuality; jde jen o identifikaci předem známého objektu mise.
+   */
+  objective?: boolean
 }
 
 /** Senzorový kontakt — co daná strana VÍ (ne pravda). */
