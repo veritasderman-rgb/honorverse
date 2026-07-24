@@ -17,6 +17,9 @@ import {
 import {
   applyVeterancy, loadFleet, recordMissionResult, resetFleet, TIER_LABEL, tierOf,
 } from './ui/fleetlog'
+import {
+  applyLoadout, LOADOUTS, loadPreset, presetById, savePreset, type LoadoutId,
+} from './data/loadout'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
 import { scoreMission } from './sim/score'
 import {
@@ -140,11 +143,16 @@ function overlay(html: string): HTMLElement {
   return el
 }
 
-/** spustí kampaňovou misi s aplikovaným veteránstvím flotily (C1) */
-function startCampaignMission(id: string): void {
+/** onReady po kampaňové přípravě rovnou spustí (briefing byl v přípravě) */
+let skipBriefing = false
+
+/** spustí kampaňovou misi s veteránstvím flotily (C1) + loadoutem (B1) */
+function startCampaignMission(id: string, preset?: LoadoutId): void {
   const sc = SCENARIOS[id]
   if (!sc) { bridge.start(id); return } // fallback (demo scénář ve workeru)
-  bridge.startScenario(applyVeterancy(sc))
+  const clone = applyVeterancy(sc)         // klon s buffy veteránů
+  applyLoadout(clone, preset ?? loadPreset()) // + zvolená výzbroj
+  bridge.startScenario(clone)
 }
 
 /** první věta briefingu (do karty výběru mise) */
@@ -242,8 +250,7 @@ function showMissionSelect(): void {
   el.querySelectorAll<HTMLButtonElement>('button[data-mission]').forEach(btn => {
     onTap(btn, () => {
       el.remove()
-      setMenuBg(false)
-      startCampaignMission(btn.dataset.mission!)
+      showMissionPrep(btn.dataset.mission!)
     })
   })
 }
@@ -384,20 +391,58 @@ const MISSION_SCENES: Record<string, string> = {
   mission11: 'scene-battle',
 }
 
+/** briefing skirmishe (bez loadoutu — výzbroj řeší stavba bitvy) */
 function showBriefing(sc: Scenario): void {
-  const scene = MISSION_SCENES[sc.id]
-  const prolog = MISSION_STORY[sc.id]?.prolog
   const el = overlay(
-    (scene ? `<img class="brief-img" src="img/${scene}.png" alt="" onerror="this.remove()">` : '')
-    + `<h2>${esc(sc.title)}</h2>`
-    + (prolog ? `<div class="brief story">${esc(prolog)}</div>` : '')
+    `<h2>${esc(sc.title)}</h2>`
     + `<div class="brief">${esc(sc.briefing)}</div>`
     + `<button id="btn-start">START</button>`,
   )
   onTap(el.querySelector('#btn-start'), () => {
     el.remove()
-    audio.setMenuMode(false) // konec menu/briefingu → adaptivní hudba dle boje
+    audio.setMenuMode(false)
     controller.setCompression(1)
+  })
+}
+
+/**
+ * Příprava kampaňové mise (B1): scéna + příběh + volba LOADOUTU výzbroje,
+ * pak START → sim se postaví s veteránstvím i loadoutem a rovnou běží
+ * (žádný druhý briefing). Staví se z klientského SCENARIOS[id].
+ */
+function showMissionPrep(id: string): void {
+  const sc = SCENARIOS[id]
+  if (!sc) { startCampaignMission(id); return }
+  const scene = MISSION_SCENES[id]
+  const prolog = MISSION_STORY[id]?.prolog
+  let sel: LoadoutId = loadPreset()
+  const btns = LOADOUTS.map(l =>
+    `<button class="ld-btn${l.id === sel ? ' active' : ''}" data-ld="${l.id}">${esc(l.label)}</button>`).join('')
+  const el = overlay(
+    (scene ? `<img class="brief-img" src="img/${scene}.png" alt="" onerror="this.remove()">` : '')
+    + `<h2>${esc(sc.title)}</h2>`
+    + (prolog ? `<div class="brief story">${esc(prolog)}</div>` : '')
+    + `<div class="brief">${esc(sc.briefing)}</div>`
+    + `<div class="ld-row"><span>VÝZBROJ:</span> ${btns}</div>`
+    + `<div id="ld-desc" class="dim">${esc(presetById(sel).desc)}</div>`
+    + `<div style="margin-top:12px"><button id="btn-start">START</button> `
+    + `<button id="btn-prep-back">ZPĚT</button></div>`,
+  )
+  el.addEventListener('click', e => {
+    const t = (e.target as Element).closest<HTMLElement>('[data-ld]')
+    if (!t) return
+    sel = t.getAttribute('data-ld') as LoadoutId
+    el.querySelectorAll('.ld-btn').forEach(b =>
+      b.classList.toggle('active', b.getAttribute('data-ld') === sel))
+    el.querySelector('#ld-desc')!.textContent = presetById(sel).desc
+  })
+  onTap(el.querySelector('#btn-prep-back'), () => { el.remove(); showMissionSelect() })
+  onTap(el.querySelector('#btn-start'), () => {
+    savePreset(sel)
+    el.remove()
+    setMenuBg(false)
+    skipBriefing = true          // briefing byl tady — onReady rovnou spustí
+    startCampaignMission(id, sel)
   })
 }
 
@@ -587,8 +632,15 @@ bridge.onReady = scenario => {
   plot.setHyperlimit(scenario.hyperlimit ?? null)
   plot.setEnvironment(scenario.decor, scenario.ambient)
   plot.setScene(sceneFor(scenario.id, scenario.ambient)) // vizuál mise (hvězda, mlhovina, planety)
-  showBriefing(scenario)
   plot.start()
+  if (skipBriefing) {
+    // kampaň: příprava (příběh + loadout) už proběhla → rovnou do boje
+    skipBriefing = false
+    audio.setMenuMode(false)
+    controller.setCompression(1)
+  } else {
+    showBriefing(scenario) // skirmish (volná bitva)
+  }
 }
 
 bridge.onSnapshot = (state, compression) => {
@@ -610,6 +662,6 @@ bridge.onSnapshot = (state, compression) => {
 // start: ?mission=id přeskočí menu (tlačítko ZNOVU), jinak výběr mise;
 // při prvním spuštění kampaně se před výběrem jednou ukáže úvod příběhu
 const requested = new URLSearchParams(location.search).get('mission')
-if (requested && SCENARIOS[requested]) startCampaignMission(requested)
+if (requested && SCENARIOS[requested]) showMissionPrep(requested)
 else if (!introSeen()) showCampaignIntro(showMissionSelect)
 else showMissionSelect()
