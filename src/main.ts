@@ -21,7 +21,9 @@ import {
   applyLoadout, LOADOUTS, loadPreset, presetById, savePreset, type LoadoutId,
 } from './data/loadout'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
-import { isMissionUnlocked } from './data/campaign'
+import {
+  CAMPAIGN_NODES, isMissionUnlocked, NEBULAE, STARFIELD, type CampaignNode,
+} from './data/campaign'
 import { scoreMission } from './sim/score'
 import {
   fetchOverall, fetchRank, fetchTop, rankSummary, submitScore,
@@ -156,12 +158,6 @@ function startCampaignMission(id: string, preset?: LoadoutId): void {
   bridge.startScenario(clone)
 }
 
-/** první věta briefingu (do karty výběru mise) */
-function firstSentence(text: string): string {
-  const i = text.indexOf('.')
-  return i >= 0 ? text.slice(0, i + 1) : text
-}
-
 /** localStorage flag „úvod kampaně už hráč viděl" */
 const INTRO_SEEN_KEY = 'wob-campaign-intro-seen'
 
@@ -203,38 +199,96 @@ function showCampaignIntro(onDone: () => void): void {
   })
 }
 
-/** úvodní menu: číslovaný seznam misí kampaně (1→10) + rozbalitelný příběh */
-function showMissionSelect(): void {
-  // kampaňové pořadí = pořadí registrace v SCENARIOS (mission01 → mission10)
-  const rows = Object.values(SCENARIOS).map((sc, i) =>
-    `<div class="mission-row">`
-    + `<button data-mission="${esc(sc.id)}">${i + 1}. ${esc(sc.title)}</button>`
-    + `<div class="mission-desc">${esc(firstSentence(sc.briefing))}</div>`
-    + `</div>`,
-  ).join('')
-  const story =
-    `<div class="story-section">`
-    + `<button id="btn-story-toggle">▸ PŘÍBĚH KAMPANĚ</button>`
-    + `<div id="story-body" class="brief story" style="display:none">${esc(CAMPAIGN_INTRO)}</div>`
-    + `</div>`
-  const hall =
-    `<div class="story-section">`
+/** stav soustavy na mapě podle postupu kampaně */
+type SysState = 'done' | 'open' | 'locked'
+
+/** SVG hvězdné mapy kampaně (viewBox 1000×600): trasy, soustavy, „jsi zde" */
+function starMapSvg(cleared: ReadonlySet<string>): string {
+  const clearedArr = [...cleared]
+  const avail = (n: CampaignNode): boolean => isMissionUnlocked(n.id, clearedArr)
+  const stateOf = (n: CampaignNode): SysState =>
+    cleared.has(n.id) ? 'done' : avail(n) ? 'open' : 'locked'
+  const byId = (id: string): CampaignNode | undefined => CAMPAIGN_NODES.find(n => n.id === id)
+
+  // pozadí — hvězdy a mlhoviny (dekorace z campaign.ts)
+  const stars = STARFIELD.map(s =>
+    `<circle class="star" cx="${s.x}" cy="${s.y}" r="${s.r}"/>`).join('')
+  const nebulae = NEBULAE.map(n =>
+    `<ellipse class="neb" cx="${n.x}" cy="${n.y}" rx="${n.rx}" ry="${n.ry}" `
+    + `style="fill:hsl(${n.hue} 60% 45%)"/>`).join('')
+
+  // hyperkoridory — čára z uzlu k jeho požadavku, obarvená podle stavu cíle
+  const lanes = CAMPAIGN_NODES.filter(n => n.requires).map(n => {
+    const from = byId(n.requires!)
+    if (!from) return ''
+    const cls = `lane ${stateOf(n)}${n.optional ? ' bonus' : ''}`
+    return `<line class="${cls}" x1="${from.x}" y1="${from.y}" x2="${n.x}" y2="${n.y}"/>`
+  }).join('')
+
+  // soustavy — číslujeme jen hlavní linii; bonusy dostanou ★
+  let mainNo = 0
+  const systems = CAMPAIGN_NODES.map(n => {
+    const st = stateOf(n)
+    const done = st === 'done'
+    const open = st !== 'locked'
+    const num = n.optional ? null : ++mainNo
+    const badge = done ? '✔' : n.optional ? '★' : String(num)
+    const title = SCENARIOS[n.id]?.title ?? n.id
+    const tap = open ? ` data-mission="${esc(n.id)}" tabindex="0" role="button"` : ''
+    const anchor = n.x > 860 ? 'end' : n.x < 140 ? 'start' : 'middle'
+    const tx = n.x > 860 ? n.x + 18 : n.x < 140 ? n.x - 18 : n.x
+    return `<g class="sys ${st}${n.optional ? ' bonus' : ''}"${tap}>`
+      + `<circle class="glow" cx="${n.x}" cy="${n.y}" r="20"/>`
+      + `<circle class="node" cx="${n.x}" cy="${n.y}" r="13"/>`
+      + `<text class="badge" x="${n.x}" y="${n.y}">${badge}</text>`
+      + `<text class="title" x="${tx}" y="${n.y + 32}" text-anchor="${anchor}">${esc(title)}</text>`
+      + `</g>`
+  }).join('')
+
+  // „jsi zde" — první nevyčištěná dostupná soustava (kam skočit dál)
+  const here = CAMPAIGN_NODES.find(n => !cleared.has(n.id) && avail(n))
+  const hereMark = here
+    ? `<g class="here"><circle class="pulse" cx="${here.x}" cy="${here.y}" r="18"/>`
+      + `<path class="ship" d="M0,-9 L6,7 L0,3 L-6,7 Z" transform="translate(${here.x},${here.y - 34})"/>`
+      + `<text class="here-lbl" x="${here.x}" y="${here.y - 44}" text-anchor="middle">JSI ZDE</text></g>`
+    : ''
+
+  return `<svg class="starmap-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" `
+    + `role="group" aria-label="Hvězdná mapa kampaně">`
+    + `<g class="bg">${nebulae}${stars}</g>`
+    + `<g class="lanes">${lanes}</g>`
+    + `<g class="systems">${systems}</g>`
+    + hereMark
+    + `</svg>`
+}
+
+/** úvodní menu: hvězdná mapa kampaně (soustavy = mise) + příběh/žebříček/bitva */
+function showStarMap(): void {
+  const cleared = new Set(loadCleared())
+  const total = CAMPAIGN_NODES.filter(n => !n.optional).length
+  const doneCount = CAMPAIGN_NODES.filter(n => !n.optional && cleared.has(n.id)).length
+  const actions =
+    `<div class="sm-actions">`
+    + `<button id="btn-story-toggle">▸ PŘÍBĚH</button>`
     + `<button id="btn-hall-toggle">▸ SÍŇ SLÁVY</button>`
+    + `<button id="btn-skirmish">⚔ VOLNÁ BITVA</button>`
+    + `<button id="btn-fleet">⚓ SÍŇ FLOTILY</button>`
+    + `</div>`
+    + `<div id="story-body" class="brief story" style="display:none">${esc(CAMPAIGN_INTRO)}</div>`
     + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">načítám…</span></div>`
-    + `</div>`
-  const skirmish =
-    `<div class="story-section">`
-    + `<button id="btn-skirmish">⚔ VOLNÁ BITVA — slož vlastní střet</button>`
-    + `</div>`
-  const fleet =
-    `<div class="story-section">`
-    + `<button id="btn-fleet">⚓ SÍŇ FLOTILY — kariéra a památník</button>`
-    + `</div>`
-  const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${hall}${skirmish}${fleet}${rows}`)
+  const el = overlay(
+    `<h2>HVĚZDNÁ MAPA</h2>`
+    + `<div class="sm-progress">Postup kampaně: <b>${doneCount}/${total}</b> soustav — `
+    + `klepni na svítící soustavu a vpluj do mise.</div>`
+    + `<div class="starmap">${starMapSvg(cleared)}</div>`
+    + actions,
+  )
+  el.classList.add('menu', 'menu-map')
+  setMenuBg(true)
+
   onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
   onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
-  el.classList.add('menu')
-  setMenuBg(true)
+
   // Síň slávy: celkové pořadí (součet nejlepších skóre per mise)
   const hallToggle = el.querySelector<HTMLButtonElement>('#btn-hall-toggle')
   const hallBody = el.querySelector<HTMLElement>('#hall-body')
@@ -256,17 +310,20 @@ function showMissionSelect(): void {
         + `</table>`
     })
   })
+
   const toggle = el.querySelector<HTMLButtonElement>('#btn-story-toggle')
   const body = el.querySelector<HTMLElement>('#story-body')
   onTap(toggle, () => {
     const open = body!.style.display !== 'none'
     body!.style.display = open ? 'none' : 'block'
-    toggle!.textContent = `${open ? '▸' : '▾'} PŘÍBĚH KAMPANĚ`
+    toggle!.textContent = `${open ? '▸' : '▾'} PŘÍBĚH`
   })
-  el.querySelectorAll<HTMLButtonElement>('button[data-mission]').forEach(btn => {
-    onTap(btn, () => {
+
+  // klepnutí na odemčenou soustavu → příprava mise (jen uzly s data-mission)
+  el.querySelectorAll<SVGGElement>('g[data-mission]').forEach(g => {
+    onTap(g, () => {
       el.remove()
-      showMissionPrep(btn.dataset.mission!)
+      showMissionPrep(g.dataset.mission!)
     })
   })
 }
@@ -298,7 +355,7 @@ function showFleetHall(): void {
     + `<button id="fl-back">ZPĚT</button> `
     + `<button id="fl-reset" class="dim">Vynulovat kariéru</button></div>`,
   )
-  onTap(el.querySelector('#fl-back'), () => { el.remove(); showMissionSelect() })
+  onTap(el.querySelector('#fl-back'), () => { el.remove(); showStarMap() })
   onTap(el.querySelector('#fl-reset'), () => {
     resetFleet()
     el.remove()
@@ -382,7 +439,7 @@ function showSkirmishBuilder(): void {
     cfg.seed = Math.floor(Math.random() * 1e9)
     el.querySelector('#sk-seed')!.textContent = String(cfg.seed)
   })
-  onTap(el.querySelector('#sk-back'), () => { el.remove(); showMissionSelect() })
+  onTap(el.querySelector('#sk-back'), () => { el.remove(); showStarMap() })
   onTap(el.querySelector('#sk-fight'), () => {
     if (fleetTotal(cfg.player) === 0 || fleetTotal(cfg.enemy) === 0) return
     el.remove()
@@ -506,7 +563,7 @@ function showMissionPrep(id: string): void {
       b.classList.toggle('active', b.getAttribute('data-ld') === sel))
     el.querySelector('#ld-desc')!.textContent = presetById(sel).desc
   })
-  onTap(el.querySelector('#btn-prep-back'), () => { el.remove(); showMissionSelect() })
+  onTap(el.querySelector('#btn-prep-back'), () => { el.remove(); showStarMap() })
   onTap(el.querySelector('#btn-start'), () => {
     savePreset(sel)
     el.remove()
@@ -738,7 +795,7 @@ const requested = new URLSearchParams(location.search).get('mission')
 if (requested && SCENARIOS[requested] && isMissionUnlocked(requested, loadCleared())) {
   showMissionPrep(requested)
 } else if (!introSeen()) {
-  showCampaignIntro(showMissionSelect)
+  showCampaignIntro(showStarMap)
 } else {
-  showMissionSelect()
+  showStarMap()
 }
