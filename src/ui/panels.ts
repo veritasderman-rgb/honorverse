@@ -401,15 +401,14 @@ export class Panels implements HudView {
       try { localStorage.setItem('wob-crt', crtOn ? '1' : '0') } catch { /* noop */ }
       applyCrt()
     })
-    // ruční přepínač mobilního UI (jinak se body.phone nastaví autodetekcí v main.ts)
+    // ruční přepínač mobilního UI (jinak se body.phone nastaví autodetekcí v
+    // main.ts). Zvýraznění tlačítka řídí CSS (body.phone .tb-mobile), takže je
+    // VŽDY v souladu se stavem třídy — i po autodetekci/resize, bez JS synchronizace.
     const mob = bar.querySelector<HTMLButtonElement>('.tb-mobile')!
-    const applyMob = (): void => { mob.classList.toggle('active', document.body.classList.contains('phone')) }
-    applyMob()
     mob.addEventListener('click', () => {
       const on = !document.body.classList.contains('phone')
       document.body.classList.toggle('phone', on)
       try { localStorage.setItem('wob-mobile', on ? '1' : '0') } catch { /* noop */ }
-      applyMob()
     })
     // přepínač vzhledu (objemový HW ⟷ klasický CIC); stav drží plot v localStorage
     const gfx = bar.querySelector<HTMLButtonElement>('.tb-gfx')!

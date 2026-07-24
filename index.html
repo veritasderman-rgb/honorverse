@@ -277,7 +277,7 @@
        kterou nastavuje JS (main.ts): úzký viewport (≤ 900 px), telefon dle
        pointer:coarse, nebo ruční přepínač 🖐. Jeden zdroj pravdy pro layout,
        ať platí i nad 900 px — proto ne @media, ale třída. */
-    .tb-mobile.active { color: #d8b34f; }
+    body.phone .tb-mobile { color: #d8b34f; }  /* zvýraznění vždy sleduje stav třídy */
     /* kompaktní topbar: bez posuvníků hlasitosti, bez mezistupňů komprese
        a bez textu zpomalení — nic nesmí přetéct do druhé řady */
     body.phone #topbar { flex-wrap: nowrap; overflow: hidden; gap: 6px; padding-top: calc(4px + env(safe-area-inset-top)); }
