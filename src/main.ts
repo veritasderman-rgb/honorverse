@@ -124,17 +124,23 @@ function detectPhone(): boolean {
   const shortSide = Math.min(window.innerWidth, window.innerHeight)
   return (coarse && shortSide < 430) || window.innerWidth <= 900
 }
-function applyPhoneClass(): void {
-  document.body.classList.toggle('phone', detectPhone())
+// Tablet (iPad): hrubý pointer + velká krátká strana (≥ 600 px). Nezávislé na
+// body.phone — jen zvětší dotykové cíle. Na šířku iPad drží plné desktop
+// rozvržení (panely vidět), na výšku ho doplní kompaktní vrstva (body.phone).
+function detectTablet(): boolean {
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
+  const shortSide = Math.min(window.innerWidth, window.innerHeight)
+  return coarse && shortSide >= 600
 }
-applyPhoneClass()
-// při otočení/resize přehodnoť jen v AUTO režimu (ruční volba se nepřepisuje)
+function applyDeviceClasses(): void {
+  document.body.classList.toggle('phone', detectPhone())
+  document.body.classList.toggle('tablet', detectTablet())
+}
+applyDeviceClasses()
+// při otočení/resize přehodnoť (ruční volba phone se v detectPhone nepřepisuje;
+// tablet je čistě z media/rozměru, takže se smí přehodnotit vždy)
 for (const evt of ['resize', 'orientationchange']) {
-  window.addEventListener(evt, () => {
-    let pref: string | null = null
-    try { pref = localStorage.getItem(MOBILE_KEY) } catch { /* noop */ }
-    if (pref !== '1' && pref !== '0') applyPhoneClass()
-  })
+  window.addEventListener(evt, () => applyDeviceClasses())
 }
 
 // výsuvné šuplíky HUD sloupců (telefonní breakpoint — záložky ◧/◨)

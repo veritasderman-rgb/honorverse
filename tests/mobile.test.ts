@@ -52,3 +52,22 @@ describe('PWA artefakty', () => {
     expect(html).toContain('rotate-hint')
   })
 })
+
+describe('iPad / tablet optimalizace', () => {
+  it('main.ts detekuje tablet (hrubý pointer + velká krátká strana) a přepíná body.tablet', () => {
+    const main = readFileSync('src/main.ts', 'utf8')
+    expect(main).toContain('detectTablet')
+    expect(main).toContain("classList.toggle('tablet'")
+    // tablet je z rozměru/media, phone drží ruční override — obojí se přehodnotí
+    expect(main).toContain('applyDeviceClasses')
+  })
+
+  it('index.html má dotykové cíle pro body.tablet a nudge do landscape i pro velké tablety', () => {
+    const html = readFileSync('index.html', 'utf8')
+    expect(html).toContain('body.tablet button')
+    expect(html).toContain('body.tablet:not(.phone)')
+    expect(html).toContain('body.tablet.phone')
+    // rotate-hint pokrývá i iPad Pro 12,9" na výšku (1024 px)
+    expect(html).toContain('max-width: 1100px')
+  })
+})
