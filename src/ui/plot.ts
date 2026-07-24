@@ -358,6 +358,9 @@ export class TacticalPlot {
 
   /** vizuální scéna aktuální mise (hvězda, mlhovina, atmosféra) */
   private scene: SceneDef | null = null
+  /** světové ukotvení dekorativních těles scény (spočte se jednou z počáteční
+   *  normalizované pozice) — aby panovaly/zoomovaly s mapou, ne s obrazovkou */
+  private sceneBodyAnchors: { wx: number; wy: number; wr: number }[] | null = null
 
   setEnvironment(decor: DecorField[] | undefined, ambient: string | undefined): void {
     this.decor = decor ?? []
@@ -367,6 +370,7 @@ export class TacticalPlot {
   /** nastaví scénu mise + srovná směr světla trupů s hvězdou na pozadí */
   setScene(scene: SceneDef): void {
     this.scene = scene
+    this.sceneBodyAnchors = null // nová scéna → přepočítat světové ukotvení těles
     setLightDir(0.5 - scene.star.x, 0.5 - scene.star.y)
   }
 
@@ -524,18 +528,30 @@ export class TacticalPlot {
     const h = this.canvas.clientHeight
     const star = { core: sc.starCore, halo: sc.starHalo }
 
-    // 1) dekorativní vzdálená tělesa scény (plynný obr, měsíc…) — parallax,
-    //    kreslí se za vším; nemají pozici na mapě ani pickable
-    const cam = this.camCenter()
-    for (let i = 0; i < (sc.bodies?.length ?? 0); i++) {
-      const b = sc.bodies![i]
-      const par = 0.04
-      const bx = b.x * w - (cam.x / this.kmPerPx) * par
-      const by = b.y * h - (-cam.y / this.kmPerPx) * par
-      if (bx < -b.r * 3 || bx > w + b.r * 3 || by < -b.r * 3 || by > h + b.r * 3) continue
-      let lx = sunX - bx, ly = sunY - by
-      const lm = Math.hypot(lx, ly) || 1
-      drawBody(ctx, bx, by, b.r, b.style, b.tint ?? sc.planet, star, lx / lm, ly / lm, now, 100 + i)
+    // 1) dekorativní tělesa scény (plynný obr, měsíc…) — UKOTVENÁ VE SVĚTĚ:
+    //    světovou pozici odvodíme JEDNOU z počáteční normalizované pozice a
+    //    kamery, pak je kreslíme přes worldToScreen. Pan/zoom je odsune z výhledu
+    //    jako vzdálenou scenérii (dřív visely na obrazovce a překážely).
+    const bodies = sc.bodies ?? []
+    if (bodies.length > 0 && w > 0 && h > 0) {
+      if (!this.sceneBodyAnchors || this.sceneBodyAnchors.length !== bodies.length) {
+        const c0 = this.camCenter()
+        this.sceneBodyAnchors = bodies.map(b => ({
+          wx: c0.x + (b.x * w - w / 2) * this.kmPerPx,
+          wy: c0.y - (b.y * h - h / 2) * this.kmPerPx,
+          wr: b.r * this.kmPerPx,
+        }))
+      }
+      for (let i = 0; i < bodies.length; i++) {
+        const b = bodies[i]
+        const a = this.sceneBodyAnchors[i]
+        const p = this.worldToScreen({ x: a.wx, y: a.wy })
+        const R = a.wr / this.kmPerPx
+        if (p.x < -R * 3 || p.x > w + R * 3 || p.y < -R * 3 || p.y > h + R * 3) continue
+        let lx = sunX - p.x, ly = sunY - p.y
+        const lm = Math.hypot(lx, ly) || 1
+        drawBody(ctx, p.x, p.y, R, b.style, b.tint ?? sc.planet, star, lx / lm, ly / lm, now, 100 + i)
+      }
     }
 
     // 2) planety na SVĚTOVÝCH pozicích (entity mapy) — styl dle jména
@@ -1073,7 +1089,9 @@ export class TacticalPlot {
       ctx.fillStyle = CLR.label
       ctx.fillText(ship.name, p.x + R + 6, p.y + 3)
       ctx.restore()
-      this.pickables.push({ id: ship.id, x: p.x, y: p.y })
+      // hitbox i výběrový kroužek dle SKUTEČNÉ velikosti kotouče (CIC ~13 px),
+      // ne dle HW poloměru PLANET_R — jinak by kroužek trčel kolem drobné planety
+      this.pickables.push({ id: ship.id, x: p.x, y: p.y, r: R + 3 })
       return
     }
     // sonda/maják: drobný pulzující bod (kosmetický objekt mapy)
@@ -1302,6 +1320,15 @@ export class TacticalPlot {
     }
     ctx.restore()
 
+    // CÍL MISE: pojmenuj objektivní kontakt jménem z briefingu i před klasifikací
+    // senzory (hráč vidí „tohle je Cygnus"); třída/detaily zůstávají skryté níže.
+    if (foe?.objective === true && !surrendered) {
+      ctx.save()
+      ctx.fillStyle = '#ffd24a'
+      ctx.fillText(`◎ ${foe.name}`, p.x + 10, p.y + 2)
+      ctx.restore()
+    }
+
     const cls = guessHull ?? (c.idQuality === 0 ? '???' : c.classGuess)
     ctx.fillStyle = color
     if (surrendered) {
@@ -1488,11 +1515,26 @@ export class TacticalPlot {
     if (this.selectedId == null) return
     const p = this.pickables.find(x => x.id === this.selectedId)
     if (!p) return
-    const r = 12
+    const isBody = this.state?.ships.find(s => s.id === this.selectedId)?.classId === 'planet'
     ctx.strokeStyle = CLR.sel
     ctx.lineWidth = 1
+    if (isBody) {
+      // nebeské těleso: soustředný kroužek se čtyřmi ryskami (ne lodní závorky)
+      const r = (p.r ?? PLANET_R) + 6
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.beginPath()
+      for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
+        ctx.moveTo(p.x + dx * r, p.y + dy * r)
+        ctx.lineTo(p.x + dx * (r + 6), p.y + dy * (r + 6))
+      }
+      ctx.stroke()
+      return
+    }
+    const r = 12
     ctx.beginPath()
-    // rohové závorky
+    // rohové závorky (lodě/kontakty)
     ctx.moveTo(p.x - r, p.y - r + 5); ctx.lineTo(p.x - r, p.y - r); ctx.lineTo(p.x - r + 5, p.y - r)
     ctx.moveTo(p.x + r - 5, p.y - r); ctx.lineTo(p.x + r, p.y - r); ctx.lineTo(p.x + r, p.y - r + 5)
     ctx.moveTo(p.x + r, p.y + r - 5); ctx.lineTo(p.x + r, p.y + r); ctx.lineTo(p.x + r - 5, p.y + r)

@@ -48,8 +48,10 @@ export const mission01: Scenario = {
     {
       // „obchodník" — ve skutečnosti runner s vojenským kompenzátorem;
       // start 25 mil. km (viz propočet honičky v hlavičce souboru)
+      // cíl mise: plot ho pojmenuje „Cygnus" i před klasifikací senzory
       classId: 'merch-runner', side: 'enemy', name: 'Cygnus',
       pos: { x: 25_000_000, y: 0 }, vel: { x: 500, y: 0 }, doctrine: 'freighter',
+      objective: true,
     },
     {
       // statická bóje značící hyperlimitní čáru (klín vypnut, AI ji ignoruje)
