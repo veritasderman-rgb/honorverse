@@ -233,6 +233,12 @@ export function shipBody(
   //     při přiblížení; ikonický Honorverse prvek (uzly klínu)
   impellerRings(ctx, g, lod)
 
+  // 5d-) boční sponsony těžkých tříd (CA/BC/DN): oblé nástavky broadside
+  //      baterií vystupující z boků — těžké lodě přestanou být jen širší DD
+  if (hullCode === 'CA' || hullCode === 'BC' || hullCode === 'DN') {
+    sponsons(ctx, g, ly, pal, sun)
+  }
+
   // 5d) DETAIL PŘI PŘIBLÍŽENÍ (LOD): boční šachty (broadside), příčné švy,
   //     senzorový stožár. Zoom-in odhalí, čím loď bojuje.
   if (lod > 0.28 && hullCode !== 'MERCH') hullDetail(ctx, g, pal, lod)
@@ -240,6 +246,8 @@ export function shipBody(
   // 5b') nadstavba/můstek na větších trupech: menší vyvýšený blok s okny
   if (r >= 3.2 && hullCode !== 'DB' && hullCode !== 'MERCH') {
     superstructure(ctx, g, lx, ly, dx, dy, pal, sun)
+    // dreadnought: druhý (zadní) blok nadstavby — stěna bitvy je létající město
+    if (hullCode === 'DN') superstructure(ctx, g, lx, ly, dx, dy, pal, sun, -0.5, 0.72)
   }
 
   // 5c) specular hotspot: ostrý lesk na přivrácené (osvětlené) straně přídě
@@ -277,7 +285,9 @@ export function shipBody(
   ctx.globalAlpha = 1
 }
 
-/** impellerové prstence na hammerheadech (uzly klínu) — aditivní chladná záře */
+/** impellerové prstence na hammerheadech (uzly klínu) — aditivní chladná záře.
+ *  Kreslí se jako úzké ELIPSY napříč trupem (prstenec viděný shora z hrany),
+ *  s uzly alfa/beta na obvodu — ikonický Honorverse obrys místo pouhé čáry. */
 function impellerRings(ctx: CanvasRenderingContext2D, g: HullGeom, lod: number): void {
   const now = performance.now()
   const col = '#bfe0ff'
@@ -287,10 +297,21 @@ function impellerRings(ctx: CanvasRenderingContext2D, g: HullGeom, lod: number):
   for (const sx of [g.bow * 0.85, g.stern * 0.85]) {
     const hw = g.r * 0.92
     const pulse = 0.7 + 0.3 * Math.sin(now / 380 + sx * 0.5)
-    ctx.globalAlpha = glow * pulse * 0.7
+    // prstenec: elipsa (hloubka prstence ~28 % poloměru trupu)
+    ctx.globalAlpha = glow * pulse * 0.55
     ctx.strokeStyle = col
-    ctx.lineWidth = 0.8 + lod * 1.2
-    ctx.beginPath(); ctx.moveTo(sx, -hw); ctx.lineTo(sx, hw); ctx.stroke()
+    ctx.lineWidth = 0.6 + lod * 0.9
+    ctx.beginPath()
+    ctx.ellipse(sx, 0, Math.max(0.6, g.r * 0.28), hw, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    // druhý, vnitřní prstenec při přiblížení (dvojité uzly těžkých tříd)
+    if (lod > 0.4 && g.r >= 4) {
+      ctx.globalAlpha = glow * pulse * 0.3
+      ctx.beginPath()
+      ctx.ellipse(sx, 0, Math.max(0.4, g.r * 0.18), hw * 0.8, 0, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    // uzly klínu na obvodu prstence
     ctx.fillStyle = col
     for (const yy of [-hw * 0.72, 0, hw * 0.72]) {
       ctx.globalAlpha = glow * pulse
@@ -339,6 +360,36 @@ function hullDetail(ctx: CanvasRenderingContext2D, g: HullGeom, pal: HullPalette
       }
     }
   }
+  // PDLC kupole: drobné báně bodové obrany mezi šachtami (blíž k ose)
+  if (lod > 0.45 && n > 0) {
+    const m = Math.max(2, Math.round(n / 2))
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < m; i++) {
+        const x = (m === 1 ? 0 : (i / (m - 1) - 0.5)) * L * 0.8 + L * 0.05
+        const y = side * W * 0.72
+        ctx.globalAlpha = 0.85
+        ctx.fillStyle = pal.mid
+        ctx.beginPath(); ctx.arc(x, y, 0.55, 0, Math.PI * 2); ctx.fill()
+        // odlesk na báni
+        ctx.globalAlpha = 0.5
+        ctx.strokeStyle = pal.spec
+        ctx.lineWidth = 0.3
+        ctx.beginPath(); ctx.arc(x, y, 0.55, -2.4, -0.8); ctx.stroke()
+      }
+    }
+  }
+  // radiátorové pásy: jantarově žhnoucí linky před kiltem (odvod tepla reaktoru)
+  if (lod > 0.35) {
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.strokeStyle = '#ffb36b'
+    ctx.lineWidth = 0.45
+    ctx.globalAlpha = 0.25 + 0.45 * lod
+    for (const yy of [-W * 0.55, W * 0.55]) {
+      ctx.beginPath(); ctx.moveTo(-L * 0.45, yy); ctx.lineTo(-L * 0.72, yy * 0.9); ctx.stroke()
+    }
+    ctx.restore()
+  }
   ctx.restore()
   // hrdlo (throat): senzorový svazek na přídi — jasné body
   ctx.save()
@@ -346,6 +397,16 @@ function hullDetail(ctx: CanvasRenderingContext2D, g: HullGeom, pal: HullPalette
   ctx.globalAlpha = 0.4 + 0.4 * lod
   ctx.fillStyle = pal.spec
   ctx.beginPath(); ctx.arc(g.bow * 0.9, 0, 0.5 + lod * 0.5, 0, Math.PI * 2); ctx.fill()
+  // chase zbraně: jasná ústí na čelech hammerheadů (hrdlo + kilt)
+  if (lod > 0.5) {
+    ctx.fillStyle = pal.window ?? '#ffe4b0'
+    ctx.globalAlpha = 0.35 + 0.45 * lod
+    for (const fx of [g.bow * 0.96, g.stern * 0.96]) {
+      for (const yy of [-g.r * 0.3, g.r * 0.3]) {
+        ctx.fillRect(fx - 0.4, yy - 0.25, 0.8, 0.5)
+      }
+    }
+  }
   ctx.restore()
 }
 
@@ -356,11 +417,12 @@ function hullDetail(ctx: CanvasRenderingContext2D, g: HullGeom, pal: HullPalette
 function superstructure(
   ctx: CanvasRenderingContext2D, g: HullGeom,
   lx: number, ly: number, dx: number, dy: number, pal: HullPalette, sun: string,
+  cxF = 0.08, sc = 1,
 ): void {
-  const cx = g.len * 0.08                       // mírně k přídi od středu
-  const halfL = g.len * 0.28                     // štíhlá věž po ose
-  const halfW = g.bodyW * 0.5
-  const th = Math.max(1, g.bodyW * 0.28)
+  const cx = g.len * cxF                         // poloha bloku po ose (výchozí: k přídi)
+  const halfL = g.len * 0.28 * sc                // štíhlá věž po ose
+  const halfW = g.bodyW * 0.5 * sc
+  const th = Math.max(1, g.bodyW * 0.28 * sc)
   const box: [number, number][] = [
     [cx + halfL, -halfW], [cx + halfL * 0.7, -halfW],
     [cx - halfL, -halfW * 0.7], [cx - halfL, halfW * 0.7],
@@ -397,6 +459,40 @@ function superstructure(
   ctx.globalAlpha = 0.55
   for (let i = -1; i <= 1; i++) ctx.fillRect(cx + i * halfL * 0.5 - 0.3, -0.3, 0.6, 0.6)
   ctx.restore()
+}
+
+/**
+ * Boční sponsony těžkých trupů (CA/BC/DN): oblé nástavky podél boků, ve
+ * kterých sedí broadside baterie. Čočka mezi hranou trupu a vydutou křivkou,
+ * stínovaná od trupu ven; vnější hrana chytá sluneční rim, když je přivrácená.
+ */
+function sponsons(
+  ctx: CanvasRenderingContext2D, g: HullGeom, ly: number, pal: HullPalette, sun: string,
+): void {
+  const L = g.len, W = g.bodyW
+  for (const side of [-1, 1]) {
+    const y = side * W
+    const x0 = -L * 0.34, x1 = L * 0.40
+    const bulge = W * 0.34 * side
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(x0, y)
+    ctx.quadraticCurveTo((x0 + x1) / 2, y + bulge, x1, y)
+    ctx.closePath()
+    const gr = ctx.createLinearGradient(0, y, 0, y + bulge)
+    gr.addColorStop(0, pal.mid)
+    gr.addColorStop(1, pal.dark)
+    ctx.fillStyle = gr
+    ctx.fill()
+    // vnější hrana: sluneční rim na přivrácené straně, jinak jen tlumený obrys
+    const lit = ly * side < 0 ? 0.55 : 0.2
+    ctx.globalAlpha = lit
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.strokeStyle = sun
+    ctx.lineWidth = 0.5
+    ctx.stroke()
+    ctx.restore()
+  }
 }
 
 /** řada svítících oken podél osy trupu (aditivní teplé tečky) */
@@ -484,9 +580,13 @@ export function enginePlume(
   ctx.restore()
 }
 
-/** stanice: nasvícený prstenec s nábojem a paprsky */
+/** stanice: nasvícený obytný prstenec s nábojem, POMALU rotujícími paprsky
+ *  a řadou svítících oken habitatu — čitelně „ne-loď" i na dálku.
+ *  Rotace je čistě render (performance.now) — simulace o ní neví. */
 function station(ctx: CanvasRenderingContext2D, pal: HullPalette): void {
-  const R = 8
+  const R = 12
+  const now = performance.now()
+  const rot = (now / 14_000) % (Math.PI * 2)   // jedna otáčka ~88 s
   const g = ctx.createRadialGradient(-R * 0.4, -R * 0.4, R * 0.2, 0, 0, R)
   g.addColorStop(0, pal.light)
   g.addColorStop(0.6, pal.mid)
@@ -499,21 +599,35 @@ function station(ctx: CanvasRenderingContext2D, pal: HullPalette): void {
   ctx.beginPath(); ctx.arc(0, 0, R * 0.42, 0, Math.PI * 2)
   ctx.fill()
   ctx.globalCompositeOperation = 'source-over'
-  // náboj
+  // náboj s vlastním nasvícením
+  const hub = ctx.createRadialGradient(-R * 0.15, -R * 0.15, 0, 0, 0, R * 0.42)
+  hub.addColorStop(0, pal.light)
+  hub.addColorStop(1, pal.dark)
   ctx.beginPath(); ctx.arc(0, 0, R * 0.42, 0, Math.PI * 2)
-  ctx.fillStyle = pal.mid
+  ctx.fillStyle = hub
   ctx.fill()
-  // paprsky + odlesk
+  // rotující paprsky (6) + odlesk
   ctx.strokeStyle = pal.spec
-  ctx.globalAlpha = 0.7
+  ctx.globalAlpha = 0.6
   ctx.lineWidth = 0.8
   ctx.beginPath()
-  for (let i = 0; i < 4; i++) {
-    const a = i * Math.PI / 2
+  for (let i = 0; i < 6; i++) {
+    const a = rot + (i * Math.PI) / 3
     ctx.moveTo(Math.cos(a) * R * 0.42, Math.sin(a) * R * 0.42)
     ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R)
   }
   ctx.stroke()
+  // okna habitatu: teplé tečky po obvodu prstence (rotují s ním)
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.fillStyle = pal.window ?? '#ffe4b0'
+  for (let i = 0; i < 14; i++) {
+    const a = rot + (i * Math.PI * 2) / 14
+    ctx.globalAlpha = 0.35 + 0.3 * Math.abs(Math.sin(i * 2.3))
+    ctx.beginPath()
+    ctx.arc(Math.cos(a) * R * 0.72, Math.sin(a) * R * 0.72, 0.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.globalCompositeOperation = 'source-over'
   ctx.globalAlpha = 1
 }
 

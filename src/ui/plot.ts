@@ -672,6 +672,14 @@ export class TacticalPlot {
     return Math.max(0, Math.min(1, (a - Math.log(this.kmPerPx)) / (a - b)))
   }
 
+  /** měřítko objemového trupu: LOD růst + extra zvětšení pod 120 km/px,
+   *  ať si hráč loď při maximálním přiblížení opravdu prohlédne (detaily
+   *  PDLC/radiátorů/chase zbraní by na ~90 px zanikly) */
+  private hullScale(lod: number): number {
+    const close = Math.sqrt(120 / Math.max(50, this.kmPerPx))
+    return HW_SCALE * (1 + lod * 2) * Math.max(1, Math.min(1.6, close))
+  }
+
   private draw(): void {
     const dpr = window.devicePixelRatio || 1
     const w = this.canvas.clientWidth
@@ -1190,7 +1198,8 @@ export class TacticalPlot {
         : ship.rolledTo != null ? HULL_PAL.rolled : HULL_PAL.own
       const lod = this.zoomLod()
       ctx.save()
-      ctx.scale(HW_SCALE * (1 + lod * 2), HW_SCALE * (1 + lod * 2))
+      const sc = this.hullScale(lod)
+      ctx.scale(sc, sc)
       hullShadow(ctx, hull, ship.heading)
       // pohon z kiltu (záď trupu), ať vlečka nepřekrývá siluetu
       if (ship.wedgeOn && ship.throttle > 0) {
@@ -1238,6 +1247,13 @@ export class TacticalPlot {
   }
 
   private drawContact(ctx: CanvasRenderingContext2D, c: Contact): void {
+    // entita kontaktu (kapitulace, telegraf záměru, filtr zakreslených těles)
+    const foe = this.state?.ships.find(s => s.id === c.shipId)
+    // ZAKRESLENO V MAPÁCH: neutrální statické objekty (planety, sondy, bóje,
+    // civilní stanice) kreslí drawBuoy jako tělesa/majáky včetně pickable.
+    // Kontaktní lodní glyf by je překreslil na „loď" — PLT/PRB nemají trupovou
+    // geometrii a padaly na DEFAULT vřeteno (planeta vypadala jako loď).
+    if (foe?.side === 'neutral' && foe.doctrine === 'buoy') return
     // paměťový pin: kreslí se na POSLEDNÍ ZNÁMÉ pozici (bez extrapolace,
     // ta by ducha odnesla přes půl mapy), ztlumeně; statický objekt bez
     // kružnice nejistoty — stanice ani planeta nikam neodletí
@@ -1248,8 +1264,6 @@ export class TacticalPlot {
     if (memory) ctx.save()
     if (memory) ctx.globalAlpha = 0.45
     this.pickables.push({ id: c.shipId, x: p.x, y: p.y })
-    // entita kontaktu (pro kapitulaci + telegrafování záměru, D2)
-    const foe = this.state?.ships.find(s => s.id === c.shipId)
     const surrendered = foe?.surrendered === true
     const color = surrendered
       ? CLR.surrendered
@@ -1288,7 +1302,8 @@ export class TacticalPlot {
       const pal = surrendered ? HULL_PAL.surrendered
         : c.idQuality === 0 ? HULL_PAL.unknown : HULL_PAL.hostile
       const lod = this.zoomLod()
-      ctx.scale(HW_SCALE * (1 + lod * 2), HW_SCALE * (1 + lod * 2))
+      const sc = this.hullScale(lod)
+      ctx.scale(sc, sc)
       if (!memory) {
         hullShadow(ctx, guessHull, ang)
         if (Math.hypot(c.vel.x, c.vel.y) > 0.5 && !surrendered) {
