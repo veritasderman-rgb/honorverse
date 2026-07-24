@@ -562,7 +562,7 @@ export class Panels implements HudView {
         + `><div class="row"><span>${mark}${key}${esc(s.name)} <span class="dim">(${esc(def?.hullCode ?? '?')})</span>${fmark}</span>`
         + `<b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></div>`
         + `<div class="row dim"><span>${t('fleet.missiles')} ${s.missiles}${s.pods > 0 ? ` <span class="amber" title="tažené raketové plošiny (${s.pods}×6 raket — alfa úder)">+${s.pods}P</span>` : ''} · CM ${s.cms}</span>`
-        + `<span>${ctrl ? t(FIRE_MODE_LABELS[s.fireControl.mode] ?? 'firemode.auto') : t('fleet.ai')}`
+        + `<span>${ctrl ? (FIRE_MODE_LABELS[s.fireControl.mode] ? t(FIRE_MODE_LABELS[s.fireControl.mode]) : '') : t('fleet.ai')}`
         + `${ctrl ? (s.tubeCooldown > 0 ? ` <span title="šachty přebíjejí">⌛${Math.ceil(s.tubeCooldown)}s</span>` : ' <span class="ok" title="šachty připraveny k salvě">✓</span>') : ''}</span></div></div>`
     }).join('')
     return this.panel('fleet', t('panel.fleet'), rows,
@@ -647,7 +647,7 @@ export class Panels implements HudView {
         ? (own.tubeCooldown > 0 ? `${t('fire.nextSalvo')} ${Math.ceil(own.tubeCooldown)} s` : t('fire.firing'))
         : t('fire.waitingEnvelope')
       fireRow = `<div class="row auto-fire"><span class="amber">${t(FIRE_MODE_LABELS[fc.mode] ?? 'firemode.auto')} → ${esc(tgtName)}</span>`
-        + `<span>${next} · ${own.missiles}</span></div>`
+        + `<span>${next} · ${t('fire.remaining')} ${own.missiles}</span></div>`
     } else if (fc.mode !== 'hold' && fc.mode !== 'auto') {
       fireRow = `<div class="row auto-fire"><span class="amber">${t(FIRE_MODE_LABELS[fc.mode] ?? 'firemode.auto')}</span>`
         + `<span>${t('fire.seeking')}</span></div>`

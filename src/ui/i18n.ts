@@ -126,6 +126,7 @@ const DICT: Record<string, { cs: string; en: string }> = {
   'fire.seeking': { cs: 'hledá cíl…', en: 'seeking target…' },
   'fire.secondWave': { cs: '2. vlna (HI)', en: '2nd wave (HI)' },
   'fire.launchIn': { cs: 'start za', en: 'launch in' },
+  'fire.remaining': { cs: 'zbývá', en: 'remaining' },
   'ownShip.hull': { cs: 'trup:', en: 'hull:' },
   'ownShip.speed': { cs: 'rychlost', en: 'speed' },
   'ownShip.accel': { cs: 'akcel.', en: 'accel.' },
