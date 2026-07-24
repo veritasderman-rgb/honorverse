@@ -296,6 +296,56 @@ export const MISSION_STORY: Record<string, MissionStory> = {
       + 'Znovu — od začátku." Příště to vyjde: drž formaci, šetři rakety '
       + 'na jádro a pamatuj, že tah nad šedesát procent platíš štíty.',
   },
+
+  // --- boční operace (volitelné; odměnou jsou raketové plošiny do dalších misí) ---
+  side01: {
+    prolog:
+      'Mezi misemi kampaně zachytí tvůj senzorový operátor nouzový signál: '
+      + 'kurýr Wren, sám a bez doprovodu, prchá Pomezím před dvěma pirátskými '
+      + 'nájezdníky. Tvoje loď je nejblíž. Rozkazy zní jasně — civilistům se '
+      + 'pomáhá — a ty víš, že jestli Wren nedoletí ke skoku, nedoletí nikam.',
+    epilog:
+      'Wren skočila do bezpečí a její kapitán ti do odletu stačil poslat '
+      + 'jediné slovo: díky. V nákladu, který nájezdníci nestihli ukořistit, '
+      + 'byly raketové plošiny z pohraničního arzenálu — a teď je táhne '
+      + 'tvoje flotila. Malá odbočka, hmatatelná kořist.',
+    epilogLose:
+      'Wren zmizela v pekle impelerových klínů dřív, než jsi dorazil na '
+      + 'dostřel. Nouzový signál utichl. Někdy dorazíš pozdě — a Pomezí ti to '
+      + 'nezapomene připomínat.',
+  },
+  side02: {
+    prolog:
+      'Zpravodajství ti předhodí souřadnice, které nikdo neměl znát: skrytý '
+      + 'pirátský přístav v asteroidovém poli, depot placený imperiálními '
+      + 'penězi. Tvoje dvojice má rozkaz jej rozbít. Vezmi Rampart dovnitř, '
+      + 'nech Skuu krýt záda a nedej pirátům čas naložit a zmizet.',
+    epilog:
+      'Depot hoří za tebou jako druhé slunce. Ve skladech, které tvůj '
+      + 'výsadek stačil projít, ležely bedny raketových plošin — imperiální '
+      + 'výroba, čerstvá série. Naložil jsi je do vlastních kýlů: nájezdy '
+      + 'Pomezím budou o kus těžší a tvá flotila o kus ostřejší.',
+    epilogLose:
+      'Přístav tě čekal lépe, než zpravodajství slíbilo. Rampart i Skua se '
+      + 'stáhly v troskách — a depot, nedotčený, do hodiny zmizel do '
+      + 'hyperprostoru i se zásobami. Napříště víc trupů, míň sebedůvěry.',
+  },
+  side03: {
+    prolog:
+      'Před finálním úderem ti admiralita svěří tichou práci: imperiální '
+      + 'hlídka dvou torpédoborců sedí na skokové trase k Cádizu a hlídá '
+      + 'příchod posil. Tvoje dvojice ji má vyřadit — potichu a rychle — '
+      + 'dřív, než stačí odeslat jediné varování k flotile.',
+    epilog:
+      'Obě hlídkové lodě mlčí a Cádiz o tobě pořád neví. V krytém skladišti, '
+      + 'které hlídaly, čekaly plošiny odsvahované pro Velkou armádu — teď '
+      + 'jsou tvoje. Vplul jsi do slepého místa nepřítele a vyšel z něj '
+      + 'silnější, než jsi tam přišel.',
+    epilogLose:
+      'Jedna z hlídek stačila odeslat varování dřív, než zhasla — a Cádiz '
+      + 'teď ví, že přicházíš. Cena za předsunutou práci, která nevyšla: '
+      + 'nepřítel, který tě čeká.',
+  },
 }
 
 /** obecná porážková věta (mise bez vlastního epilogLose) */

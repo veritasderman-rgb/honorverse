@@ -43,6 +43,10 @@ export const MISSION_PAR: Record<string, { par: number; mult: number }> = {
   mission09: { par: 7_000, mult: 1.8 },
   mission10: { par: 7_000, mult: 2.0 },
   mission11: { par: 8_000, mult: 2.5 },
+  // boční operace (kratší střety, mírný násobič)
+  side01: { par: 5_000, mult: 1.1 },
+  side02: { par: 6_000, mult: 1.3 },
+  side03: { par: 6_000, mult: 1.8 },
 }
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x))

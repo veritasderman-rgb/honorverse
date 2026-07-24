@@ -4,8 +4,10 @@
  * hratelnost už vyčištěných misí.
  */
 import { describe, expect, it } from 'vitest'
-import { CAMPAIGN_NODES, isMissionUnlocked } from '../src/data/campaign'
+import { BONUS_REWARD, CAMPAIGN_NODES, isMissionUnlocked, podReward } from '../src/data/campaign'
 import { SCENARIOS } from '../src/data/missions'
+import { sim } from '../src/sim/engine'
+import { SIM_DT } from '../src/sim/constants'
 
 describe('hvězdná mapa kampaně', () => {
   const ids = new Set(CAMPAIGN_NODES.map(n => n.id))
@@ -63,4 +65,54 @@ describe('hvězdná mapa kampaně', () => {
       if (n.requires) expect(optionalIds.has(n.requires), `${n.id} závisí na volitelné ${n.requires}`).toBe(false)
     }
   })
+
+  it('boční operace jsou rozmístěné po ~3 misích hlavní linie', () => {
+    const optional = CAMPAIGN_NODES.filter(n => n.optional)
+    expect(optional.length).toBeGreaterThanOrEqual(3)
+    // každá boční operace visí na některé hlavní misi
+    for (const n of optional) {
+      expect(n.requires, `boční operace ${n.id} nemá požadavek`).toBeDefined()
+      const req = CAMPAIGN_NODES.find(m => m.id === n.requires)
+      expect(req?.optional ?? false, `${n.id} visí na jiné boční operaci`).toBe(false)
+    }
+  })
+})
+
+describe('odměny za boční operace (plošiny)', () => {
+  it('každý bonusový uzel má definovanou odměnu v plošinách', () => {
+    for (const n of CAMPAIGN_NODES.filter(x => x.optional)) {
+      expect(BONUS_REWARD[n.id], `chybí odměna pro ${n.id}`).toBeDefined()
+      expect(BONUS_REWARD[n.id].pods).toBeGreaterThan(0)
+    }
+  })
+
+  it('podReward sčítá jen dokončené boční operace', () => {
+    expect(podReward([])).toBe(0)
+    expect(podReward(['mission01', 'mission02'])).toBe(0) // hlavní mise plošiny nedávají
+    expect(podReward(['side01'])).toBe(BONUS_REWARD.side01.pods)
+    expect(podReward(['side01', 'side02', 'side03']))
+      .toBe(BONUS_REWARD.side01.pods + BONUS_REWARD.side02.pods + BONUS_REWARD.side03.pods)
+  })
+})
+
+describe('boční operace — stabilita simulace', () => {
+  // každá boční operace musí běžet ~250 s bez NaN/rozpadu (nedokončí se v tom
+  // čase — jen ověřujeme numerickou stabilitu scénáře)
+  for (const id of ['side01', 'side02', 'side03']) {
+    it(`${id} běží 250 s stabilně`, () => {
+      const state = sim.create(structuredClone(SCENARIOS[id]))
+      const steps = Math.ceil(250 / SIM_DT)
+      for (let i = 0; i < steps; i++) {
+        sim.tick(state, SIM_DT)
+        if (state.outcome !== 'running') break
+      }
+      for (const s of state.ships) {
+        expect(Number.isFinite(s.pos.x) && Number.isFinite(s.pos.y), `${id}: NaN pozice ${s.name}`).toBe(true)
+        expect(Number.isFinite(s.vel.x) && Number.isFinite(s.vel.y), `${id}: NaN rychlost ${s.name}`).toBe(true)
+      }
+      for (const m of state.missiles) {
+        expect(Number.isFinite(m.pos.x) && Number.isFinite(m.pos.y), `${id}: NaN raketa`).toBe(true)
+      }
+    })
+  }
 })

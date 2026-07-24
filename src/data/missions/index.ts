@@ -11,6 +11,9 @@ import { mission08 } from './mission08'
 import { mission09 } from './mission09'
 import { mission10 } from './mission10'
 import { mission11 } from './mission11'
+import { side01 } from './side01'
+import { side02 } from './side02'
+import { side03 } from './side03'
 
 export const SCENARIOS: Record<string, Scenario> = {
   [mission01.id]: mission01,
@@ -24,4 +27,8 @@ export const SCENARIOS: Record<string, Scenario> = {
   [mission09.id]: mission09,
   [mission10.id]: mission10,
   [mission11.id]: mission11,
+  // volitelné boční operace (mimo hlavní linii, odemykají se po m3/m6/m9)
+  [side01.id]: side01,
+  [side02.id]: side02,
+  [side03.id]: side03,
 }
