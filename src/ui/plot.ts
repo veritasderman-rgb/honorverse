@@ -90,6 +90,20 @@ const HULL_PAL: Record<string, HullPalette> = {
   },
 }
 
+/**
+ * Telegraf záměru nepřátelské lodi (D2): přečte postoj z jejího stavu, ať
+ * hráč vidí, co dělá, a jeho protikrok je „zasloužený". Priorita: rolování
+ * (klín do dráhy) → chystaná salva → útěk → vysílání. null = nic zásadního.
+ */
+function telegraph(foe: ShipState): { text: string; warn: boolean } | null {
+  if (foe.destroyed) return null
+  if (foe.rolledTo !== null) return { text: '⟳ roluje – klín k nám', warn: true }
+  if (foe.pendingWave) return { text: '⚠ chystá salvu', warn: true }
+  if (foe.doctrine === 'runner') return { text: '⇗ prchá', warn: false }
+  if (foe.activeSensors) return { text: '◎ vysílá', warn: false }
+  return null
+}
+
 interface Pickable { id: number; x: number; y: number; r?: number }
 
 /** stylizovaný poloměr planety (px) — velké těleso na světové pozici */
@@ -1216,8 +1230,9 @@ export class TacticalPlot {
     if (memory) ctx.save()
     if (memory) ctx.globalAlpha = 0.45
     this.pickables.push({ id: c.shipId, x: p.x, y: p.y })
-    // kapitulovaná loď: šedobílá + vlajka ▽ (už není hrozba)
-    const surrendered = this.state?.ships.find(s => s.id === c.shipId)?.surrendered === true
+    // entita kontaktu (pro kapitulaci + telegrafování záměru, D2)
+    const foe = this.state?.ships.find(s => s.id === c.shipId)
+    const surrendered = foe?.surrendered === true
     const color = surrendered
       ? CLR.surrendered
       : c.idQuality === 0 ? CLR.contactUnknown : CLR.contactHostile
@@ -1300,6 +1315,17 @@ export class TacticalPlot {
         p.x + 10, p.y + 14)
     } else {
       ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
+      // TELEGRAF ZÁMĚRU (D2): u sledovaného nepřítele čti jeho postoj, ať je
+      // protikrok „zasloužený". Jen dobrý track (idQuality ≥ 1) — tvé senzory.
+      if (foe && foe.side !== 'player' && c.idQuality >= 1) {
+        const tg = telegraph(foe)
+        if (tg) {
+          ctx.save()
+          ctx.fillStyle = tg.warn ? '#ffb14a' : CLR.ringLabel
+          ctx.fillText(tg.text, p.x + 10, p.y + 24)
+          ctx.restore()
+        }
+      }
     }
     if (memory) ctx.restore()
   }
