@@ -1089,7 +1089,9 @@ export class TacticalPlot {
       ctx.fillStyle = CLR.label
       ctx.fillText(ship.name, p.x + R + 6, p.y + 3)
       ctx.restore()
-      this.pickables.push({ id: ship.id, x: p.x, y: p.y })
+      // hitbox i výběrový kroužek dle SKUTEČNÉ velikosti kotouče (CIC ~13 px),
+      // ne dle HW poloměru PLANET_R — jinak by kroužek trčel kolem drobné planety
+      this.pickables.push({ id: ship.id, x: p.x, y: p.y, r: R + 3 })
       return
     }
     // sonda/maják: drobný pulzující bod (kosmetický objekt mapy)
