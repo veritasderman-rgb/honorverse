@@ -14,6 +14,9 @@ import { SHIP_CLASSES } from './data/defs'
 import {
   buildSkirmish, fleetTotal, RANGE_PRESETS, SKIRMISH_CLASSES, type SkirmishConfig,
 } from './data/skirmish'
+import {
+  applyVeterancy, loadFleet, recordMissionResult, resetFleet, TIER_LABEL, tierOf,
+} from './ui/fleetlog'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
 import { scoreMission } from './sim/score'
 import {
@@ -137,6 +140,13 @@ function overlay(html: string): HTMLElement {
   return el
 }
 
+/** spustí kampaňovou misi s aplikovaným veteránstvím flotily (C1) */
+function startCampaignMission(id: string): void {
+  const sc = SCENARIOS[id]
+  if (!sc) { bridge.start(id); return } // fallback (demo scénář ve workeru)
+  bridge.startScenario(applyVeterancy(sc))
+}
+
 /** první věta briefingu (do karty výběru mise) */
 function firstSentence(text: string): string {
   const i = text.indexOf('.')
@@ -192,8 +202,13 @@ function showMissionSelect(): void {
     `<div class="story-section">`
     + `<button id="btn-skirmish">⚔ VOLNÁ BITVA — slož vlastní střet</button>`
     + `</div>`
-  const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${hall}${skirmish}${rows}`)
+  const fleet =
+    `<div class="story-section">`
+    + `<button id="btn-fleet">⚓ SÍŇ FLOTILY — kariéra a památník</button>`
+    + `</div>`
+  const el = overlay(`<h2>VÝBĚR MISE</h2>${story}${hall}${skirmish}${fleet}${rows}`)
   onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
+  onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
   el.classList.add('menu')
   setMenuBg(true)
   // Síň slávy: celkové pořadí (součet nejlepších skóre per mise)
@@ -228,8 +243,43 @@ function showMissionSelect(): void {
     onTap(btn, () => {
       el.remove()
       setMenuBg(false)
-      bridge.start(btn.dataset.mission!)
+      startCampaignMission(btn.dataset.mission!)
     })
+  })
+}
+
+/** Síň flotily (C1): kariéra vlastních lodí (veteránství) + památník ztrát. */
+function showFleetHall(): void {
+  const log = loadFleet()
+  const active = Object.entries(log.ships).sort((a, b) => b[1].battles - a[1].battles)
+  const activeHtml = active.length === 0
+    ? `<div class="dim">Zatím žádné veterány — dokonči kampaňovou misi a lodě si začnou nést zkušenost.</div>`
+    : active.map(([name, r]) => {
+      const tier = tierOf(r.battles)
+      const hull = SHIP_CLASSES[r.classId]?.hullCode ?? '?'
+      return `<div class="row"><span>${esc(name)} <span class="dim">(${esc(hull)})</span></span>`
+        + `<span class="${tier === 'elite' ? 'ok' : ''}">${TIER_LABEL[tier]} · ${r.battles} ${r.battles === 1 ? 'bitva' : r.battles < 5 ? 'bitvy' : 'bitev'}</span></div>`
+    }).join('')
+  const lostHtml = log.lost.length === 0
+    ? `<div class="dim">Zatím bez ztrát. Drž to tak.</div>`
+    : log.lost.map(l =>
+      `<div class="row"><span class="bad">✕ ${esc(l.name)}</span><span class="dim">${esc(SHIP_CLASSES[l.classId]?.hullCode ?? '?')}</span></div>`).join('')
+
+  const el = overlay(
+    `<h2>SÍŇ FLOTILY</h2>`
+    + `<div class="brief">Vlastní lodě si mezi misemi kampaně nesou zkušenost — veteráni střílejí těsnější salvy. `
+    + `Ztráta lodi je trvalá. Nepřátel zničeno celkem: <b>${log.kills}</b>.</div>`
+    + `<div class="score-block"><div class="score-total">POSÁDKY</div>${activeHtml}</div>`
+    + `<div class="score-block"><div class="score-total">PAMÁTNÍK</div>${lostHtml}</div>`
+    + `<div style="margin-top:14px">`
+    + `<button id="fl-back">ZPĚT</button> `
+    + `<button id="fl-reset" class="dim">Vynulovat kariéru</button></div>`,
+  )
+  onTap(el.querySelector('#fl-back'), () => { el.remove(); showMissionSelect() })
+  onTap(el.querySelector('#fl-reset'), () => {
+    resetFleet()
+    el.remove()
+    showFleetHall()
   })
 }
 
@@ -551,6 +601,8 @@ bridge.onSnapshot = (state, compression) => {
   if (!outcomeShown && state.outcome !== 'running') {
     outcomeShown = true
     controller.setCompression(0)
+    // kariérní deník flotily (C1): jen kampaň, ne volná bitva
+    if (currentMissionId !== 'skirmish') recordMissionResult(state)
     showOutcome(state)
   }
 }
@@ -558,6 +610,6 @@ bridge.onSnapshot = (state, compression) => {
 // start: ?mission=id přeskočí menu (tlačítko ZNOVU), jinak výběr mise;
 // při prvním spuštění kampaně se před výběrem jednou ukáže úvod příběhu
 const requested = new URLSearchParams(location.search).get('mission')
-if (requested && SCENARIOS[requested]) bridge.start(requested)
+if (requested && SCENARIOS[requested]) startCampaignMission(requested)
 else if (!introSeen()) showCampaignIntro(showMissionSelect)
 else showMissionSelect()
