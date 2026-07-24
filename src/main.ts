@@ -5,6 +5,7 @@
 import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { startFleetView } from './ui/fleetview'
+import { sceneFor } from './ui/scenes'
 import { Panels, esc, fmtTime } from './ui/panels'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -381,6 +382,7 @@ bridge.onReady = scenario => {
   panels.resetStats() // bojová statistika se počítá per mise
   plot.setHyperlimit(scenario.hyperlimit ?? null)
   plot.setEnvironment(scenario.decor, scenario.ambient)
+  plot.setScene(sceneFor(scenario.id, scenario.ambient)) // vizuál mise (hvězda, mlhovina, planety)
   showBriefing(scenario)
   plot.start()
 }

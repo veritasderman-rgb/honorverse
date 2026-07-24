@@ -12,9 +12,20 @@
  * vyplněné a nasvícené), aby se obě vrstvy nerozešly.
  */
 
-/** směr světla v OBRAZOVCE (jednotkový): hvězda vlevo nahoře, y dolů */
-const LIGHT_SX = -0.55
-const LIGHT_SY = -0.83
+/**
+ * Směr světla v OBRAZOVCE (jednotkový): odkud svítí hvězda soustavy, y dolů.
+ * Nastavuje ho plot per mise podle scény (setLightDir), ať rim a stínování
+ * trupů souhlasí s pozicí slunce na pozadí. Výchozí: vlevo nahoře.
+ */
+let LIGHT_SX = -0.55
+let LIGHT_SY = -0.83
+
+/** nastaví směr světla (normalizuje se); volá plot při změně scény mise */
+export function setLightDir(sx: number, sy: number): void {
+  const m = Math.hypot(sx, sy) || 1
+  LIGHT_SX = sx / m
+  LIGHT_SY = sy / m
+}
 
 export interface HullPalette {
   /** osvětlená strana trupu (přivrácená ke hvězdě) */
