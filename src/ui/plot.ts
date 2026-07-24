@@ -15,6 +15,7 @@ import {
   enginePlume, hullLights, hullShadow, setLightDir, shipBody, type HullPalette,
 } from './hull3d'
 import { sceneFor, type SceneDef } from './scenes'
+import { bodyStyleFor, drawBody } from './celestial'
 import type {
   Contact, DecorField, Hyperlimit, MissileState, ShipState, SimState, Vec2,
 } from '../sim/types'
@@ -503,59 +504,38 @@ export class TacticalPlot {
    * straně), s atmosférickým prstencem. Marker/label řeší drawBuoy.
    */
   private drawCelestials(ctx: CanvasRenderingContext2D, sc: SceneDef, sunX: number, sunY: number): void {
+    const now = performance.now()
+    const w = this.canvas.clientWidth
+    const h = this.canvas.clientHeight
+    const star = { core: sc.starCore, halo: sc.starHalo }
+
+    // 1) dekorativní vzdálená tělesa scény (plynný obr, měsíc…) — parallax,
+    //    kreslí se za vším; nemají pozici na mapě ani pickable
+    const cam = this.camCenter()
+    for (let i = 0; i < (sc.bodies?.length ?? 0); i++) {
+      const b = sc.bodies![i]
+      const par = 0.04
+      const bx = b.x * w - (cam.x / this.kmPerPx) * par
+      const by = b.y * h - (-cam.y / this.kmPerPx) * par
+      if (bx < -b.r * 3 || bx > w + b.r * 3 || by < -b.r * 3 || by > h + b.r * 3) continue
+      let lx = sunX - bx, ly = sunY - by
+      const lm = Math.hypot(lx, ly) || 1
+      drawBody(ctx, bx, by, b.r, b.style, b.tint ?? sc.planet, star, lx / lm, ly / lm, now, 100 + i)
+    }
+
+    // 2) planety na SVĚTOVÝCH pozicích (entity mapy) — styl dle jména
     const s = this.state
     if (!s) return
     for (const body of s.ships) {
       if (body.classId !== 'planet' || body.destroyed) continue
       const p = this.worldToScreen(body.pos)
-      const R = PLANET_R   // stylizovaný poloměr tělesa (px), pevný bod mapy
-      // mimo obraz? přeskoč
-      if (p.x < -R * 2 || p.x > this.canvas.clientWidth + R * 2
-        || p.y < -R * 2 || p.y > this.canvas.clientHeight + R * 2) continue
-      // směr ke hvězdě (osvětlená strana)
+      const R = PLANET_R
+      if (p.x < -R * 3 || p.x > w + R * 3 || p.y < -R * 3 || p.y > h + R * 3) continue
       let lx = sunX - p.x, ly = sunY - p.y
       const lm = Math.hypot(lx, ly) || 1
-      lx /= lm; ly /= lm
-      ctx.save()
-      // atmosférický prstenec (halo)
-      const atm = ctx.createRadialGradient(p.x, p.y, R * 0.9, p.x, p.y, R * 1.28)
-      atm.addColorStop(0, 'transparent')
-      atm.addColorStop(0.6, sc.starHalo)
-      atm.addColorStop(1, 'transparent')
-      ctx.globalAlpha = 0.4
-      ctx.fillStyle = atm
-      ctx.beginPath(); ctx.arc(p.x, p.y, R * 1.28, 0, Math.PI * 2); ctx.fill()
-      // těleso: gradient od osvětlené strany (ke hvězdě) do terminátoru
-      const g = ctx.createRadialGradient(p.x + lx * R * 0.5, p.y + ly * R * 0.5, R * 0.15,
-        p.x, p.y, R)
-      g.addColorStop(0, sc.planet)
-      g.addColorStop(0.55, this.mix(sc.planet, '#000000', 0.35))
-      g.addColorStop(1, '#04060a')
-      ctx.globalAlpha = 1
-      ctx.fillStyle = g
-      ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI * 2); ctx.fill()
-      // jasný okraj (limb) na straně ke hvězdě
-      ctx.globalCompositeOperation = 'lighter'
-      ctx.globalAlpha = 0.5
-      ctx.lineWidth = 1.5
-      ctx.strokeStyle = sc.starCore
-      ctx.beginPath()
-      ctx.arc(p.x, p.y, R - 0.5, Math.atan2(ly, lx) - 1.2, Math.atan2(ly, lx) + 1.2)
-      ctx.stroke()
-      ctx.restore()
+      const style = bodyStyleFor(body.name)
+      drawBody(ctx, p.x, p.y, R, style, sc.planet, star, lx / lm, ly / lm, now, body.id)
     }
-  }
-
-  /** lineární míchání dvou #rrggbb barev (t=0 → a, t=1 → b) */
-  private mix(a: string, b: string, t: number): string {
-    if (a[0] !== '#' || b[0] !== '#') return a // jen #rrggbb; jinak vrať základ
-    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16)
-    const ar = (pa >> 16) & 255, ag = (pa >> 8) & 255, ab = pa & 255
-    const br = (pb >> 16) & 255, bg = (pb >> 8) & 255, bb = pb & 255
-    const r = Math.round(ar + (br - ar) * t)
-    const gg = Math.round(ag + (bg - ag) * t)
-    const bl = Math.round(ab + (bb - ab) * t)
-    return `rgb(${r},${gg},${bl})`
   }
 
   /** pole asteroidů: deterministické balvany s pomalým driftem (kosmetika) */
@@ -694,6 +674,7 @@ export class TacticalPlot {
     for (const ship of s.ships) {
       if (ship.side === 'player' && !ship.destroyed) this.drawFormationLink(ctx, ship)
     }
+    this.drawSalvoMarkers(ctx, s.missiles)
     for (const m of s.missiles) this.drawMissile(ctx, m)
     for (const ship of s.ships) {
       // navigační bóje jsou veřejné majáky — vysílají polohu, kreslí se vždy
@@ -1309,6 +1290,95 @@ export class TacticalPlot {
       ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
     }
     if (memory) ctx.restore()
+  }
+
+  /**
+   * Značky salv: společné halo + počet střel + čelní šipka. Velikost haly,
+   * jas a velikost čísla rostou s počtem raket — z plotu je hned vidět, jak
+   * silná vlna to je (3 rakety vs 30). Barva dle strany (naše zelené, cizí
+   * rudé). Kreslí se POD jednotlivými raketami, ať čísla nezakrývají hlavice.
+   */
+  private drawSalvoMarkers(ctx: CanvasRenderingContext2D, missiles: MissileState[]): void {
+    const w = this.canvas.clientWidth
+    const h = this.canvas.clientHeight
+    // seskup živé střely dle salvoId
+    const groups = new Map<number, MissileState[]>()
+    for (const m of missiles) {
+      if (m.phase === 'dead') continue
+      let g = groups.get(m.salvoId)
+      if (!g) { g = []; groups.set(m.salvoId, g) }
+      g.push(m)
+    }
+    ctx.save()
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    for (const [salvoId, ms] of groups) {
+      const n = ms.length
+      if (n < 2) continue
+      // centroid + směr (screen) + rozptyl
+      let cx = 0, cy = 0, vx = 0, vy = 0
+      const pts: Vec2[] = []
+      for (const m of ms) {
+        const e = this.exPos(m.pos, m.vel)
+        const p = this.worldToScreen(e)
+        pts.push(p); cx += p.x; cy += p.y
+        vx += m.vel.x; vy += m.vel.y   // svět; převod na screen níž
+      }
+      cx /= n; cy /= n
+      if (cx < -100 || cx > w + 100 || cy < -100 || cy > h + 100) continue
+      let spread = 0
+      for (const p of pts) { const d = Math.hypot(p.x - cx, p.y - cy); if (d > spread) spread = d }
+      // směr letu v obrazovce (svět y nahoru → screen y dolů)
+      const svx = vx, svy = -vy
+      const vlen = Math.hypot(svx, svy) || 1
+      const nx = svx / vlen, ny = svy / vlen
+      // čelo vlny: nejpřednější střela ve směru letu
+      let lead = pts[0], lproj = -Infinity
+      for (const p of pts) {
+        const proj = (p.x - cx) * nx + (p.y - cy) * ny
+        if (proj > lproj) { lproj = proj; lead = p }
+      }
+      const own = ms[0].side === 'player'
+      const col = own ? CLR.missileOwn : CLR.missileFoe
+      const sel = this.selectedSalvoId != null && salvoId === this.selectedSalvoId
+      // halo: velikost dle rozptylu i počtu, jas dle počtu
+      const haloR = Math.max(spread * 0.95 + 6, 10 + 5 * Math.sqrt(n))
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, haloR)
+      g.addColorStop(0, col)
+      g.addColorStop(0.5, col)
+      g.addColorStop(1, 'transparent')
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.globalAlpha = Math.min(0.5, 0.14 + n * 0.012) * (sel ? 1.5 : 1)
+      ctx.fillStyle = g
+      ctx.beginPath(); ctx.arc(cx, cy, haloR, 0, Math.PI * 2); ctx.fill()
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.globalAlpha = 1
+
+      // čelní šipka vlny (na nejpřednější střele, míří po vektoru)
+      const ax = lead.x + nx * 6, ay = lead.y + ny * 6
+      ctx.strokeStyle = col
+      ctx.globalAlpha = 0.9
+      ctx.lineWidth = sel ? 2 : 1.3
+      ctx.beginPath()
+      ctx.moveTo(ax - ny * 5, ay + nx * 5)
+      ctx.lineTo(ax + nx * 7, ay + ny * 7)
+      ctx.lineTo(ax + ny * 5, ay - nx * 5)
+      ctx.stroke()
+
+      // počet střel: číslo za čelem vlny, velikost roste s počtem
+      const fs = 10 + Math.min(11, Math.round(Math.sqrt(n) * 2.4))
+      const lx = lead.x + nx * (fs * 0.7 + 8)
+      const ly = lead.y + ny * (fs * 0.7 + 8)
+      ctx.font = `bold ${fs}px Consolas, Menlo, monospace`
+      ctx.lineWidth = 3
+      ctx.strokeStyle = '#02060a'
+      ctx.strokeText(`${n}`, lx, ly)
+      ctx.fillStyle = sel ? CLR.sel : col
+      ctx.fillText(`${n}`, lx, ly)
+    }
+    ctx.restore()
+    ctx.textAlign = 'start'
+    ctx.textBaseline = 'alphabetic'
   }
 
   private drawMissile(ctx: CanvasRenderingContext2D, m: MissileState): void {

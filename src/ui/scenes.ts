@@ -7,6 +7,20 @@
  * od hvězdy — plot volá setLightDir(0.5 - star.x, 0.5 - star.y).
  */
 
+import type { BodyStyle } from './celestial'
+
+/** dekorativní vzdálené těleso na pozadí scény (parallax, bez mapy) */
+export interface SceneBody {
+  style: BodyStyle
+  /** normalizovaná pozice na obrazovce (0..1) */
+  x: number
+  y: number
+  /** poloměr v px */
+  r: number
+  /** barva tělesa (jinak scene.planet) */
+  tint?: string
+}
+
 export interface SceneDef {
   /** jádro hvězdy (nejjasnější) */
   starCore: string
@@ -24,6 +38,8 @@ export interface SceneDef {
   dust: string
   /** nádech planetových těles v této soustavě */
   planet: string
+  /** dekorativní vzdálená tělesa na pozadí (plynný obr, měsíc…) */
+  bodies?: SceneBody[]
 }
 
 /** ručně laděné scény per mise — výrazně odlišné nálady */
@@ -33,12 +49,17 @@ const SCENES: Record<string, SceneDef> = {
     starCore: '#dfe9ff', starHalo: '#4a6a9a', star: { x: 0.16, y: 0.7 },
     nebA: '#1c3a5a', nebB: '#243a6a', atmTop: '#1a2740', atmBot: '#05080f',
     dust: '#9fc4ff', planet: '#2d5a7a',
+    bodies: [
+      { style: 'ringed', x: 0.6, y: 0.16, r: 52, tint: '#4a6a8a' },
+      { style: 'moon', x: 0.4, y: 0.87, r: 22, tint: '#5a6470' },
+    ],
   },
   // 2 — Konvoj Pomezí: prašný soumrak na okraji soustavy, teplé slunce vpravo
   mission02: {
     starCore: '#fff2d0', starHalo: '#b8702e', star: { x: 0.78, y: 0.22 },
     nebA: '#5a3a1e', nebB: '#3a2a3a', atmTop: '#3a2a1c', atmBot: '#0a0710',
     dust: '#ffcf9a', planet: '#7a5a34',
+    bodies: [{ style: 'gas', x: 0.55, y: 0.15, r: 62, tint: '#8a6a3a' }],
   },
   // 3 — Q-ship (Cádiz): rudá imperiální mlhovina, nízké krvavé slunce
   mission03: {
@@ -51,12 +72,17 @@ const SCENES: Record<string, SceneDef> = {
     starCore: '#e6d8ff', starHalo: '#5a3a8a', star: { x: 0.82, y: 0.14 },
     nebA: '#2a1c4a', nebB: '#1a244a', atmTop: '#1c1630', atmBot: '#04040a',
     dust: '#c0a0ff', planet: '#3a2a6a',
+    bodies: [
+      { style: 'ringed', x: 0.44, y: 0.16, r: 56, tint: '#5a4a7a' },
+      { style: 'moon', x: 0.9, y: 0.5, r: 26, tint: '#6a6478' },
+    ],
   },
   // 5 — Stanice Zeta: chladně zelená obranná soustava s planetou
   mission05: {
     starCore: '#e0fff0', starHalo: '#2a7a6a', star: { x: 0.7, y: 0.6 },
     nebA: '#123a34', nebB: '#1a3a4a', atmTop: '#12281f', atmBot: '#040a08',
     dust: '#9fffd0', planet: '#2a6a54',
+    bodies: [{ style: 'gas', x: 0.44, y: 0.13, r: 46, tint: '#3a7a6a' }],
   },
   // 6 — Ústup od Tharsis: doutnající červeň porážky, kouř
   mission06: {
@@ -69,12 +95,17 @@ const SCENES: Record<string, SceneDef> = {
     starCore: '#fff6d8', starHalo: '#c88a2a', star: { x: 0.6, y: 0.12 },
     nebA: '#5a4418', nebB: '#4a3020', atmTop: '#3a2c14', atmBot: '#0a0806',
     dust: '#ffe08a', planet: '#7a5a2a',
+    bodies: [{ style: 'ringed', x: 0.4, y: 0.16, r: 58, tint: '#a8863a' }],
   },
   // 8 — Kaledonská hvězda: jasná bílo-azurová hvězda, spojenecká soustava
   mission08: {
     starCore: '#f4fbff', starHalo: '#3a8aca', star: { x: 0.5, y: 0.16 },
     nebA: '#1c3a5a', nebB: '#2a4a6a', atmTop: '#182a3c', atmBot: '#05080f',
     dust: '#bfe6ff', planet: '#2a5a8a',
+    bodies: [
+      { style: 'gas', x: 0.9, y: 0.5, r: 58, tint: '#3a6a9a' },
+      { style: 'moon', x: 0.34, y: 0.2, r: 18, tint: '#7a8490' },
+    ],
   },
   // 9 — Velká armáda (Avalon Prime): domovský soumrak, planeta v sázce
   mission09: {
@@ -87,6 +118,7 @@ const SCENES: Record<string, SceneDef> = {
     starCore: '#fff0c0', starHalo: '#c85020', star: { x: 0.5, y: 0.66 },
     nebA: '#6a2a14', nebB: '#4a2020', atmTop: '#3a1c10', atmBot: '#0a0505',
     dust: '#ffa060', planet: '#8a4020',
+    bodies: [{ style: 'lava', x: 0.9, y: 0.5, r: 52, tint: '#8a3018' }],
   },
   // 11 — Stěna bitvy (Avalon Prime): chladná modř, planeta jako pevný bod
   mission11: {
