@@ -45,14 +45,24 @@ export const CAMPAIGN_NODES: CampaignNode[] = [
   { id: 'side03', x: 800, y: 480, requires: 'mission09', optional: true },
 ]
 
+/** odměna za dokončenou boční operaci: plošiny NEBO kořistní loď do flotily */
+export interface BonusReward {
+  /** trvalé navýšení raketových plošin flotily pro další kampaňové mise */
+  pods: number
+  /** popis odměny do UI */
+  label: string
+  /** kořistní loď přidaná do flotily pro další kampaňové mise (jednou) */
+  ship?: { classId: string; name: string }
+}
+
 /**
- * Odměna za dokončení boční operace: trvalé navýšení raketových plošin
- * flotily pro další kampaňové mise (aplikuje se z `wob-cleared`). Kořist
- * z bočních skladišť — čím dál v kampani, tím větší.
+ * Odměny za boční operace (aplikuje se z `wob-cleared`). side01/side03 dávají
+ * raketové plošiny; side02 (dobytý pirátský přístav) přidá do flotily kořistní
+ * lehký křižník ANS Kaper — nese se pak do dalších kampaňových misí.
  */
-export const BONUS_REWARD: Record<string, { pods: number; label: string }> = {
+export const BONUS_REWARD: Record<string, BonusReward> = {
   side01: { pods: 2, label: '+2 raketové plošiny pro flotilu' },
-  side02: { pods: 3, label: '+3 raketové plošiny pro flotilu' },
+  side02: { pods: 0, label: 'kořistní křižník ANS Kaper do flotily', ship: { classId: 'cl-korzar', name: 'ANS Kaper' } },
   side03: { pods: 4, label: '+4 raketové plošiny pro flotilu' },
 }
 
@@ -61,6 +71,16 @@ export function podReward(cleared: readonly string[]): number {
   let n = 0
   for (const id of cleared) n += BONUS_REWARD[id]?.pods ?? 0
   return n
+}
+
+/** kořistní lodě za dokončené boční operace (do flotily dalších kampaňových misí) */
+export function shipRewards(cleared: readonly string[]): { classId: string; name: string }[] {
+  const out: { classId: string; name: string }[] = []
+  for (const id of cleared) {
+    const ship = BONUS_REWARD[id]?.ship
+    if (ship) out.push(ship)
+  }
+  return out
 }
 
 /** deterministický PRNG (mulberry32) — hvězdné pozadí mapy bez závislostí */

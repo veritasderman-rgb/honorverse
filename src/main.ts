@@ -20,10 +20,11 @@ import {
 import {
   applyLoadout, LOADOUTS, loadPreset, presetById, savePreset, type LoadoutId,
 } from './data/loadout'
+import { applyBonusRewards } from './data/rewards'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
 import {
   CAMPAIGN_NODES, GALAXY, GALAXY_TILT, isMissionUnlocked, NEBULAE, podReward,
-  type CampaignNode,
+  shipRewards, type CampaignNode,
 } from './data/campaign'
 import { scoreMission } from './sim/score'
 import {
@@ -156,32 +157,8 @@ function startCampaignMission(id: string, preset?: LoadoutId): void {
   if (!sc) { bridge.start(id); return } // fallback (demo scénář ve workeru)
   const clone = applyVeterancy(sc)         // klon s buffy veteránů
   applyLoadout(clone, preset ?? loadPreset()) // + zvolená výzbroj
-  applyBonusRewards(clone)                 // + kořist z bočních operací (plošiny)
+  applyBonusRewards(clone, loadCleared())  // + kořist z bočních operací (plošiny + lodě)
   bridge.startScenario(clone)
-}
-
-/**
- * Odměna z dokončených bočních operací: navýší raketové plošiny vlastních
- * lodí (mutuje předaný KLON). Bonus se dělí mezi vlastní lodě, ať to není jen
- * jedna přetížená vlajka; nad rámec podCapacity třídy se plošiny nepřidávají.
- */
-function applyBonusRewards(scenario: Scenario): void {
-  const extra = podReward(loadCleared())
-  if (extra <= 0) return
-  const own = scenario.ships.filter(s => s.side === 'player')
-  if (own.length === 0) return
-  let remaining = extra
-  // kolo po kole přidávej po jedné plošině tam, kde je ještě místo do kapacity
-  let progressed = true
-  while (remaining > 0 && progressed) {
-    progressed = false
-    for (const spec of own) {
-      if (remaining <= 0) break
-      const cap = SHIP_CLASSES[spec.classId]?.podCapacity ?? 0
-      const cur = spec.pods ?? 0
-      if (cur < cap) { spec.pods = cur + 1; remaining--; progressed = true }
-    }
-  }
 }
 
 /** localStorage flag „úvod kampaně už hráč viděl" */
@@ -331,10 +308,14 @@ function showStarMap(): void {
   const cleared = new Set(loadCleared())
   const total = CAMPAIGN_NODES.filter(n => !n.optional).length
   const doneCount = CAMPAIGN_NODES.filter(n => !n.optional && cleared.has(n.id)).length
-  // kořist z dokončených bočních operací (plošiny) — hlásíme hráči na mapě
+  // kořist z dokončených bočních operací (plošiny + lodě) — hlásíme na mapě
   const pods = podReward([...cleared])
-  const rewardHint = pods > 0
-    ? ` · <b class="ok">★ +${pods} plošin</b> z bočních operací`
+  const prizeShips = shipRewards([...cleared])
+  const rewardBits: string[] = []
+  if (pods > 0) rewardBits.push(`+${pods} plošin`)
+  for (const s of prizeShips) rewardBits.push(esc(s.name))
+  const rewardHint = rewardBits.length > 0
+    ? ` · <b class="ok">★ ${rewardBits.join(', ')}</b> z bočních operací`
     : ''
   const unlocked = unlockAllOn()
   const actions =
