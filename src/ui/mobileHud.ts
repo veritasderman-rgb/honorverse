@@ -134,6 +134,16 @@ export class MobileHud implements HudView {
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
       this.contactsEl.addEventListener(ev, clear)
     }
+    // klávesnice / asistivní technologie: čipy jsou role="button" + tabindex="0",
+    // ale delegace Panels poslouchá jen pointerdown. Enter/mezerník proto
+    // převedeme na bublající pointerdown na čipu → stejná cesta zaměření.
+    this.contactsEl.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      const chip = (e.target as Element | null)?.closest('.mc-chip')
+      if (!chip) return
+      e.preventDefault()
+      chip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    })
   }
 
   private ring(ship: ShipState): string {
