@@ -6,7 +6,7 @@ import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { startFleetView } from './ui/fleetview'
 import { sceneFor } from './ui/scenes'
-import { Panels, esc, fmtTime } from './ui/panels'
+import { Panels, esc, fmtTime, type CombatStats } from './ui/panels'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
 import { SCENARIOS } from './data/missions'
@@ -267,6 +267,59 @@ const savePref = (key: string, v: string): void => {
   try { localStorage.setItem(key, v) } catch { /* noop */ }
 }
 
+/** české popisky příčin zániku rakety (rozpad obrany v rozboru) */
+const CAUSE_LABEL: Record<string, string> = {
+  cm: 'protirakety', pdlc: 'bodová obrana', wedge: 'klín', decoy: 'návnady',
+  ecm: 'ECM', dud: 'selhání', link: 'ztráta zámku', fizzle: 'minula',
+}
+
+/** top 2 příčiny z rozpadu (např. „protirakety 12, bodová obrana 5") */
+function causeBreakdown(rec: Record<string, number>): string {
+  return Object.entries(rec)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([k, v]) => `${CAUSE_LABEL[k] ?? k} ${v}`)
+    .join(', ')
+}
+
+/** rozhodující faktor bitvy — poučná věta „proč to dopadlo takhle" (D1) */
+function decisiveFactor(
+  win: boolean, r: CombatStats, succ: number, defPct: number, ownLoss: number,
+): string {
+  if (win) {
+    if (succ >= 30 && r.ourLaunched >= 6) return 'přesné soustředěné salvy prolomily obranu'
+    if (defPct >= 60 && r.incLaunched >= 6) return 'vaše protiraketová clona udržela loď celou'
+    if (ownLoss === 0) return 'čisté vítězství bez ztrát'
+    return 'cíl padl dřív, než stačila rozhodnout přesila'
+  }
+  if (r.incHits >= 3) return 'nepřátelské salvy prošly obranou — příště hustší clona nebo klín do dráhy'
+  if (succ < 12 && r.ourLaunched >= 6) return 'palte z kratší vzdálenosti — na dálku obrana cíle stíhá vše'
+  if (ownLoss > 0) return 'ztráty rozhodly — chraňte lodě rolováním a bočními štíty'
+  return 'rozhodla přesila nepřítele'
+}
+
+/** After-action rozbor (D1): co se stalo a co o výsledku rozhodlo */
+function afterActionHtml(state: SimState, r: CombatStats): string {
+  if (r.ourLaunched === 0 && r.incLaunched === 0) return '' // bez boje nemá smysl
+  const win = state.outcome === 'win'
+  const succ = r.ourLaunched > 0 ? Math.round((100 * r.ourHits) / r.ourLaunched) : 0
+  const ownLoss = state.ships.filter(s => s.side === 'player' && s.destroyed).length
+  const foeKilled = state.ships.filter(s => s.side === 'enemy' && s.destroyed).length
+  const defPct = r.incLaunched > 0 ? Math.round((100 * r.incKilled) / r.incLaunched) : 0
+  const defParts = causeBreakdown(r.incLoss)
+  const verdict = decisiveFactor(win, r, succ, defPct, ownLoss)
+  return `<div class="score-block aa">`
+    + `<div class="score-total">ROZBOR BITVY</div>`
+    + `<div class="row"><span>naše palba</span><span>${r.ourLaunched} raket · ${r.ourHits} zásahů (${succ} %)</span></div>`
+    + (r.incLaunched > 0
+      ? `<div class="row"><span>naše obrana</span><span>${r.incKilled}/${r.incLaunched} sestřeleno (${defPct} %)${defParts ? ` · ${esc(defParts)}` : ''}</span></div>`
+      : '')
+    + (r.incHits > 0 ? `<div class="row"><span>zásahy do nás</span><span class="bad">${r.incHits}</span></div>` : '')
+    + `<div class="row"><span>bilance</span><span>zničeno ${foeKilled} · vlastní ztráty ${ownLoss}</span></div>`
+    + `<div class="row"><span><b>rozhodlo</b></span><span class="${win ? 'ok' : 'bad'}">${esc(verdict)}</span></div>`
+    + `</div>`
+}
+
 function showOutcome(state: SimState): void {
   const win = state.outcome === 'win'
   const objs = state.objectives.map(o => {
@@ -311,6 +364,7 @@ function showOutcome(state: SimState): void {
     `<h2 class="${win ? 'win' : 'lose'}">${win ? 'VÍTĚZSTVÍ' : 'PORÁŽKA'}</h2>`
     + `<div class="brief">Mise ukončena v čase ${fmtTime(state.t)}.</div>`
     + objs
+    + afterActionHtml(state, panels.combatReport)
     + scoreHtml
     + (epilog ? `<div class="brief story story-epilog">${esc(epilog)}</div>` : '')
     + `<div style="margin-top:14px">`

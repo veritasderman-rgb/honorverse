@@ -360,6 +360,12 @@ export type Order =
   | { kind: 'launchDouble'; shipId: number; targetId: number }
   /** vrstvená salva: hlavní vlna LO hned + follow-up HI časovaný na společný přílet */
   | { kind: 'launchLayered'; shipId: number; targetId: number; countLo: number; countHi: number }
+  /**
+   * Sesazená alfa-salva („srovnat tuby"): více lodí naplánuje plnou salvu na
+   * společný dopad (time-on-target) — bližší lodě zpozdí odpal, aby všechny
+   * salvy dorazily naráz a zahltily obranu cíle.
+   */
+  | { kind: 'alphaStrike'; shipIds: number[]; targetId: number }
   /** přesměrování letící salvy (boost/ballistic) na nový cíl — zámek ×0.75, jen v dosahu řízení */
   | { kind: 'retargetSalvo'; shipId: number; salvoId: number; newTargetId: number }
   | { kind: 'fireEnergy'; shipId: number; targetId: number }

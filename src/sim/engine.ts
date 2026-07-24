@@ -5,7 +5,8 @@
  */
 import type { Order, Scenario, ShipState, SimApi, SimState } from './types'
 import { updateShipPhysics } from './physics'
-import { fireEnergy, launchDouble, launchPods, launchSalvo, missileFlightTime, retargetSalvo, updateMissiles } from './weapons'
+import { autoDriveMode, fireEnergy, launchDouble, launchPods, launchSalvo, missileFlightTime, retargetSalvo, updateMissiles } from './weapons'
+import { effectiveTubes } from './damage'
 import { deployDecoy, updateDefenses } from './defense'
 import { updateSensors } from './sensors'
 import { updateFireControl } from './firecontrol'
@@ -54,7 +55,52 @@ const liveTarget = (state: SimState, id: number): ShipState | undefined => {
   return s && !s.destroyed ? s : undefined
 }
 
+/**
+ * Sesazená alfa-salva („srovnat tuby"): vybrané lodě naplánují plnou salvu
+ * na SPOLEČNÝ dopad (time-on-target). Spočítáme dobu doletu každé lodě k cíli;
+ * ta s nejdelším letem pálí hned, bližší se zpozdí (pendingWave), aby všechny
+ * salvy dorazily naráz a zahltily obranu. Jen nabité, nezavalené lodě.
+ */
+function applyAlphaStrike(state: SimState, order: { shipIds: number[]; targetId: number }): void {
+  const target = liveTarget(state, order.targetId)
+  if (!target || target.surrendered) return
+  const plan = order.shipIds
+    .map(id => shipById(state, id))
+    .filter((sh): sh is ShipState =>
+      !!sh && !sh.destroyed && !sh.surrendered && sh.side === 'player'
+      && sh.tubeCooldown <= 0 && sh.rolledTo === null && sh.missiles > 0
+      && effectiveTubes(sh) > 0)
+    .map(sh => {
+      const d = dist(sh.pos, target.pos)
+      const closing = dot(sub(sh.vel, target.vel), norm(sub(target.pos, sh.pos)))
+      const mode = autoDriveMode(sh.pos, sh.vel, target.pos, target.vel)
+      const tf = missileFlightTime(d, closing, mode)
+      return { sh, mode, tf: Number.isFinite(tf) ? tf : 0 }
+    })
+  if (plan.length === 0) return
+  const maxFlight = plan.reduce((m, p) => Math.max(m, p.tf), 0)
+  for (const p of plan) {
+    const tubes = effectiveTubes(p.sh)
+    const delay = Math.max(0, maxFlight - p.tf)
+    if (delay <= 0.05) {
+      launchSalvo(state, p.sh, order.targetId, tubes, p.mode)
+    } else {
+      // přednabito na koordinovaný dopad — odpal ignoruje cooldown (jako vrstvená vlna)
+      p.sh.pendingWave = { targetId: order.targetId, count: tubes, mode: p.mode, launchAt: state.t + delay }
+    }
+  }
+  const player = plan.find(p => p.sh.doctrine === 'player')?.sh
+  if (player) {
+    state.events.push({
+      t: state.t, kind: 'message', shipId: player.id, side: player.side, speaker: 'tactical', slowdown: true,
+      text: `Srovnat tuby — ${plan.length} ${plan.length === 1 ? 'loď' : plan.length < 5 ? 'lodě' : 'lodí'} `
+        + `na společný dopad za ${Math.round(maxFlight)} s. Zahltíme jim obranu jednou vlnou.`,
+    })
+  }
+}
+
 function applyOrder(state: SimState, order: Order): void {
+  if (order.kind === 'alphaStrike') { applyAlphaStrike(state, order); return }
   const ship = shipById(state, order.shipId)
   if (!ship || ship.destroyed || ship.surrendered) return
 

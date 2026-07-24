@@ -132,7 +132,7 @@ const avatarHtml = (speaker: string): string => {
 // ---------- panely ----------
 
 /** akumulovaná bojová statistika (z eventů; reset při nové misi) */
-interface CombatStats {
+export interface CombatStats {
   ourLaunched: number; ourKilled: number; ourHits: number
   incLaunched: number; incKilled: number; incHits: number
   /** rozpad ztrát NAŠICH raket podle příčiny (cause z eventů) */
@@ -306,6 +306,15 @@ export class Panels {
   /** bojová statistika pro skórování (odpaly/zásahy vlastní strany) */
   get combatStats(): { ourLaunched: number; ourHits: number } {
     return { ourLaunched: this.stats.ourLaunched, ourHits: this.stats.ourHits }
+  }
+
+  /** plná bojová statistika pro after-action rozbor (D1) — kopie */
+  get combatReport(): CombatStats {
+    return {
+      ...this.stats,
+      ourLoss: { ...this.stats.ourLoss },
+      incLoss: { ...this.stats.incLoss },
+    }
   }
 
   /** reset bojové statistiky a logů — volat při startu nové mise */
@@ -1069,6 +1078,7 @@ export class Panels {
       fleetFocus: 'SOUSTŘEDIT: všechny vybrané lodě AUTO palbou na TEBOU vybraný cíl (klikni na kontakt). Jednorázové přiřazení — po zničení cíle se lodě zastaví.',
       fleetHold: 'DRŽET PALBU: všechny vybrané lodě přestanou střílet (doktríny i AUTO vypnuty).',
       fleetSalvo: 'SALVA VÝBĚRU: každá vybraná loď s nabitými šachtami TEĎ odpálí plnou salvu na tebou vybraný cíl — koordinovaný úder bez přepínání lodí. Připravenost šachet vidíš v rosteru FLOTILA (✓/⌛).',
+      fleetAlpha: 'SROVNAT TUBY (sesazená alfa-salva): vybrané lodě naplánují plnou salvu na SPOLEČNÝ dopad — bližší lodě odpal zpozdí, aby všechny salvy dorazily naráz a ZAHLTILY obranu cíle. Klasický Honorverse úder časovaný na cíl (time-on-target). Vyžaduje vybraný cíl a nabité šachty; vyprázdní zásobníky.',
     }
     const squadSeg = fleetCount >= 3
       ? `<span class="obg" title="Velení eskadry: doktríny palby pro celý výběr — cíle si lodě volí samy (deterministicky), i při kompresi času.">${lbl('ESKADRA:', 'E:')}`
@@ -1076,6 +1086,7 @@ export class Panels {
         + `<button data-act="fleetBiggest" class="${allMode('biggest') ? 'active' : ''}" title="${esc(squadTips.fleetBiggest)}"${dis(!noShip)}>${lbl('Největší', 'Nejv.')}</button>`
         + `<button data-act="fleetSpread" class="${allMode('spread') ? 'active' : ''}" title="${esc(squadTips.fleetSpread)}"${dis(!noShip)}>${lbl('Rozdělit', 'Rozd.')}</button>`
         + `<button data-act="fleetSalvo" title="${esc(squadTips.fleetSalvo)}"${dis(canFire)}>${lbl('Salva výběru', 'S⊞')}</button>`
+        + `<button data-act="fleetAlpha" title="${esc(squadTips.fleetAlpha)}"${dis(canFire)}>${lbl('Srovnat tuby', 'Alfa')}</button>`
         + `<button data-act="fleetFocus" title="${esc(squadTips.fleetFocus)}"${dis(canFire)}>${lbl('Soustředit', 'Soustř.')}</button>`
         + `<button data-act="fleetHold" title="${esc(squadTips.fleetHold)}"${dis(!noShip)}>${lbl('Držet palbu', '✋')}</button>`
         + xN
