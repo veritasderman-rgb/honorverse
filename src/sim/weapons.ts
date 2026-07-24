@@ -458,15 +458,20 @@ export function updateMissiles(state: SimState, dt: number): void {
 
     let target = state.ships.find(s => s.id === m.targetId)
     if (!target || target.destroyed) {
-      // cíl zničen/pryč: dokud raketa letí (boost/ballistic) a má manévrovací
-      // prostor, stoč se na nejbližšího nepřítele v dosahu (postih za změnu
-      // směru = penalizace zámku). Není-li koho napadnout → sebedestrukce.
-      const reacq = (m.phase === 'boost' || m.phase === 'ballistic')
+      // cíl zničen/pryč: dokud raketa HOŘÍ (fáze boost = má pohon, a tedy
+      // manévrovací prostor), stoč se na nejbližšího nepřítele v dosahu (postih
+      // za změnu směru = penalizace zámku). Balistická (vyhořelá) raketa už
+      // kurz změnit nemůže → sebedestrukce, stejně jako když není koho napadnout.
+      const reacq = m.phase === 'boost'
         ? nearestHostileShip(state, m.side, m.pos, REACQUIRE_RANGE)
         : null
       if (reacq) {
         m.targetId = reacq.id
         m.lock *= RETARGET_LOCK_PENALTY
+        // nový cíl = nový obranný souboj: návnada i protirakety se vyhodnotí znovu
+        m.decoyChecked = false
+        m.cmShots = 0
+        m.cmBudget = undefined
         target = reacq // pokračuj tímto tickem naváděním na nový cíl
       } else {
         m.phase = 'dead'

@@ -28,12 +28,12 @@ function twoEnemies(bx: number): Scenario {
   }
 }
 
-/** raketa letící na cíl `targetId`, poblíž nepřítele A */
+/** hořící raketa (boost = má manévrovací prostor) letící na cíl `targetId` */
 function missileAt(targetId: number, over: Partial<MissileState> = {}): MissileState {
   return {
     id: 500, side: 'player', def: 'std-shipkiller',
     pos: { x: 3_500_000, y: 0 }, vel: { x: 100, y: 0 },
-    targetId, mode: 0, driveRemaining: 0, phase: 'ballistic',
+    targetId, mode: 0, driveRemaining: 30, phase: 'boost',
     lock: 0.9, salvoId: 1, autonomous: true, launchedAt: 0, ...over,
   }
 }
@@ -79,6 +79,17 @@ describe('re-akvizice raket po zničení cíle', () => {
     updateMissiles(state, 0.5)
 
     expect(state.rng.s, 're-akvizice nesmí měnit stav RNG').toBe(rngBefore)
+  })
+
+  it('balistická (vyhořelá) raketa se nepřesměrovává — bez pohonu nezmění kurz', () => {
+    const state = sim.create(twoEnemies(6_000_000)) // nepřítel v dosahu, ale…
+    state.ships.find(s => s.id === 2)!.destroyed = true
+    state.missiles.push(missileAt(2, { phase: 'ballistic', driveRemaining: 0 }))
+
+    updateMissiles(state, 0.5)
+
+    expect(alive(state, 500), 'vyhořelá raketa má zaniknout, ne přesměrovat').toBe(false)
+    expect(state.events.some(e => e.kind === 'missileMiss' && e.cause === 'lost')).toBe(true)
   })
 
   it('terminální raketa se už nepřesměrovává (nemá manévrovací prostor)', () => {
