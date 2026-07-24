@@ -384,15 +384,15 @@
     .mw-scrim { position: absolute; inset: 0; z-index: 12; display: none; background: #05080a00; }
     #mobile-wheel.open .mw-scrim { display: block; background: #05080a6e; }
     .mw-arc { position: absolute; right: calc(34px + env(safe-area-inset-right)); bottom: calc(34px + env(safe-area-inset-bottom)); z-index: 13; width: 0; height: 0; }
-    .mw-act { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px;
+    .mw-act { position: absolute; left: -23px; top: -23px; width: 46px; height: 46px;
       border-radius: 50%; transform: translate(0, 0); opacity: 0; pointer-events: none;
       transition: transform .16s ease, opacity .16s ease;
       background: #0b1a0cf5; border: 1px solid #2a5a2e; color: #cfeecf;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
       box-shadow: 0 0 8px #05080a; }
     #mobile-wheel.open .mw-act { transform: translate(var(--tx), var(--ty)); opacity: 1; pointer-events: auto; }
-    .mw-act .mw-g { font-size: 20px; line-height: 1; }
-    .mw-act .mw-l { font-size: 8px; letter-spacing: .3px; text-align: center; max-width: 52px;
+    .mw-act .mw-g { font-size: 18px; line-height: 1; }
+    .mw-act .mw-l { font-size: 8px; letter-spacing: .2px; text-align: center; max-width: 44px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mw-act.active { border-color: #58e06a; color: #eaffea; box-shadow: 0 0 8px #2c5a2e; }
     #mobile-wheel.open .mw-act:disabled { opacity: .3; pointer-events: none; }
@@ -426,9 +426,9 @@
     body.tablet.phone .mc-chip .mc-code { font-size: 15px; }
     body.tablet.phone .mc-chip .mc-rng { font-size: 13px; }
     body.tablet.phone .mw-fab { width: 62px; height: 62px; font-size: 26px; }
-    body.tablet.phone .mw-act { width: 64px; height: 64px; left: -32px; top: -32px; }
-    body.tablet.phone .mw-act .mw-g { font-size: 23px; }
-    body.tablet.phone .mw-act .mw-l { font-size: 9px; max-width: 60px; }
+    body.tablet.phone .mw-act { width: 52px; height: 52px; left: -26px; top: -26px; }
+    body.tablet.phone .mw-act .mw-g { font-size: 21px; }
+    body.tablet.phone .mw-act .mw-l { font-size: 9px; max-width: 50px; }
 
     /* portrét na dotyku: taktický plot potřebuje šířku — vyzvi k otočení.
        Práh 1100 px pokryje i iPad Pro 12,9" na výšku (1024 px), aby i velké

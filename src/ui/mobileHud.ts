@@ -118,7 +118,9 @@ export class MobileHud implements HudView {
   private wheelBtn(a: WheelAction, i: number, n: number): string {
     const deg = 180 + 90 * (n > 1 ? i / (n - 1) : 0) // 180° (vlevo) → 270° (nahoru)
     const rad = (deg * Math.PI) / 180
-    const R = 94
+    // poloměr dost velký, aby se 6 tlačítek (46–50 px) v kvadrantu nepřekrývalo:
+    // rozestup středů = 2·R·sin(9°) ≈ 0,31·R ≈ 53 px u R 168 (na tabletu širší)
+    const R = document.body.classList.contains('tablet') ? 190 : 168
     const tx = (R * Math.cos(rad)).toFixed(1)
     const ty = (R * Math.sin(rad)).toFixed(1)
     const label = t(a.labelKey) + (a.count != null ? ` ${a.count}` : '')
@@ -139,6 +141,15 @@ export class MobileHud implements HudView {
   private wireWheel(): void {
     const fab = this.wheelEl.querySelector('.mw-fab')!
     fab.addEventListener('pointerdown', e => { e.stopPropagation(); this.setWheelOpen(!this.wheelOpen) })
+    // klávesnice / AT: FAB je nativní button → Enter/mezerník emituje click, ne
+    // pointerdown. Ošetříme keydown (a preventDefault potlačí syntetický click,
+    // takže se stav nepřepne dvakrát); click samotný neposloucháme.
+    fab.addEventListener('keydown', e => {
+      const ke = e as KeyboardEvent
+      if (ke.key !== 'Enter' && ke.key !== ' ') return
+      ke.preventDefault()
+      this.setWheelOpen(!this.wheelOpen)
+    })
     this.wheelEl.querySelector('.mw-scrim')!
       .addEventListener('pointerdown', () => this.setWheelOpen(false))
     // akce odešle data-act delegace Panels (bublá přes plot-container); kolo pak
