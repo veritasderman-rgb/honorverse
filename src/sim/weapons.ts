@@ -4,12 +4,12 @@
  * Nově: poháněná obálka (poweredEnvelope), odhad doletu (missileFlightTime)
  * a česká zpětná vazba rozkazů hráče (event 'message', speaker 'tactical').
  */
-import type { DriveMode, DriveModeOrder, MissileState, ShipState, SimState, Vec2 } from './types'
+import type { DriveMode, DriveModeOrder, MissileState, ShipState, Side, SimState, Vec2 } from './types'
 import {
   AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
   ENERGY_MAX_RANGE, G, JAMMER_MIN_SALVO, LINK_LOCK_DECAY, LOCK_LOST,
   MISSILE_MAX_FLIGHT, MISSILE_QUALITY_LOCK_CAP, PODS_PER_POD,
-  RETARGET_LOCK_PENALTY, ROLL_TIME,
+  REACQUIRE_RANGE, RETARGET_LOCK_PENALTY, ROLL_TIME,
   SOLUTION_EMITTING_BONUS, SOLUTION_PASSIVE, SOLUTION_TRACK_BONUS, TUBE_COOLDOWN,
   VEE_SOLUTION_BONUS,
 } from './constants'
@@ -428,21 +428,60 @@ export function retargetSalvo(
     `Salva přesměrována na ${target.name} — ${missiles.length} raket, zámek ×0,75.`)
 }
 
+const hostileTo = (a: Side, b: Side): boolean =>
+  (a === 'player' && b === 'enemy') || (a === 'enemy' && b === 'player')
+
+/**
+ * Nejbližší platný nepřátelský cíl pro raketu (deterministicky: podle
+ * vzdálenosti, remíza podle nižšího id). Přeskakuje zničené i kapitulované
+ * lodě. Jen v dosahu `maxRange`, jinak null.
+ */
+function nearestHostileShip(
+  state: SimState, side: Side, pos: Vec2, maxRange: number,
+): ShipState | null {
+  let best: ShipState | null = null
+  let bestD = Infinity
+  for (const s of state.ships) {
+    if (s.destroyed || s.surrendered || !hostileTo(side, s.side)) continue
+    const d = dist(pos, s.pos)
+    if (d > maxRange) continue
+    if (!best || d < bestD || (d === bestD && s.id < best.id)) { best = s; bestD = d }
+  }
+  return best
+}
+
 /** Let raket: navádění, boost/balistika, přechod do terminální fáze. */
 export function updateMissiles(state: SimState, dt: number): void {
   for (const m of state.missiles) {
     if (m.phase === 'dead') continue
     const def = MISSILES[m.def]
 
-    const target = state.ships.find(s => s.id === m.targetId)
+    let target = state.ships.find(s => s.id === m.targetId)
     if (!target || target.destroyed) {
-      m.phase = 'dead'
-      state.events.push({
-        t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
-        cause: 'lost', salvoId: m.salvoId, pos: { ...m.pos },
-        text: 'raketa ztratila cíl (zničen)',
-      })
-      continue
+      // cíl zničen/pryč: dokud raketa HOŘÍ (fáze boost = má pohon, a tedy
+      // manévrovací prostor), stoč se na nejbližšího nepřítele v dosahu (postih
+      // za změnu směru = penalizace zámku). Balistická (vyhořelá) raketa už
+      // kurz změnit nemůže → sebedestrukce, stejně jako když není koho napadnout.
+      const reacq = m.phase === 'boost'
+        ? nearestHostileShip(state, m.side, m.pos, REACQUIRE_RANGE)
+        : null
+      if (reacq) {
+        m.targetId = reacq.id
+        m.lock *= RETARGET_LOCK_PENALTY
+        // nový cíl = nový obranný souboj: návnada i protirakety se vyhodnotí znovu
+        m.decoyChecked = false
+        m.cmShots = 0
+        m.cmBudget = undefined
+        target = reacq // pokračuj tímto tickem naváděním na nový cíl
+      } else {
+        m.phase = 'dead'
+        state.events.push({
+          t: state.t, kind: 'missileMiss', side: m.side, shipId: m.targetId,
+          cause: 'lost', salvoId: m.salvoId, pos: { ...m.pos },
+          text: 'raketa ztratila cíl (zničen)',
+        })
+        continue
+      }
     }
 
     // konec doletu: sebedestrukce (balistické dno zámku by jinak nechalo
