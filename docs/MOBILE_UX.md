@@ -16,8 +16,9 @@ nesmí větvit — jen HUD/rozvržení a vstup mají mobilní variantu.
   `orientation: portrait`.
 - Výsuvné **šuplíky** HUD (`◧/◨`), jeden otevřený po druhém.
 - **Pinch-zoom** a tažení plotu (pointer handlery canvasu).
-- **Výzva k otočení** na výšku, haptika (`navigator.vibrate`), redukce hustoty
-  hvězd na `pointer: coarse`, bez CRT overlaye.
+- **Výzva k otočení na šířku** (`#rotate-hint`) — zobrazí se, když je telefon
+  v **portrétu**, a žádá otočení do landscape; haptika (`navigator.vibrate`),
+  redukce hustoty hvězd na `pointer: coarse`, bez CRT overlaye.
 - Režim **hromadného výběru** (tap = toggle, tažení = box) místo Shiftu.
 
 **Problém:** HUD je pořád textový (panely s řádky „název: hodnota", 12
@@ -82,11 +83,27 @@ ikony: inline SVG / canvas overlay (bez závislostí)
 - Ikony jako **inline SVG** (ostré, malé, bez assetů) nebo dokreslené na
   canvas plotu (stavový prstenec kolem vybrané lodi přímo na mapě).
 
+**Sdílené rozhraní `HudView` (nutný refaktor v M0).** Dnes `UIController`
+přijímá **konkrétní** typ `Panels` a volá `panels.addEvents(...)` a
+`panels.update(...)`; navíc `main.ts` čte `panels.combatStats` /
+`panels.combatReport` a volá `panels.resetStats()`. Mobilní HUD, který jen
+konzumuje snapshoty a posílá `PanelAction`, tedy `Panels` **nemůže** rovnou
+nahradit, dokud tyhle povinnosti nevytáhneme ven. V M0 proto:
+
+1. Zavést rozhraní `HudView` (metody `addEvents(events)`, `update(snapshot)`,
+   `mount()/unmount()`), které implementuje `Panels` i nový `MobileHud`.
+   `UIController` závisí na `HudView`, ne na konkrétním `Panels`.
+2. **Akumulaci bojové statistiky** (`combatStats`/`combatReport`/`resetStats`)
+   přesunout mimo prezentaci — do sdíleného modulu (např. `combatStats.ts`),
+   který plní controller. Oba HUDy z něj jen čtou pro zobrazení; `main.ts`
+   after-action čte tenhle modul, ne `Panels`.
+3. Teprve pak lze render vrstvu přepínat bez větvení controlleru.
+
 ## 6. Fáze a odhad
 
 | Fáze | Obsah | Odhad |
 |---|---|---|
-| M0 | Detekce `phone`, ruční přepínač, kostra `mobileHud` (přebírá snapshoty) | ~0,5 d |
+| M0 | Detekce `phone`, ruční přepínač, kostra `mobileHud` (přebírá snapshoty); **refaktor: rozhraní `HudView` + vytažení `combatStats` z `Panels`** (viz §5) | ~1 d |
 | M1 | **Stavový prstenec vlastní lodi** (trup/tah/klín/EMCON + pipy subsystémů) | ~1 d |
 | M2 | **Ikonové karty kontaktů** + tap/long-press cíl | ~1 d |
 | M3 | **Radiální lišta rozkazů** v palcové zóně (pohyb/palba/obrana) | ~1–1,5 d |
