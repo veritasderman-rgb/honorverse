@@ -108,9 +108,12 @@ function detectPhone(): boolean {
   try { pref = localStorage.getItem(MOBILE_KEY) } catch { /* noop */ }
   if (pref === '1') return true
   if (pref === '0') return false
+  // auto: telefon (hrubý pointer + krátká strana) NEBO úzký viewport ≤ 900 px —
+  // body.phone teď řídí celou kompaktní vrstvu (dřív @media max-width:900px),
+  // takže musí pokrýt i úzká okna na desktopu, jinak by ztratila kompaktní HUD
   const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
   const shortSide = Math.min(window.innerWidth, window.innerHeight)
-  return coarse && shortSide < 430
+  return (coarse && shortSide < 430) || window.innerWidth <= 900
 }
 function applyPhoneClass(): void {
   document.body.classList.toggle('phone', detectPhone())

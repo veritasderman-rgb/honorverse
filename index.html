@@ -272,56 +272,21 @@
       .tb-comp button { min-width: 44px; }
     }
 
-    /* telefon (šířka ≤ 900 px): HUD sloupce jako výsuvné šuplíky */
-    @media (max-width: 900px) {
-      /* kompaktní topbar: bez posuvníků hlasitosti (mute stačí), bez
-         mezistupňů komprese a bez textu zpomalení — jinak se prvky
-         překrývají; nic nesmí přetéct do druhé řady */
-      #topbar { flex-wrap: nowrap; overflow: hidden; gap: 6px; }
-      .tb-main { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
-      .tb-time { min-width: 0; }
-      .tb-cb-10, .tb-cb-1000 { display: none; }
-      .tb-audio label { display: none; }
-      .tb-audio { gap: 4px; }
-      .tb-slow { display: none; }
-      #hud-tl, #hud-tr {
-        top: 60px; bottom: 96px; width: min(340px, 86vw);
-        background: #05080af2; z-index: 12;
-        transition: transform .2s ease; padding: 6px;
-      }
-      #hud-tl { left: 0; transform: translateX(-100%); border-right: 1px solid #1c3a1e; }
-      #hud-tr { right: 0; transform: translateX(100%); border-left: 1px solid #1c3a1e; }
-      #hud-tl.open, #hud-tr.open { transform: translateX(0); }
-      .hud-tab {
-        display: block; position: absolute; z-index: 13; top: 64px;
-        min-width: 44px; min-height: 52px; font-size: 16px;
-        background: #081008ee; border: 1px solid #2a5a2e; color: #9fd8a0;
-      }
-      #tab-tl { left: 0; border-left: none; }
-      #tab-tr { right: 0; border-right: none; }
-      /* bojové menu: KRÁTKÉ popisky + zalomení do řad — celé viditelné,
-         žádné scrollování za okraj */
-      .lbl-lg { display: none; }
-      .lbl-sm { display: inline; }
-      #hud-bottom { left: 0; right: 0; bottom: 0; padding: 2px calc(2px + env(safe-area-inset-right)) calc(2px + env(safe-area-inset-bottom)) calc(2px + env(safe-area-inset-left)); }
-      #hud-bottom .panel { width: 100%; box-sizing: border-box; }
-      #hud-bottom button { min-height: 34px; padding: 4px 8px; font-size: 13px; }
-      #hud-bottom .panel h3 { display: none; } /* hlavička „Rozkazy" jen bere místo */
-      .ob { flex-wrap: wrap; row-gap: 4px; }
-      .ob .obg { padding: 0 4px; }
-      #hud-br { display: none; }  /* komunikaci nesou toasty, log je v šuplíku netřeba */
-      #toasts { bottom: 100px; max-width: 86vw; }
-      #topbar { padding-top: calc(4px + env(safe-area-inset-top)); }
-      .tb-slow { max-width: 30vw; }
-    }
-
-    /* Ruční mobilní režim (body.phone): stejná kompaktní vrstva jako telefonní
-       breakpoint, ale nezávisle na šířce — pro velké telefony/tablety i test.
-       Zrcadlí klíčová pravidla z @media (max-width: 900px). */
+    /* Kompaktní mobilní vrstva (HUD sloupce jako výsuvné šuplíky, krátké
+       popisky, skrytý komunikační sloupec). Řídí ji JEDNA třída body.phone,
+       kterou nastavuje JS (main.ts): úzký viewport (≤ 900 px), telefon dle
+       pointer:coarse, nebo ruční přepínač 🖐. Jeden zdroj pravdy pro layout,
+       ať platí i nad 900 px — proto ne @media, ale třída. */
     .tb-mobile.active { color: #d8b34f; }
-    body.phone #topbar { flex-wrap: nowrap; overflow: hidden; gap: 6px; }
+    /* kompaktní topbar: bez posuvníků hlasitosti, bez mezistupňů komprese
+       a bez textu zpomalení — nic nesmí přetéct do druhé řady */
+    body.phone #topbar { flex-wrap: nowrap; overflow: hidden; gap: 6px; padding-top: calc(4px + env(safe-area-inset-top)); }
+    body.phone .tb-main { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+    body.phone .tb-time { min-width: 0; }
+    body.phone .tb-cb-10, body.phone .tb-cb-1000 { display: none; }
     body.phone .tb-audio label { display: none; }
-    body.phone .tb-slow { display: none; }
+    body.phone .tb-audio { gap: 4px; }
+    body.phone .tb-slow { display: none; max-width: 30vw; }
     body.phone #hud-tl, body.phone #hud-tr {
       top: 60px; bottom: 96px; width: min(340px, 86vw);
       background: #05080af2; z-index: 12; transition: transform .2s ease; padding: 6px;
@@ -336,9 +301,16 @@
     }
     body.phone #tab-tl { left: 0; border-left: none; }
     body.phone #tab-tr { right: 0; border-right: none; }
+    /* bojové menu: KRÁTKÉ popisky + zalomení do řad — celé viditelné */
     body.phone .lbl-lg { display: none; }
     body.phone .lbl-sm { display: inline; }
-    body.phone #hud-br { display: none; }
+    body.phone #hud-bottom { left: 0; right: 0; bottom: 0; padding: 2px calc(2px + env(safe-area-inset-right)) calc(2px + env(safe-area-inset-bottom)) calc(2px + env(safe-area-inset-left)); }
+    body.phone #hud-bottom .panel { width: 100%; box-sizing: border-box; }
+    body.phone #hud-bottom button { min-height: 34px; padding: 4px 8px; font-size: 13px; }
+    body.phone #hud-bottom .panel h3 { display: none; } /* hlavička „Rozkazy" jen bere místo */
+    body.phone .ob { flex-wrap: wrap; row-gap: 4px; }
+    body.phone .ob .obg { padding: 0 4px; }
+    body.phone #hud-br { display: none; } /* komunikaci nesou toasty, log netřeba */
     body.phone #toasts { bottom: 100px; max-width: 86vw; }
 
     /* portrét na dotyku: taktický plot potřebuje šířku — vyzvi k otočení */
