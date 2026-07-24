@@ -6,7 +6,8 @@ import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { startFleetView } from './ui/fleetview'
 import { sceneFor } from './ui/scenes'
-import { Panels, esc, fmtTime } from './ui/panels'
+import { Panels, esc, fmtTime, type HudView } from './ui/panels'
+import { MobileHud } from './ui/mobileHud'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -44,7 +45,14 @@ const audio = new AudioManager()
 audio.setMenuMode(true)
 window.addEventListener('pointerdown', () => audio.unlock())
 const panels = new Panels(plotContainer, topbar, a => { audio.uiClick(); controller.handleAction(a) }, audio)
-const controller = new UIController(bridge, plot, panels)
+// mobilní HUD (M1): stavový prstenec vlastní lodi; aktivní jen na body.phone.
+// Composite krmí desktop Panels i mobilní prstenec stejnými snapshoty (HudView).
+const mobileHud = new MobileHud(plotContainer)
+const hud: HudView = {
+  addEvents: e => { panels.addEvents(e); mobileHud.addEvents(e) },
+  update: (s, ui, f) => { panels.update(s, ui, f); mobileHud.update(s, ui, f) },
+}
+const controller = new UIController(bridge, plot, hud)
 
 // hook pro smoke testy (Playwright) — čtení stavu plotu a ovládání zvenku
 Object.assign(window, { __wob: { plot, controller } })

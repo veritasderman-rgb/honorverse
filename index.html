@@ -313,6 +313,26 @@
     body.phone #hud-br { display: none; } /* komunikaci nesou toasty, log netřeba */
     body.phone #toasts { bottom: 100px; max-width: 86vw; }
 
+    /* M1: stavový prstenec vlastní lodi (mobil) — infografika místo textu.
+       Zobrazuje ho jen MobileHud na body.phone; palcová zóna vlevo dole. */
+    #mobile-hud { position: absolute; left: 8px; bottom: 92px; z-index: 11;
+      width: 120px; pointer-events: none; display: none; text-align: center; }
+    #mobile-hud svg { width: 120px; height: 120px; display: block;
+      filter: drop-shadow(0 0 6px #05080acc); }
+    #mobile-hud .mh-bg { fill: #060d0ae0; stroke: #1c3a1e; stroke-width: 1; }
+    #mobile-hud .mh-thr { fill: none; stroke: #4fd2e0; stroke-width: 5;
+      stroke-linecap: round; opacity: .8; }
+    #mobile-hud .mh-hull { fill: none; stroke-width: 5; stroke-linecap: round; }
+    #mobile-hud .mh-hullpct { font: 700 22px system-ui, sans-serif; text-anchor: middle; }
+    #mobile-hud .mh-lbl { fill: #6fae74; font: 8px system-ui, sans-serif;
+      text-anchor: middle; letter-spacing: 1px; }
+    #mobile-hud .mh-ic { font-size: 12px; text-anchor: middle; }
+    #mobile-hud .mh-ic.on { fill: #58e06a; }
+    #mobile-hud .mh-ic.off { fill: #46603f; }
+    #mobile-hud .mh-ic.warn { fill: #e0c24a; }
+    #mobile-hud .mh-name { color: #9fd8a0; font-size: 11px; margin-top: -4px;
+      text-shadow: 0 0 4px #05080a; white-space: nowrap; }
+
     /* portrét na dotyku: taktický plot potřebuje šířku — vyzvi k otočení */
     @media (orientation: portrait) and (pointer: coarse) and (max-width: 900px) {
       #rotate-hint {
