@@ -203,6 +203,13 @@ export const SOLUTION_TRACK_BONUS = 0.1
 export const CONTROL_RANGE = 10_000_000
 /** penalizace zámku při přesměrování salvy za letu */
 export const RETARGET_LOCK_PENALTY = 0.75
+/**
+ * Dosah automatické re-akvizice: když je cíl rakety zničen, raketa si (dokud
+ * má „manévrovací prostor" – fáze boost/ballistic) najde nejbližšího nepřítele
+ * v tomto dosahu a stočí se na něj (za cenu penalizace zámku). Mimo dosah už
+ * není koho napadnout → sebedestrukce jako dřív.
+ */
+export const REACQUIRE_RANGE = 12_000_000
 /** autonomní salva (fire-and-forget): násobič počátečního zámku */
 export const AUTONOMOUS_LOCK_FACTOR = 0.85
 /**
