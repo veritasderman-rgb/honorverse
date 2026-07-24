@@ -54,62 +54,80 @@ interface HullGeom {
   details: [[number, number], [number, number]][]
   /** poloha kontrolek/světel na trupu */
   lights: [number, number][]
-  /** přibližný poloměr (pro gradient a stín) */
+  /** přibližný poloměr (pro gradient a stín) — polovina šířky hammerheadu */
   r: number
   /** poloha zádi (kořen pohonné záře) */
   stern: number
+  /** poloha přídě (špička hrdla) */
+  bow: number
+  /** polovina délky trupu */
+  len: number
+  /** polovina šířky těla (broadside) */
+  bodyW: number
+  /** počet bočních šachet na bok (broadside baterie) — detail při přiblížení */
+  ports: number
 }
 
-/** obrysy odpovídají CIC siluetám ve fx.ts (vyplněná varianta) */
+/**
+ * Honorverse trup: dlouhé VŘETENO s „hammerhead" konci (rozšířená příď =
+ * hrdlo/throat a záď = kilt, kde sedí impellerové prstence a chase zbraně),
+ * hlavní výzbroj v BOCÍCH (broadside). Obrys generujeme z půlprofilu
+ * (příď +x → záď) a zrcadlíme; hrdlo je širší než užší kilt.
+ *
+ * L = polovina délky, W = polovina šířky těla, E = polovina šířky hrdla.
+ */
+function spindle(L: number, W: number, E: number, ports: number): HullGeom {
+  const K = E * 0.82 // kilt (záď) užší než hrdlo (throat)
+  // půlprofil [x, poloviční šířka] příď → záď
+  const half: [number, number][] = [
+    [L, E * 0.34],            // špička hrdla
+    [L * 0.90, E],            // rameno předního hammerheadu
+    [L * 0.80, E * 0.98],     // zadní hrana hammerheadu
+    [L * 0.70, W * 1.06],     // krk
+    [L * 0.40, W],            // tělo
+    [-L * 0.40, W],
+    [-L * 0.70, W * 1.04],    // zadní krk
+    [-L * 0.80, K * 0.98],    // přední hrana kiltu
+    [-L * 0.90, K],           // rameno kiltu
+    [-L, K * 0.34],           // špička kiltu
+  ]
+  const top: [number, number][] = half.map(([x, hw]) => [x, -hw])
+  const bot: [number, number][] = [...half].reverse().map(([x, hw]) => [x, hw])
+  const outline = [...top, ...bot]
+  // podélné panelové švy (hřbet + dvě boční linie)
+  const details: [[number, number], [number, number]][] = [
+    [[L * 0.7, -W * 0.5], [-L * 0.7, -W * 0.5]],
+    [[L * 0.7, W * 0.5], [-L * 0.7, W * 0.5]],
+  ]
+  const lights: [number, number][] = [
+    [L * 0.85, 0], [-L * 0.85, 0], [0, -W * 0.5], [0, W * 0.5],
+  ]
+  return { outline, details, lights, r: E, stern: -L, bow: L, len: L, bodyW: W, ports }
+}
+
+/** trup obchodníka: kontejnerová „housenka" (ne válečný hammerhead) */
+function freighter(): HullGeom {
+  const outline: [number, number][] = [
+    [9, 2.4], [9, -2.4], [6, -4], [-7, -4], [-9, -2.2], [-9, 2.2], [-7, 4], [6, 4],
+  ]
+  return {
+    outline,
+    details: [[[2, -4], [2, 4]], [[-2, -4], [-2, 4]], [[-6, -4], [-6, 4]]],
+    lights: [[8, 0], [-8, 2.4], [-8, -2.4]],
+    r: 4, stern: -9, bow: 9, len: 9, bodyW: 4, ports: 0,
+  }
+}
+
+/** třídy trupů (příď = +x). Delší a užší než dřív — vřetenový Honorverse styl. */
 export const HULL_GEOM: Record<string, HullGeom> = {
-  DD: {
-    outline: [[9, 0], [6, 2], [-6, 2.5], [-8, 1], [-8, -1], [-6, -2.5], [6, -2]],
-    details: [[[6, -3.2], [6, 3.2]], [[-2, -2], [-2, 2]]],
-    lights: [[7, 0], [-5, 1.6], [-5, -1.6]],
-    r: 9, stern: -8,
-  },
-  DB: {
-    outline: [[7, 0], [-5, 3], [-3, 0], [-5, -3]],
-    details: [[[-3, 0], [4, 0]]],
-    lights: [[5, 0], [-4, 1.5], [-4, -1.5]],
-    r: 7, stern: -4,
-  },
-  CL: {
-    outline: [[10, 0], [6, 2.5], [-7, 3], [-9, 1.2], [-9, -1.2], [-7, -3], [6, -2.5]],
-    details: [[[7, -3.6], [7, 3.6]], [[-1, -2.6], [-1, -5.2]], [[-3, -2.4], [-3, 2.4]]],
-    lights: [[8, 0], [-6, 2], [-6, -2], [-1, -5]],
-    r: 10, stern: -9,
-  },
-  CA: {
-    outline: [[11, 0], [7, 3.5], [-8, 4], [-10, 1.5], [-10, -1.5], [-8, -4], [7, -3.5]],
-    details: [[[8, -4.6], [8, 4.6]], [[-2, -3.6], [-2, 3.6]], [[3, -3], [3, 3]]],
-    lights: [[9, 0], [-7, 3], [-7, -3], [1, 3.4], [1, -3.4]],
-    r: 11, stern: -10,
-  },
-  BC: {
-    outline: [[14, 0], [9, 3], [-10, 4], [-12, 1.5], [-12, -1.5], [-10, -4], [9, -3]],
-    details: [[[10, -4.2], [10, 4.2]], [[0, -3.5], [0, 3.5]], [[-6, -3.6], [-6, 3.6]]],
-    lights: [[12, 0], [-9, 3.2], [-9, -3.2], [0, 3.2], [0, -3.2]],
-    r: 14, stern: -12,
-  },
-  DN: {
-    outline: [[14, 0], [9, 5], [-11, 6], [-13, 2.5], [-13, -2.5], [-11, -6], [9, -5]],
-    details: [[[10, -6], [10, 6]], [[2, -5.2], [2, 5.2]], [[-5, -5.6], [-5, 5.6]], [[-9, -5.6], [-9, 5.6]]],
-    lights: [[12, 0], [-10, 5], [-10, -5], [2, 5], [2, -5], [-5, 5], [-5, -5]],
-    r: 14, stern: -13,
-  },
-  MERCH: {
-    outline: [[8, 2.5], [8, -2.5], [5, -4], [-7, -4], [-8, -2], [-8, 2], [-7, 4], [5, 4]],
-    details: [[[1, -4], [1, 4]], [[-3, -4], [-3, 4]], [[5, -4], [5, 4]]],
-    lights: [[7, 0], [-7, 3.2], [-7, -3.2]],
-    r: 8, stern: -8,
-  },
-  DEFAULT: {
-    outline: [[10, 0], [0, 6], [-10, 0], [0, -6]],
-    details: [],
-    lights: [[6, 0]],
-    r: 10, stern: -8,
-  },
+  DB: spindle(8, 1.4, 2.2, 0),    // kurýr
+  DD: spindle(11, 2.0, 3.3, 3),   // torpédoborec
+  CL: spindle(13, 2.3, 3.8, 5),   // lehký křižník
+  CA: spindle(15, 2.8, 4.6, 8),   // těžký křižník
+  BC: spindle(18, 3.0, 5.0, 8),   // bitevní křižník
+  DN: spindle(21, 4.0, 6.4, 12),  // dreadnought (stěna bitvy)
+  MERCH: freighter(),
+  DEFAULT: spindle(12, 2.4, 3.6, 4),
 }
 
 /** obrys → cesta (bez vykreslení) */
@@ -127,7 +145,7 @@ function tracePath(ctx: CanvasRenderingContext2D, pts: [number, number][]): void
  */
 export function shipBody(
   ctx: CanvasRenderingContext2D, hullCode: string,
-  heading: number, pal: HullPalette,
+  heading: number, pal: HullPalette, lod = 0,
 ): void {
   if (hullCode === 'STN') { station(ctx, pal); return }
   const g = HULL_GEOM[hullCode] ?? HULL_GEOM.DEFAULT
@@ -211,8 +229,16 @@ export function shipBody(
   ctx.stroke()
   ctx.restore()
 
-  // 5b) nadstavba/můstek na větších trupech: menší vyvýšený blok s okny
-  if (r >= 9 && hullCode !== 'DB' && hullCode !== 'MERCH') {
+  // 5b) impellerové prstence na hammerheadech (příď/záď) — vždy, jasnější
+  //     při přiblížení; ikonický Honorverse prvek (uzly klínu)
+  impellerRings(ctx, g, lod)
+
+  // 5d) DETAIL PŘI PŘIBLÍŽENÍ (LOD): boční šachty (broadside), příčné švy,
+  //     senzorový stožár. Zoom-in odhalí, čím loď bojuje.
+  if (lod > 0.28 && hullCode !== 'MERCH') hullDetail(ctx, g, pal, lod)
+
+  // 5b') nadstavba/můstek na větších trupech: menší vyvýšený blok s okny
+  if (r >= 3.2 && hullCode !== 'DB' && hullCode !== 'MERCH') {
     superstructure(ctx, g, lx, ly, dx, dy, pal, sun)
   }
 
@@ -251,20 +277,90 @@ export function shipBody(
   ctx.globalAlpha = 1
 }
 
+/** impellerové prstence na hammerheadech (uzly klínu) — aditivní chladná záře */
+function impellerRings(ctx: CanvasRenderingContext2D, g: HullGeom, lod: number): void {
+  const now = performance.now()
+  const col = '#bfe0ff'
+  const glow = 0.3 + 0.55 * lod
+  ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
+  for (const sx of [g.bow * 0.85, g.stern * 0.85]) {
+    const hw = g.r * 0.92
+    const pulse = 0.7 + 0.3 * Math.sin(now / 380 + sx * 0.5)
+    ctx.globalAlpha = glow * pulse * 0.7
+    ctx.strokeStyle = col
+    ctx.lineWidth = 0.8 + lod * 1.2
+    ctx.beginPath(); ctx.moveTo(sx, -hw); ctx.lineTo(sx, hw); ctx.stroke()
+    ctx.fillStyle = col
+    for (const yy of [-hw * 0.72, 0, hw * 0.72]) {
+      ctx.globalAlpha = glow * pulse
+      ctx.beginPath(); ctx.arc(sx, yy, 0.6 + lod * 0.7, 0, Math.PI * 2); ctx.fill()
+    }
+  }
+  ctx.restore()
+}
+
 /**
- * Vyvýšená nadstavba (můstek): menší blok posunutý k přídi, s vlastní
- * výškou (extruze dolů), nasvícením a řádkou oken — vrstvená paluba.
+ * Detail při přiblížení: boční baterie (broadside šachty) na obou bocích,
+ * příčné panelové švy a jasné ústí zbraní. Ořezané na trup.
+ */
+function hullDetail(ctx: CanvasRenderingContext2D, g: HullGeom, pal: HullPalette, lod: number): void {
+  const W = g.bodyW, L = g.len, n = g.ports
+  ctx.save()
+  tracePath(ctx, g.outline)
+  ctx.clip()
+  // příčné švy sekcí trupu
+  ctx.globalAlpha = 0.4
+  ctx.strokeStyle = pal.dark
+  ctx.lineWidth = 0.5
+  ctx.beginPath()
+  for (let i = -2; i <= 2; i++) {
+    const x = (i / 5) * L * 1.2
+    ctx.moveTo(x, -W); ctx.lineTo(x, W)
+  }
+  ctx.stroke()
+  // boční baterie: n šachet na každý bok (tmavý zářez + jasné ústí)
+  if (n > 0) {
+    const span = L * 1.05
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < n; i++) {
+        const x = n === 1 ? 0 : (i / (n - 1) - 0.5) * span
+        const y = side * W
+        ctx.globalAlpha = 0.75
+        ctx.fillStyle = pal.dark
+        ctx.fillRect(x - 0.55, y - 0.7, 1.1, 1.4)
+        // ústí (muzzle) svítí aditivně při větším přiblížení
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.globalAlpha = 0.3 + 0.5 * lod
+        ctx.fillStyle = pal.window ?? '#ffe4b0'
+        ctx.fillRect(x - 0.35, y - side * 0.2, 0.7, side * 0.6)
+        ctx.restore()
+      }
+    }
+  }
+  ctx.restore()
+  // hrdlo (throat): senzorový svazek na přídi — jasné body
+  ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.globalAlpha = 0.4 + 0.4 * lod
+  ctx.fillStyle = pal.spec
+  ctx.beginPath(); ctx.arc(g.bow * 0.9, 0, 0.5 + lod * 0.5, 0, Math.PI * 2); ctx.fill()
+  ctx.restore()
+}
+
+/**
+ * Vyvýšená nadstavba (můstek): štíhlá věž po ose těla, s vlastní výškou
+ * (extruze dolů), nasvícením a řádkou oken — vrstvená paluba.
  */
 function superstructure(
   ctx: CanvasRenderingContext2D, g: HullGeom,
   lx: number, ly: number, dx: number, dy: number, pal: HullPalette, sun: string,
 ): void {
-  const r = g.r
-  const bow = g.outline[0][0]
-  const cx = (bow + g.stern) / 2 + r * 0.12   // mírně k přídi
-  const halfL = r * 0.42
-  const halfW = r * 0.34
-  const th = Math.max(1, r * 0.16)
+  const cx = g.len * 0.08                       // mírně k přídi od středu
+  const halfL = g.len * 0.28                     // štíhlá věž po ose
+  const halfW = g.bodyW * 0.5
+  const th = Math.max(1, g.bodyW * 0.28)
   const box: [number, number][] = [
     [cx + halfL, -halfW], [cx + halfL * 0.7, -halfW],
     [cx - halfL, -halfW * 0.7], [cx - halfL, halfW * 0.7],
@@ -314,10 +410,10 @@ function drawWindows(ctx: CanvasRenderingContext2D, g: HullGeom, col: string): v
   ctx.fillStyle = col
   for (let i = 1; i < n; i++) {
     const x = stern + (len * i) / n
-    // dvě řady mírně od osy
-    for (const yy of [-g.r * 0.28, g.r * 0.28]) {
+    // dvě řady mírně od osy (podle šířky těla)
+    for (const yy of [-g.bodyW * 0.4, g.bodyW * 0.4]) {
       ctx.globalAlpha = 0.5
-      ctx.fillRect(x - 0.35, yy - 0.35, 0.7, 0.7)
+      ctx.fillRect(x - 0.3, yy - 0.3, 0.6, 0.6)
     }
   }
   ctx.restore()

@@ -12,7 +12,8 @@ import {
   type Effect, type Wreck,
 } from './fx'
 import {
-  enginePlume, hullLights, hullShadow, setLightDir, shipBody, type HullPalette,
+  enginePlume, HULL_GEOM, hullLights, hullShadow, setLightDir, shipBody,
+  type HullPalette,
 } from './hull3d'
 import { sceneFor, type SceneDef } from './scenes'
 import { bodyStyleFor, drawBody } from './celestial'
@@ -632,6 +633,15 @@ export class TacticalPlot {
 
   // ---------- kreslení ----------
 
+  /**
+   * Míra přiblížení 0..1 pro LOD lodí: 0 = odzoomováno (malé ikony),
+   * 1 = max přiblížení (velké modely s detaily). Logaritmicky dle km/px.
+   */
+  private zoomLod(): number {
+    const a = Math.log(6000), b = Math.log(120)
+    return Math.max(0, Math.min(1, (a - Math.log(this.kmPerPx)) / (a - b)))
+  }
+
   private draw(): void {
     const dpr = window.devicePixelRatio || 1
     const w = this.canvas.clientWidth
@@ -1146,15 +1156,16 @@ export class TacticalPlot {
     if (hw) {
       const pal = ship.surrendered ? HULL_PAL.surrendered
         : ship.rolledTo != null ? HULL_PAL.rolled : HULL_PAL.own
+      const lod = this.zoomLod()
       ctx.save()
-      ctx.scale(HW_SCALE, HW_SCALE)
+      ctx.scale(HW_SCALE * (1 + lod * 2), HW_SCALE * (1 + lod * 2))
       hullShadow(ctx, hull, ship.heading)
-      // pohon pod trupem, ať vlečka nepřekrývá siluetu
+      // pohon z kiltu (záď trupu), ať vlečka nepřekrývá siluetu
       if (ship.wedgeOn && ship.throttle > 0) {
-        enginePlume(ctx, hull === 'DN' || hull === 'BC' ? -12 : -8,
-          ship.throttle, now, ship.id, '#eaffff', '#3fb0d8')
+        const stern = (HULL_GEOM[hull] ?? HULL_GEOM.DEFAULT).stern
+        enginePlume(ctx, stern, ship.throttle, now, ship.id, '#eaffff', '#3fb0d8')
       }
-      shipBody(ctx, hull, ship.heading, pal)
+      shipBody(ctx, hull, ship.heading, pal, lod)
       if (hullPct >= 0.5) hullLights(ctx, hull, pal, now, ship.id)
       ctx.restore()
     } else {
@@ -1243,15 +1254,16 @@ export class TacticalPlot {
       // objemový nepřátelský/neznámý trup, nasvícený a s pohonem
       const pal = surrendered ? HULL_PAL.surrendered
         : c.idQuality === 0 ? HULL_PAL.unknown : HULL_PAL.hostile
-      ctx.scale(HW_SCALE, HW_SCALE)
+      const lod = this.zoomLod()
+      ctx.scale(HW_SCALE * (1 + lod * 2), HW_SCALE * (1 + lod * 2))
       if (!memory) {
         hullShadow(ctx, guessHull, ang)
         if (Math.hypot(c.vel.x, c.vel.y) > 0.5 && !surrendered) {
-          enginePlume(ctx, guessHull === 'DN' || guessHull === 'BC' ? -12 : -8,
-            0.7, performance.now(), c.shipId, '#ffe6d8', '#c85a3a')
+          const stern = (HULL_GEOM[guessHull] ?? HULL_GEOM.DEFAULT).stern
+          enginePlume(ctx, stern, 0.7, performance.now(), c.shipId, '#ffe6d8', '#c85a3a')
         }
       }
-      shipBody(ctx, guessHull, ang, pal)
+      shipBody(ctx, guessHull, ang, pal, lod)
     } else if (guessHull) {
       ctx.scale(0.85, 0.85)
       shipSilhouette(ctx, guessHull)
