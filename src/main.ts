@@ -22,7 +22,8 @@ import {
 } from './data/loadout'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
 import {
-  CAMPAIGN_NODES, isMissionUnlocked, NEBULAE, STARFIELD, type CampaignNode,
+  CAMPAIGN_NODES, isMissionUnlocked, NEBULAE, podReward, STARFIELD,
+  type CampaignNode,
 } from './data/campaign'
 import { scoreMission } from './sim/score'
 import {
@@ -155,7 +156,32 @@ function startCampaignMission(id: string, preset?: LoadoutId): void {
   if (!sc) { bridge.start(id); return } // fallback (demo scénář ve workeru)
   const clone = applyVeterancy(sc)         // klon s buffy veteránů
   applyLoadout(clone, preset ?? loadPreset()) // + zvolená výzbroj
+  applyBonusRewards(clone)                 // + kořist z bočních operací (plošiny)
   bridge.startScenario(clone)
+}
+
+/**
+ * Odměna z dokončených bočních operací: navýší raketové plošiny vlastních
+ * lodí (mutuje předaný KLON). Bonus se dělí mezi vlastní lodě, ať to není jen
+ * jedna přetížená vlajka; nad rámec podCapacity třídy se plošiny nepřidávají.
+ */
+function applyBonusRewards(scenario: Scenario): void {
+  const extra = podReward(loadCleared())
+  if (extra <= 0) return
+  const own = scenario.ships.filter(s => s.side === 'player')
+  if (own.length === 0) return
+  let remaining = extra
+  // kolo po kole přidávej po jedné plošině tam, kde je ještě místo do kapacity
+  let progressed = true
+  while (remaining > 0 && progressed) {
+    progressed = false
+    for (const spec of own) {
+      if (remaining <= 0) break
+      const cap = SHIP_CLASSES[spec.classId]?.podCapacity ?? 0
+      const cur = spec.pods ?? 0
+      if (cur < cap) { spec.pods = cur + 1; remaining--; progressed = true }
+    }
+  }
 }
 
 /** localStorage flag „úvod kampaně už hráč viděl" */
@@ -183,6 +209,22 @@ function markCleared(id: string): void {
   try { localStorage.setItem(CLEARED_KEY, JSON.stringify([...s])) } catch { /* noop */ }
 }
 
+/** testovací režim: odemkne všechny mise na mapě (localStorage / ?unlockall=1) */
+const UNLOCK_ALL_KEY = 'wob-unlock-all'
+function unlockAllOn(): boolean {
+  try { return localStorage.getItem(UNLOCK_ALL_KEY) === '1' } catch { return false }
+}
+function setUnlockAll(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(UNLOCK_ALL_KEY, '1')
+    else localStorage.removeItem(UNLOCK_ALL_KEY)
+  } catch { /* noop */ }
+}
+/** odemčení pro účely UI/bootstrapu: test-override NEBO postup kampaně */
+function missionAvailable(id: string, cleared: readonly string[]): boolean {
+  return unlockAllOn() || isMissionUnlocked(id, cleared)
+}
+
 /** úvod kampaně (první spuštění): CAMPAIGN_INTRO + POKRAČOVAT → výběr mise */
 function showCampaignIntro(onDone: () => void): void {
   const el = overlay(
@@ -205,7 +247,7 @@ type SysState = 'done' | 'open' | 'locked'
 /** SVG hvězdné mapy kampaně (viewBox 1000×600): trasy, soustavy, „jsi zde" */
 function starMapSvg(cleared: ReadonlySet<string>): string {
   const clearedArr = [...cleared]
-  const avail = (n: CampaignNode): boolean => isMissionUnlocked(n.id, clearedArr)
+  const avail = (n: CampaignNode): boolean => missionAvailable(n.id, clearedArr)
   const stateOf = (n: CampaignNode): SysState =>
     cleared.has(n.id) ? 'done' : avail(n) ? 'open' : 'locked'
   const byId = (id: string): CampaignNode | undefined => CAMPAIGN_NODES.find(n => n.id === id)
@@ -234,10 +276,16 @@ function starMapSvg(cleared: ReadonlySet<string>): string {
     const num = n.optional ? null : ++mainNo
     const badge = done ? '✔' : n.optional ? '★' : String(num)
     const title = SCENARIOS[n.id]?.title ?? n.id
-    const tap = open ? ` data-mission="${esc(n.id)}" tabindex="0" role="button"` : ''
+    const tap = open ? ` data-mission="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(title)}"` : ''
     const anchor = n.x > 860 ? 'end' : n.x < 140 ? 'start' : 'middle'
     const tx = n.x > 860 ? n.x + 18 : n.x < 140 ? n.x - 18 : n.x
+    // průhledná hit-plocha: zvětší dotykový cíl (na telefonu je uzel jinak
+    // jen ~12–16 px) a překryje i popisek — celá skupina je aktivovatelná
+    const hit = open
+      ? `<rect class="hit" x="${n.x - 46}" y="${n.y - 24}" width="92" height="${68}" rx="8"/>`
+      : ''
     return `<g class="sys ${st}${n.optional ? ' bonus' : ''}"${tap}>`
+      + hit
       + `<circle class="glow" cx="${n.x}" cy="${n.y}" r="20"/>`
       + `<circle class="node" cx="${n.x}" cy="${n.y}" r="13"/>`
       + `<text class="badge" x="${n.x}" y="${n.y}">${badge}</text>`
@@ -267,19 +315,27 @@ function showStarMap(): void {
   const cleared = new Set(loadCleared())
   const total = CAMPAIGN_NODES.filter(n => !n.optional).length
   const doneCount = CAMPAIGN_NODES.filter(n => !n.optional && cleared.has(n.id)).length
+  // kořist z dokončených bočních operací (plošiny) — hlásíme hráči na mapě
+  const pods = podReward([...cleared])
+  const rewardHint = pods > 0
+    ? ` · <b class="ok">★ +${pods} plošin</b> z bočních operací`
+    : ''
+  const unlocked = unlockAllOn()
   const actions =
     `<div class="sm-actions">`
     + `<button id="btn-story-toggle">▸ PŘÍBĚH</button>`
     + `<button id="btn-hall-toggle">▸ SÍŇ SLÁVY</button>`
     + `<button id="btn-skirmish">⚔ VOLNÁ BITVA</button>`
     + `<button id="btn-fleet">⚓ SÍŇ FLOTILY</button>`
+    + `<button id="btn-unlock-all" class="${unlocked ? 'active' : 'dim'}">`
+    + `${unlocked ? '🔓 VŠE ODEMČENO (test)' : '🔓 ODEMKNOUT VŠE (test)'}</button>`
     + `</div>`
     + `<div id="story-body" class="brief story" style="display:none">${esc(CAMPAIGN_INTRO)}</div>`
     + `<div id="hall-body" style="display:none" class="lb-box"><span class="dim">načítám…</span></div>`
   const el = overlay(
     `<h2>HVĚZDNÁ MAPA</h2>`
-    + `<div class="sm-progress">Postup kampaně: <b>${doneCount}/${total}</b> soustav — `
-    + `klepni na svítící soustavu a vpluj do mise.</div>`
+    + `<div class="sm-progress">Postup kampaně: <b>${doneCount}/${total}</b> soustav${rewardHint} — `
+    + `klepni na svítící soustavu a vpluj do mise. ★ = boční operace (odměnou plošiny).</div>`
     + `<div class="starmap">${starMapSvg(cleared)}</div>`
     + actions,
   )
@@ -288,6 +344,12 @@ function showStarMap(): void {
 
   onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
   onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
+  // testovací přepínač: odemkne/zamkne všechny soustavy a překreslí mapu
+  onTap(el.querySelector('#btn-unlock-all'), () => {
+    setUnlockAll(!unlockAllOn())
+    el.remove()
+    showStarMap()
+  })
 
   // Síň slávy: celkové pořadí (součet nejlepších skóre per mise)
   const hallToggle = el.querySelector<HTMLButtonElement>('#btn-hall-toggle')
@@ -319,11 +381,16 @@ function showStarMap(): void {
     toggle!.textContent = `${open ? '▸' : '▾'} PŘÍBĚH`
   })
 
-  // klepnutí na odemčenou soustavu → příprava mise (jen uzly s data-mission)
+  // klepnutí / Enter / mezerník na odemčené soustavě → příprava mise. SVG <g>
+  // (role=button) nemá nativní aktivaci klávesnicí, proto Enter/Space ručně.
   el.querySelectorAll<SVGGElement>('g[data-mission]').forEach(g => {
-    onTap(g, () => {
-      el.remove()
-      showMissionPrep(g.dataset.mission!)
+    const go = (): void => { el.remove(); showMissionPrep(g.dataset.mission!) }
+    onTap(g, go)
+    g.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault()
+        go()
+      }
     })
   })
 }
@@ -462,6 +529,10 @@ const MISSION_SCENES: Record<string, string> = {
   mission09: 'scene-battle',
   mission10: 'scene-hyperwave',
   mission11: 'scene-battle',
+  // boční operace
+  side01: 'scene-convoy',
+  side02: 'scene-battle',
+  side03: 'scene-station',
 }
 
 /**
@@ -790,9 +861,12 @@ bridge.onSnapshot = (state, compression) => {
 
 // start: ?mission=id přeskočí menu (tlačítko ZNOVU), jinak výběr mise;
 // při prvním spuštění kampaně se před výběrem jednou ukáže úvod příběhu
-const requested = new URLSearchParams(location.search).get('mission')
+const params = new URLSearchParams(location.search)
+if (params.get('unlockall') === '1') setUnlockAll(true) // testovací odemčení z URL
+const requested = params.get('mission')
 // bookmark / ručně upravené ?mission= nesmí přeskočit linii — jen odemčené mise
-if (requested && SCENARIOS[requested] && isMissionUnlocked(requested, loadCleared())) {
+// (test-override „odemknout vše" tuhle bránu obchází záměrně)
+if (requested && SCENARIOS[requested] && missionAvailable(requested, loadCleared())) {
   showMissionPrep(requested)
 } else if (!introSeen()) {
   showCampaignIntro(showStarMap)

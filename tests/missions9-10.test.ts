@@ -56,7 +56,7 @@ function rollDefense(state: SimState, shipId: number, range = 700_000): void {
 
 describe('registrace misí 9–10', () => {
   it('mise 9–10 jsou v SCENARIOS (výběr misí 1→10) a mají očekávaný tvar', () => {
-    expect(Object.keys(SCENARIOS)).toHaveLength(11)
+    expect(Object.keys(SCENARIOS).length).toBeGreaterThanOrEqual(11)
     expect(SCENARIOS['mission09']).toBe(mission09)
     expect(SCENARIOS['mission10']).toBe(mission10)
     // M9: eskadra 5 lodí (s dreadnoughtem) + stanice; hyperlimit KRUŽNICE

@@ -38,7 +38,30 @@ export const CAMPAIGN_NODES: CampaignNode[] = [
   { id: 'mission09', x: 855, y: 355, requires: 'mission08' },
   { id: 'mission10', x: 910, y: 200, requires: 'mission09' },
   { id: 'mission11', x: 945, y: 85, requires: 'mission10' },
+  // boční operace mimo hlavní koridor — po každých ~3 misích jedna; nic na ně
+  // neukazuje přes `requires`, takže nikdy neblokují postup kampaně
+  { id: 'side01', x: 255, y: 585, requires: 'mission03', optional: true },
+  { id: 'side02', x: 560, y: 235, requires: 'mission06', optional: true },
+  { id: 'side03', x: 800, y: 480, requires: 'mission09', optional: true },
 ]
+
+/**
+ * Odměna za dokončení boční operace: trvalé navýšení raketových plošin
+ * flotily pro další kampaňové mise (aplikuje se z `wob-cleared`). Kořist
+ * z bočních skladišť — čím dál v kampani, tím větší.
+ */
+export const BONUS_REWARD: Record<string, { pods: number; label: string }> = {
+  side01: { pods: 2, label: '+2 raketové plošiny pro flotilu' },
+  side02: { pods: 3, label: '+3 raketové plošiny pro flotilu' },
+  side03: { pods: 4, label: '+4 raketové plošiny pro flotilu' },
+}
+
+/** součet plošinové odměny za všechny dokončené boční operace */
+export function podReward(cleared: readonly string[]): number {
+  let n = 0
+  for (const id of cleared) n += BONUS_REWARD[id]?.pods ?? 0
+  return n
+}
 
 /** deterministický PRNG (mulberry32) — hvězdné pozadí mapy bez závislostí */
 function mulberry32(seed: number): () => number {
