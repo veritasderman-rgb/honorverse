@@ -321,10 +321,10 @@ export const MISSION_STORY: Record<string, MissionStory> = {
       + 'penězi. Tvoje dvojice má rozkaz jej rozbít. Vezmi Rampart dovnitř, '
       + 'nech Skuu krýt záda a nedej pirátům čas naložit a zmizet.',
     epilog:
-      'Depot hoří za tebou jako druhé slunce. Ve skladech, které tvůj '
-      + 'výsadek stačil projít, ležely bedny raketových plošin — imperiální '
-      + 'výroba, čerstvá série. Naložil jsi je do vlastních kýlů: nájezdy '
-      + 'Pomezím budou o kus těžší a tvá flotila o kus ostřejší.',
+      'Depot hoří za tebou jako druhé slunce. U mola ale kotvil nedotčený '
+      + 'lehký křižník korzárů — posádka ho opustila dřív, než stačila odrazit. '
+      + 'Tvůj výsadek ho zajal netknutý; v docích ho přeznačí na ANS Kaper a od '
+      + 'téhle chvíle pluje ve tvé flotile. Kořist, která střílí zpátky.',
     epilogLose:
       'Přístav tě čekal lépe, než zpravodajství slíbilo. Rampart i Skua se '
       + 'stáhly v troskách — a depot, nedotčený, do hodiny zmizel do '

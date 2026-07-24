@@ -79,10 +79,11 @@ describe('hvězdná mapa kampaně', () => {
 })
 
 describe('odměny za boční operace (plošiny)', () => {
-  it('každý bonusový uzel má definovanou odměnu v plošinách', () => {
+  it('každý bonusový uzel má definovanou odměnu (plošiny nebo loď)', () => {
     for (const n of CAMPAIGN_NODES.filter(x => x.optional)) {
-      expect(BONUS_REWARD[n.id], `chybí odměna pro ${n.id}`).toBeDefined()
-      expect(BONUS_REWARD[n.id].pods).toBeGreaterThan(0)
+      const r = BONUS_REWARD[n.id]
+      expect(r, `chybí odměna pro ${n.id}`).toBeDefined()
+      expect(r.pods > 0 || r.ship != null, `${n.id} nemá žádnou odměnu`).toBe(true)
     }
   })
 
