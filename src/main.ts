@@ -21,6 +21,7 @@ import {
   applyLoadout, LOADOUTS, loadPreset, presetById, savePreset, type LoadoutId,
 } from './data/loadout'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
+import { isMissionUnlocked } from './data/campaign'
 import { scoreMission } from './sim/score'
 import {
   fetchOverall, fetchRank, fetchTop, rankSummary, submitScore,
@@ -169,6 +170,21 @@ const introSeen = (): boolean => {
 }
 const markIntroSeen = (): void => {
   try { localStorage.setItem(INTRO_SEEN_KEY, '1') } catch { /* noop */ }
+}
+
+/** localStorage: seznam vyčištěných misí (odemyká další soustavy na mapě) */
+const CLEARED_KEY = 'wob-cleared'
+
+function loadCleared(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLEARED_KEY) ?? '[]')
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  } catch { return [] }
+}
+function markCleared(id: string): void {
+  const s = new Set(loadCleared())
+  s.add(id)
+  try { localStorage.setItem(CLEARED_KEY, JSON.stringify([...s])) } catch { /* noop */ }
 }
 
 /** úvod kampaně (první spuštění): CAMPAIGN_INTRO + POKRAČOVAT → výběr mise */
@@ -566,6 +582,8 @@ function afterActionHtml(state: SimState, r: CombatStats): string {
 
 function showOutcome(state: SimState): void {
   const win = state.outcome === 'win'
+  // vyčištěná kampaňová mise odemkne další soustavu na mapě (ne volná bitva)
+  if (win && currentMissionId && currentMissionId !== 'skirmish') markCleared(currentMissionId)
   const objs = state.objectives.map(o => {
     const mark = o.state === 'done' ? '■' : o.state === 'failed' ? '✗' : '□'
     return `<div class="obj ${o.state}">${mark} ${esc(o.text)}</div>`
@@ -716,6 +734,11 @@ bridge.onSnapshot = (state, compression) => {
 // start: ?mission=id přeskočí menu (tlačítko ZNOVU), jinak výběr mise;
 // při prvním spuštění kampaně se před výběrem jednou ukáže úvod příběhu
 const requested = new URLSearchParams(location.search).get('mission')
-if (requested && SCENARIOS[requested]) showMissionPrep(requested)
-else if (!introSeen()) showCampaignIntro(showMissionSelect)
-else showMissionSelect()
+// bookmark / ručně upravené ?mission= nesmí přeskočit linii — jen odemčené mise
+if (requested && SCENARIOS[requested] && isMissionUnlocked(requested, loadCleared())) {
+  showMissionPrep(requested)
+} else if (!introSeen()) {
+  showCampaignIntro(showMissionSelect)
+} else {
+  showMissionSelect()
+}
