@@ -3,7 +3,7 @@
  * integrace pohybu. Jednotky: km, s, km/s, km/s². Úhly rad.
  */
 import type { ShipState, SimState, Vec2 } from './types'
-import { EMERGENCY_THROTTLE_MAX, G, SHIP_MAX_SPEED, THRUSTER_G, TURN_RATE } from './constants'
+import { EMERGENCY_THROTTLE_MAX, G, INTERCEPT_PASS_SPEED, SHIP_MAX_SPEED, SIM_DT, THRUSTER_G, TURN_RATE } from './constants'
 import { add, angleDiff, angleOf, clampLen, dot, fromAngle, len, norm, scale, sub } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
 import { interceptSolution } from './intercept'
@@ -80,19 +80,38 @@ export function desiredHeading(ship: ShipState, state: SimState): number | null 
     // každý tick přepočet na skutečnou pozici cíle
     const target = state.ships.find((s) => s.id === nav.targetId && !s.destroyed)
     if (!target) return null
+    // GUVERNÉR DOJEZDU: bojový intercept nemá cílem proletět kolem cíle
+    // tisíci km/s — jakmile by nebrzděný dolet překročil průletovou rychlost,
+    // otoč se a brzdi VŮČI CÍLI (kilt k nepříteli — kanonická decelerace).
+    // Brzdí se ale až kdy je to nutné (brzdná dráha ≥ zbytek), ne od půlky
+    // letu jako dřív — loď už necouvá hned po rozkazu.
+    const rel = sub(target.pos, ship.pos)
+    const d = len(rel)
+    if (d > 0 && accel > 0) {
+      const relVel = sub(ship.vel, target.vel)
+      const closing = dot(relVel, norm(rel))
+      // rezerva na otočku: nejhorší flip 180° trvá π/TURN_RATE (~21 s) a loď
+      // se během něj nebrzděně blíží — start brzdění o tu dráhu dřív
+      const dEff = Math.max(0, d - closing * (Math.PI / TURN_RATE))
+      if (closing > INTERCEPT_PASS_SPEED
+        && (closing * closing - INTERCEPT_PASS_SPEED * INTERCEPT_PASS_SPEED) / (2 * accel) >= dEff) {
+        return angleOf(scale(relVel, -1))
+      }
+    }
     const sol = interceptSolution(ship.pos, ship.vel, accel, target.pos, target.vel)
     if (sol) return sol.heading
     // bez řešení do 24 h: aspoň mířit na cíl
-    const rel = sub(target.pos, ship.pos)
-    return len(rel) > 0 ? angleOf(rel) : null
+    return d > 0 ? angleOf(rel) : null
   }
 
   // --- kurz na pevný bod ---
   const toDest = sub(nav.dest, ship.pos)
   const d = len(toDest)
   const speed = len(ship.vel)
-  // dorazili (u arriveAtRest až po vybrzdění)
-  if (d < ARRIVE_DIST && (!nav.arriveAtRest || speed < ARRIVE_SPEED)) return null
+  // dorazili (u arriveAtRest až po vybrzdění); práh roste s rychlostí —
+  // průletová loď by jinak 100km okno minula o celé ticky a kroužila kolem
+  const arriveD = Math.max(ARRIVE_DIST, speed * SIM_DT * 3)
+  if (d < arriveD && (!nav.arriveAtRest || speed < ARRIVE_SPEED)) return null
 
   // Bez klínu (trysky): intercept solver je pro poměr malá akcelerace ×
   // velká rychlost špatně podmíněný — místo něj navádění na předpokládaný

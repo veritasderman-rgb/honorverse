@@ -680,6 +680,15 @@ export class TacticalPlot {
     return HW_SCALE * (1 + lod * 2) * Math.max(1, Math.min(1.6, close))
   }
 
+  /** poloměr hitboxu lodi: v HW režimu roste s VYKRESLENÝM trupem (půlka
+   *  délky × měřítko) — přiblížená loď je ~150 px a klik na trup musí sedět */
+  private hullPickR(hullCode: string | undefined): number {
+    if (this.renderMode !== 'hw' || !hullCode) return PICK_PX
+    const g = HULL_GEOM[hullCode]
+    if (!g) return PICK_PX
+    return Math.max(PICK_PX, g.len * this.hullScale(this.zoomLod()))
+  }
+
   private draw(): void {
     const dpr = window.devicePixelRatio || 1
     const w = this.canvas.clientWidth
@@ -1146,8 +1155,8 @@ export class TacticalPlot {
 
   private drawOwnShip(ctx: CanvasRenderingContext2D, ship: ShipState): void {
     const p = this.worldToScreen(this.exPos(ship.pos, ship.vel))
-    this.pickables.push({ id: ship.id, x: p.x, y: p.y })
     const hull = SHIP_CLASSES[ship.classId]?.hullCode ?? 'DD'
+    this.pickables.push({ id: ship.id, x: p.x, y: p.y, r: this.hullPickR(hull) })
 
     // predikce dráhy: extrapolace 10 min, tečkovaně
     const fut = this.worldToScreen(this.exPos(ship.pos, ship.vel, 600))
@@ -1263,7 +1272,8 @@ export class TacticalPlot {
     const p = this.worldToScreen(est)
     if (memory) ctx.save()
     if (memory) ctx.globalAlpha = 0.45
-    this.pickables.push({ id: c.shipId, x: p.x, y: p.y })
+    const guessHullPick = SHIP_CLASSES[c.classGuess]?.hullCode
+    this.pickables.push({ id: c.shipId, x: p.x, y: p.y, r: this.hullPickR(guessHullPick) })
     const surrendered = foe?.surrendered === true
     const color = surrendered
       ? CLR.surrendered
