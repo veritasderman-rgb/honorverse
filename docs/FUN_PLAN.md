@@ -35,13 +35,15 @@ Návnady a rušičky jako **aktivní tlačítka s cooldownem**, ne pasivní čí
   ECM puls, pak cooldown).
 - *Odhad:* ~1 den.
 
-### A3. Fokus palby / „kill target"
-Hráč označí prioritní cíl a celá eskadra se na něj složí; efekt je vidět.
-- *Proč:* soustředěná palba láme jednu loď rychleji než rozmělněná — čitelné
-  rozhodnutí s okamžitým dopadem.
-- *Staví na:* doktríny (Nejbližší/Největší/Rozdělit/Soustředit už jsou) —
-  přidat ruční prioritu na konkrétní kontakt + zvýraznění.
-- *Odhad:* ~0,5 dne.
+### A3. Fokus palby — zvýraznění a zpětná vazba
+Mechanika už existuje: rozkaz **Soustředit** (`fleetFocus` v `input.ts`)
+přiřadí všem vybraným lodím `targetId` hráče. Chybí ale **čitelnost**, aby
+byl efekt „vidět" — což je jádro pocitu vlivu:
+- sbíhající se palebné linie / společný zaměřovací kroužek na cíli,
+- indikátor „soustředí se N lodí na TENTO cíl" + jeho klesající trup,
+- varování, když soustředěná palba mrhá (cíl už mrtvý / mimo dosah).
+- *Staví na:* existující `fleetFocus` + `selectedSalvoId` zvýraznění.
+- *Odhad:* ~0,5 dne (jen prezentace, mechanika hotová).
 
 ### A4. Manévrové odměny (crossing the T, ambush, útěk)
 - **Crossing the T** — bonus přesnosti/průniku, když křížíš kurz nepřítele
@@ -164,7 +166,7 @@ Jedna sdílená náhodná bitva denně na žebříček (deterministický seed z 
 | E1 | Skirmish / sandbox | znovuhratelnost | ⭐⭐⭐ | 1,5 d |
 | C1 | Přetrvávající flotila | stakes | ⭐⭐⭐ | 1,5–2 d |
 | B1 | Loadout před misí | agency před bojem | ⭐⭐ | 1 d |
-| A3 | Fokus palby | páka v boji | ⭐⭐ | 0,5 d |
+| A3 | Fokus palby — zvýraznění (mechanika hotová) | čitelnost | ⭐⭐ | 0,5 d |
 | D2 | Telegrafování záměru | čitelnost | ⭐⭐ | 0,5 d |
 
 **Doporučený start:** **A1 (alfa-salva) + D1 (after-action)** — spolu dají
