@@ -671,6 +671,9 @@ function voPlayer(name: string): HTMLElement {
   btn.className = 'vo-btn'
   const setLabel = (): void => { btn.textContent = audio.paused ? t('vo.play') : t('vo.pause') }
   audio.addEventListener('canplaythrough', () => {
+    // overlay mezitím zavřený (START/ZPĚT dřív, než se nahrávka donačetla):
+    // opožděný start by hrál přes bojiště — odpojený řádek nic nespouští
+    if (!wrap.isConnected) return
     if (wrap.style.display !== 'none') return
     stopVo()
     activeVo = audio
