@@ -6,7 +6,8 @@ import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { startFleetView } from './ui/fleetview'
 import { sceneFor } from './ui/scenes'
-import { Panels, esc, fmtTime, type CombatStats } from './ui/panels'
+import { Panels, esc, fmtTime } from './ui/panels'
+import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
 import { SCENARIOS } from './data/missions'
@@ -97,6 +98,32 @@ function onTap(el: Element | null, fn: () => void): void {
 }
 
 // ---------- mobil / tablet ----------
+
+// Detekce telefonu → body.phone (kompaktní mobilní UX). Auto: hrubý ukazatel
+// (pointer: coarse) A krátká strana viewportu < 430 px (odliší telefon od
+// tabletu). Ruční přepínač 🖐 v topbaru přepíše (localStorage 'wob-mobile').
+const MOBILE_KEY = 'wob-mobile'
+function detectPhone(): boolean {
+  let pref: string | null = null
+  try { pref = localStorage.getItem(MOBILE_KEY) } catch { /* noop */ }
+  if (pref === '1') return true
+  if (pref === '0') return false
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
+  const shortSide = Math.min(window.innerWidth, window.innerHeight)
+  return coarse && shortSide < 430
+}
+function applyPhoneClass(): void {
+  document.body.classList.toggle('phone', detectPhone())
+}
+applyPhoneClass()
+// při otočení/resize přehodnoť jen v AUTO režimu (ruční volba se nepřepisuje)
+for (const evt of ['resize', 'orientationchange']) {
+  window.addEventListener(evt, () => {
+    let pref: string | null = null
+    try { pref = localStorage.getItem(MOBILE_KEY) } catch { /* noop */ }
+    if (pref !== '1' && pref !== '0') applyPhoneClass()
+  })
+}
 
 // výsuvné šuplíky HUD sloupců (telefonní breakpoint — záložky ◧/◨)
 for (const [tabId, hudId] of [['tab-tl', 'hud-tl'], ['tab-tr', 'hud-tr']] as const) {
@@ -715,7 +742,7 @@ function showOutcome(state: SimState): void {
   }).join('')
 
   // skóre mise (jen výhra) — deterministické z průběhu
-  const stats = panels.combatStats
+  const stats = controller.stats.scoring
   const score = scoreMission({
     missionId: currentMissionId,
     outcome: state.outcome === 'win' ? 'win' : 'lose',
@@ -754,7 +781,7 @@ function showOutcome(state: SimState): void {
     `<h2 class="${win ? 'win' : 'lose'}">${win ? 'VÍTĚZSTVÍ' : 'PORÁŽKA'}</h2>`
     + `<div class="brief">Mise ukončena v čase ${fmtTime(state.t)}.</div>`
     + objs
-    + afterActionHtml(state, panels.combatReport)
+    + afterActionHtml(state, controller.stats.report)
     + scoreHtml
     + (epilog ? `<div class="brief story story-epilog">${esc(epilog)}</div>` : '')
     + `<div style="margin-top:14px">`
@@ -825,7 +852,8 @@ function showOutcome(state: SimState): void {
 
 bridge.onReady = scenario => {
   currentMissionId = scenario.id
-  panels.resetStats() // bojová statistika se počítá per mise
+  controller.stats.reset() // bojová statistika (sdílený tracker) — per mise
+  panels.resetStats()      // + HUD logy a rozpracované salvy
   plot.setHyperlimit(scenario.hyperlimit ?? null)
   plot.setEnvironment(scenario.decor, scenario.ambient)
   plot.setScene(sceneFor(scenario.id, scenario.ambient)) // vizuál mise (hvězda, mlhovina, planety)

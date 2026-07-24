@@ -315,6 +315,32 @@
       .tb-slow { max-width: 30vw; }
     }
 
+    /* Ruční mobilní režim (body.phone): stejná kompaktní vrstva jako telefonní
+       breakpoint, ale nezávisle na šířce — pro velké telefony/tablety i test.
+       Zrcadlí klíčová pravidla z @media (max-width: 900px). */
+    .tb-mobile.active { color: #d8b34f; }
+    body.phone #topbar { flex-wrap: nowrap; overflow: hidden; gap: 6px; }
+    body.phone .tb-audio label { display: none; }
+    body.phone .tb-slow { display: none; }
+    body.phone #hud-tl, body.phone #hud-tr {
+      top: 60px; bottom: 96px; width: min(340px, 86vw);
+      background: #05080af2; z-index: 12; transition: transform .2s ease; padding: 6px;
+    }
+    body.phone #hud-tl { left: 0; transform: translateX(-100%); border-right: 1px solid #1c3a1e; }
+    body.phone #hud-tr { right: 0; transform: translateX(100%); border-left: 1px solid #1c3a1e; }
+    body.phone #hud-tl.open, body.phone #hud-tr.open { transform: translateX(0); }
+    body.phone .hud-tab {
+      display: block; position: absolute; z-index: 13; top: 64px;
+      min-width: 44px; min-height: 52px; font-size: 16px;
+      background: #081008ee; border: 1px solid #2a5a2e; color: #9fd8a0;
+    }
+    body.phone #tab-tl { left: 0; border-left: none; }
+    body.phone #tab-tr { right: 0; border-right: none; }
+    body.phone .lbl-lg { display: none; }
+    body.phone .lbl-sm { display: inline; }
+    body.phone #hud-br { display: none; }
+    body.phone #toasts { bottom: 100px; max-width: 86vw; }
+
     /* portrét na dotyku: taktický plot potřebuje šířku — vyzvi k otočení */
     @media (orientation: portrait) and (pointer: coarse) and (max-width: 900px) {
       #rotate-hint {
