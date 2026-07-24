@@ -285,6 +285,14 @@ export class UIController {
       this.refresh()
       return
     }
+    // sesazená alfa-salva: vybrané lodě na SPOLEČNÝ dopad (time-on-target)
+    if (act === 'fleetAlpha') {
+      if (t == null) return
+      const ids = this.selectedShips().map(sh => sh.id)
+      if (ids.length > 0) this.send({ kind: 'alphaStrike', shipIds: ids, targetId: t })
+      this.refresh()
+      return
+    }
     if (act === 'fleetHold') {
       for (const sh of this.selectedShips()) {
         this.send({ kind: 'holdFire', shipId: sh.id })
