@@ -391,6 +391,58 @@ const MISSION_SCENES: Record<string, string> = {
   mission11: 'scene-battle',
 }
 
+/**
+ * Video briefing per mise (public/vid/<hodnota>.mp4). Každá mise má hook na
+ * vlastní video; dokud soubor neexistuje, přehrávač spadne zpět na statickou
+ * scénu (MISSION_SCENES). Viz docs/VIDEO_BRIEFINGS.md.
+ */
+const MISSION_VIDEOS: Record<string, string> = {
+  mission01: 'brief-mission01', mission02: 'brief-mission02',
+  mission03: 'brief-mission03', mission04: 'brief-mission04',
+  mission05: 'brief-mission05', mission06: 'brief-mission06',
+  mission07: 'brief-mission07', mission08: 'brief-mission08',
+  mission09: 'brief-mission09', mission10: 'brief-mission10',
+  mission11: 'brief-mission11',
+}
+
+/**
+ * Media briefingu: přehraje video mise (pokud existuje), jinak statická
+ * scéna. Chyba načtení videa → graceful fallback na obrázek. Vrací element
+ * k vložení, nebo null (mise bez scény i videa).
+ */
+function briefingMedia(id: string): HTMLElement | null {
+  const scene = MISSION_SCENES[id]
+  const makeImg = (): HTMLImageElement | null => {
+    if (!scene) return null
+    const img = document.createElement('img')
+    img.className = 'brief-img'
+    img.src = `img/${scene}.png`
+    img.alt = ''
+    img.onerror = () => img.remove()
+    return img
+  }
+  const vid = MISSION_VIDEOS[id]
+  if (vid) {
+    const v = document.createElement('video')
+    v.className = 'brief-vid'
+    v.src = `vid/${vid}.mp4`
+    v.autoplay = true
+    v.muted = true
+    v.setAttribute('playsinline', '')
+    v.controls = false
+    if (scene) v.poster = `img/${scene}.png`
+    // video chybí/nejde přehrát → statická scéna (nebo nic)
+    v.addEventListener('error', () => {
+      const img = makeImg()
+      if (img && v.parentElement) v.replaceWith(img)
+      else v.remove()
+    })
+    void v.play?.().catch(() => { /* autoplay blokován — poster zůstává */ })
+    return v
+  }
+  return makeImg()
+}
+
 /** briefing skirmishe (bez loadoutu — výzbroj řeší stavba bitvy) */
 function showBriefing(sc: Scenario): void {
   const el = overlay(
@@ -413,13 +465,12 @@ function showBriefing(sc: Scenario): void {
 function showMissionPrep(id: string): void {
   const sc = SCENARIOS[id]
   if (!sc) { startCampaignMission(id); return }
-  const scene = MISSION_SCENES[id]
   const prolog = MISSION_STORY[id]?.prolog
   let sel: LoadoutId = loadPreset()
   const btns = LOADOUTS.map(l =>
     `<button class="ld-btn${l.id === sel ? ' active' : ''}" data-ld="${l.id}">${esc(l.label)}</button>`).join('')
   const el = overlay(
-    (scene ? `<img class="brief-img" src="img/${scene}.png" alt="" onerror="this.remove()">` : '')
+    `<div id="prep-media"></div>`
     + `<h2>${esc(sc.title)}</h2>`
     + (prolog ? `<div class="brief story">${esc(prolog)}</div>` : '')
     + `<div class="brief">${esc(sc.briefing)}</div>`
@@ -428,6 +479,9 @@ function showMissionPrep(id: string): void {
     + `<div style="margin-top:12px"><button id="btn-start">START</button> `
     + `<button id="btn-prep-back">ZPĚT</button></div>`,
   )
+  // video briefing (nebo statická scéna jako fallback)
+  const media = briefingMedia(id)
+  if (media) el.querySelector('#prep-media')?.appendChild(media)
   el.addEventListener('click', e => {
     const t = (e.target as Element).closest<HTMLElement>('[data-ld]')
     if (!t) return
