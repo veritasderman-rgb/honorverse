@@ -21,6 +21,11 @@ export class SimBridge {
     this.post({ kind: 'init', scenarioId })
   }
 
+  /** spustí custom bitvu (skirmish) z hotového scénáře */
+  startScenario(scenario: Scenario): void {
+    this.post({ kind: 'init', scenarioId: scenario.id, scenario })
+  }
+
   sendOrder(order: Order): void {
     this.post({ kind: 'order', order })
   }

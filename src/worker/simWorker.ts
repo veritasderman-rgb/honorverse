@@ -62,7 +62,8 @@ self.onmessage = (e: MessageEvent<WorkerInMsg>) => {
   const msg = e.data
   switch (msg.kind) {
     case 'init': {
-      const scenario = loadScenario(msg.scenarioId)
+      // custom bitva (skirmish) posílá scénář přímo; jinak lookup dle id
+      const scenario = msg.scenario ?? loadScenario(msg.scenarioId)
       state = sim.create(scenario)
       compression = 0
       stepAcc = 0
