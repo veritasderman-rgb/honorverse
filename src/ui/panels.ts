@@ -20,6 +20,7 @@ import { autoDriveMode, fireSolution, poweredEnvelope } from '../sim/weapons'
 import { controllableShips, fleetShips, isControllable, rosterVisible } from './roster'
 import type { Contact, ShipClassDef, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { AudioManager } from './audio'
+import { type CombatStats } from './combatStats'
 
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
 export interface UiState {
@@ -40,12 +41,25 @@ export interface UiState {
   autoSlowEnabled: boolean
   /** režim hromadného výběru (mobil — tap = toggle, tažení = box výběr) */
   selectMode: boolean
+  /** aktuální bojová statistika (z controllerova trackeru) k zobrazení */
+  report: CombatStats
 }
 
 export type PanelAction =
   | { kind: 'compression'; factor: number }
   | { kind: 'select'; id: number }
   | { kind: 'order'; act: string; shift?: boolean }
+
+/**
+ * Rozhraní HUD vrstvy: controller přes něj krmí prezentaci snapshoty a eventy,
+ * aniž by znal konkrétní implementaci. Desktop/tablet = Panels; mobil (body.phone)
+ * = budoucí MobileHud. Bojová statistika žije v controlleru (CombatStatsTracker),
+ * ne tady — HUD ji dostává ve snapshotu (UiState.report).
+ */
+export interface HudView {
+  addEvents(events: SimEvent[]): void
+  update(state: SimState, ui: UiState, force?: boolean): void
+}
 
 const COMP_BTNS: { f: number; label: string }[] = [
   { f: 0, label: '⏸' },
@@ -131,23 +145,6 @@ const avatarHtml = (speaker: string): string => {
 
 // ---------- panely ----------
 
-/** akumulovaná bojová statistika (z eventů; reset při nové misi) */
-export interface CombatStats {
-  ourLaunched: number; ourKilled: number; ourHits: number
-  incLaunched: number; incKilled: number; incHits: number
-  /** rozpad ztrát NAŠICH raket podle příčiny (cause z eventů) */
-  ourLoss: Record<string, number>
-  /** rozpad práce NAŠÍ obrany na příchozích raketách */
-  incLoss: Record<string, number>
-}
-
-const emptyStats = (): CombatStats => ({
-  ourLaunched: 0, ourKilled: 0, ourHits: 0,
-  incLaunched: 0, incKilled: 0, incHits: 0,
-  ourLoss: {}, incLoss: {},
-})
-
-/** české popisky příčin zániku rakety */
 /** české štítky doktrín palby eskadry (roster, panel lodi) */
 const FIRE_MODE_LABELS: Record<string, string> = {
   auto: 'AUTO', nearest: 'AUTO·nejbl.', biggest: 'AUTO·nejv.', spread: 'AUTO·rozděl.',
@@ -186,10 +183,9 @@ const loadFolds = (): Record<string, boolean> => {
   } catch { return {} }
 }
 
-export class Panels {
+export class Panels implements HudView {
   private log: { t: number; text: string; warn: boolean }[] = []
   private commLog: { t: number; speaker: string; text: string }[] = []
-  private stats: CombatStats = emptyStats()
   private lastSidebarAt = 0
   private toasts: HTMLElement | null = null
   /** přerenderovávaná část topbaru (audio ovládání se renderuje jen jednou) */
@@ -303,49 +299,12 @@ export class Panels {
     setTimeout(() => { el.classList.add('fade'); setTimeout(() => el.remove(), 600) }, ms)
   }
 
-  /** bojová statistika pro skórování (odpaly/zásahy vlastní strany) */
-  get combatStats(): { ourLaunched: number; ourHits: number } {
-    return { ourLaunched: this.stats.ourLaunched, ourHits: this.stats.ourHits }
-  }
-
-  /** plná bojová statistika pro after-action rozbor (D1) — kopie */
-  get combatReport(): CombatStats {
-    return {
-      ...this.stats,
-      ourLoss: { ...this.stats.ourLoss },
-      incLoss: { ...this.stats.incLoss },
-    }
-  }
-
-  /** reset bojové statistiky a logů — volat při startu nové mise */
+  /** reset HUD logů a rozpracovaných salv — volat při startu nové mise.
+   *  (Bojovou statistiku resetuje controller přes CombatStatsTracker.) */
   resetStats(): void {
-    this.stats = emptyStats()
     this.salvoTallies.clear()
     this.log = []
     this.commLog = []
-  }
-
-  /** akumulace bojové statistiky (side u launch/kill/hit = strana RAKETY) */
-  private countStat(ev: SimEvent): void {
-    const s = this.stats
-    if (ev.kind === 'launch') {
-      const n = ev.count ?? 0
-      if (ev.side === 'player') s.ourLaunched += n
-      else if (ev.side === 'enemy') s.incLaunched += n
-    } else if (ev.kind === 'missileKilled' || ev.kind === 'missileMiss') {
-      // rozpad podle příčiny (kill i miss — hráče zajímá osud každé rakety)
-      const cause = ev.cause ?? 'link'
-      if (ev.side === 'player') s.ourLoss[cause] = (s.ourLoss[cause] ?? 0) + 1
-      else if (ev.side === 'enemy') s.incLoss[cause] = (s.incLoss[cause] ?? 0) + 1
-      if (ev.kind === 'missileKilled') {
-        if (ev.side === 'player') s.ourKilled++
-        else if (ev.side === 'enemy') s.incKilled++
-      }
-    } else if (ev.kind === 'missileHit') {
-      if (ev.side === 'player') s.ourHits++
-      else if (ev.side === 'enemy') s.incHits++
-    }
-    this.tallySalvo(ev)
   }
 
   /** sleduje osud NAŠICH salv; po dostřílení celé salvy shrne výsledek do logu */
@@ -380,7 +339,7 @@ export class Panels {
   /** připojí nové události ze snapshotu do logu (worker je po odeslání maže) */
   addEvents(events: SimEvent[]): void {
     for (const ev of events) {
-      this.countStat(ev)
+      this.tallySalvo(ev)
       const speakerName = ev.speaker ? SPEAKERS[ev.speaker]?.name ?? ev.speaker : null
       const logText = speakerName && ev.kind !== 'message' ? `${speakerName}: ${ev.text}` : ev.text
       this.log.unshift({ t: ev.t, text: logText, warn: !!ev.slowdown || ev.kind === 'shipDestroyed' })
@@ -421,6 +380,7 @@ export class Panels {
       `<button class="tb-gfx" title="Vzhled plotu: objemové (3D shora, Homeworld) ⟷ klasické vektorové siluety">◈</button>`
       + `<button class="tb-crt" title="CRT vzhled: scanlines + vinětace (jen kosmetika)">📺</button>`
       + `<button class="tb-info" title="režim nápovědy (dotyk): klepnutí na prvek ukáže jeho vysvětlení místo akce">ⓘ</button>`
+      + `<button class="tb-mobile" title="mobilní UI: kompaktní rozvržení pro telefon (jinak se zapne samo na malém dotykovém displeji)">🖐</button>`
       + `<button class="tb-mute" title="ztlumit / zapnout zvuk">${audio.muted ? '🔇' : '🔊'}</button>`
       + `<label title="hlasitost hudby">♪ <input class="tb-vol-music" type="range" min="0" max="100"`
       + ` value="${Math.round(audio.musicVolume * 100)}"></label>`
@@ -440,6 +400,16 @@ export class Panels {
       crtOn = !crtOn
       try { localStorage.setItem('wob-crt', crtOn ? '1' : '0') } catch { /* noop */ }
       applyCrt()
+    })
+    // ruční přepínač mobilního UI (jinak se body.phone nastaví autodetekcí v main.ts)
+    const mob = bar.querySelector<HTMLButtonElement>('.tb-mobile')!
+    const applyMob = (): void => { mob.classList.toggle('active', document.body.classList.contains('phone')) }
+    applyMob()
+    mob.addEventListener('click', () => {
+      const on = !document.body.classList.contains('phone')
+      document.body.classList.toggle('phone', on)
+      try { localStorage.setItem('wob-mobile', on ? '1' : '0') } catch { /* noop */ }
+      applyMob()
     })
     // přepínač vzhledu (objemový HW ⟷ klasický CIC); stav drží plot v localStorage
     const gfx = bar.querySelector<HTMLButtonElement>('.tb-gfx')!
@@ -495,7 +465,7 @@ export class Panels {
     this.hudTl.innerHTML =
       this.panelFleet(state, ui)
       + this.panelOwnShip(own, state)
-      + this.panelStats()
+      + this.panelStats(ui)
     this.hudTr.innerHTML =
       this.panelContacts(state, own, ui)
       + this.panelTargetDetail(state, own, ui)
@@ -507,9 +477,9 @@ export class Panels {
       + this.panelLog()
   }
 
-  /** BOJOVÁ STATISTIKA — naše palba vs. příchozí (akumulace z eventů) */
-  private panelStats(): string {
-    const s = this.stats
+  /** BOJOVÁ STATISTIKA — naše palba vs. příchozí (z controllerova trackeru) */
+  private panelStats(ui: UiState): string {
+    const s = ui.report
     if (s.ourLaunched === 0 && s.incLaunched === 0) return ''
     const pct = s.ourLaunched > 0 ? Math.round((100 * s.ourHits) / s.ourLaunched) : 0
     const ourParts = lossBreakdown(s.ourLoss)

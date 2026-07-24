@@ -7,7 +7,8 @@ import { SHIP_CLASSES } from '../data/defs'
 import type { DriveMode, Order, ShipState, SimEvent, SimState, Vec2 } from '../sim/types'
 import type { SimBridge } from '../worker/bridge'
 import type { TacticalPlot } from './plot'
-import { contactEstPos, type PanelAction, type Panels, type UiState } from './panels'
+import { contactEstPos, type HudView, type PanelAction, type UiState } from './panels'
+import { CombatStatsTracker } from './combatStats'
 import {
   boxSelectShips, normalizeSelection, resolveOwnShipId, rosterPick, toggleShipSelection,
 } from './roster'
@@ -47,10 +48,13 @@ export class UIController {
   /** lodě, jejichž contactNew už zpomalil (zpomalí jen první detekce) */
   private seenContacts = new Set<number>()
 
+  /** sdílený akumulátor bojové statistiky (skóre i HUDy z něj čtou) */
+  readonly stats = new CombatStatsTracker()
+
   constructor(
     private bridge: SimBridge,
     private plot: TacticalPlot,
-    private panels: Panels,
+    private panels: HudView,
   ) {
     plot.onPick = (id, world, shift) => this.onPlotClick(id, world, shift)
     plot.onBoxSelect = (a, b) => this.onBoxSelect(a, b)
@@ -90,6 +94,7 @@ export class UIController {
       this.selectedSalvoId = null
     }
 
+    for (const ev of state.events) this.stats.count(ev) // bojová statistika (sdílená)
     this.panels.addEvents(state.events)
     this.plot.followId = this.ownShipId
     this.plot.selectedId = this.targetId ?? this.ownShipId
@@ -715,6 +720,7 @@ export class UIController {
       escortJammerMode: this.escortJammerMode,
       autoSlowEnabled: this.autoSlow,
       selectMode: this.plot.multiSelectMode,
+      report: this.stats.report,
     }
   }
 
