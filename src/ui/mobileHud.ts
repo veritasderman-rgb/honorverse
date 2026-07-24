@@ -9,9 +9,11 @@
  */
 import type { ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { HudView, UiState } from './panels'
-import { fmtKm } from './panels'
+import { esc, fmtKm } from './panels'
+import { t } from './i18n'
 import { SHIP_CLASSES } from '../data/defs'
 import { mobileContactChips, type MobileContactChip } from './mobileContacts'
+import { wheelActions, type WheelAction } from './mobileWheel'
 
 /** 12 subsystémů v pořadí kolem prstence (od horní osy po směru hodin) */
 const SUBS: { key: keyof Subsystems; label: string }[] = [
@@ -53,6 +55,10 @@ export class MobileHud implements HudView {
   private el: HTMLElement
   /** M2: palcový proužek kontaktů (pravý okraj) */
   private contactsEl: HTMLElement
+  /** M3: palcové radiální kolo rozkazů (FAB v pravém dolním rohu) */
+  private wheelEl: HTMLElement
+  private wheelArc: HTMLElement
+  private wheelOpen = false
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div')
@@ -65,6 +71,16 @@ export class MobileHud implements HudView {
     this.contactsEl.style.display = 'none'
     root.appendChild(this.contactsEl)
     this.wireLongPress()
+
+    this.wheelEl = document.createElement('div')
+    this.wheelEl.id = 'mobile-wheel'
+    this.wheelEl.style.display = 'none'
+    this.wheelEl.innerHTML =
+      `<div class="mw-scrim"></div><div class="mw-arc"></div>`
+      + `<button class="mw-fab" aria-label="Rychlé rozkazy" aria-expanded="false">⌖</button>`
+    root.appendChild(this.wheelEl)
+    this.wheelArc = this.wheelEl.querySelector('.mw-arc')!
+    this.wireWheel()
   }
 
   // prstenec čte stav přímo ze snapshotu; eventy (log/statistika) nepotřebuje
@@ -76,6 +92,8 @@ export class MobileHud implements HudView {
     if (!ship || ship.destroyed) {
       this.el.style.display = 'none'
       this.contactsEl.style.display = 'none'
+      this.wheelEl.style.display = 'none'
+      this.setWheelOpen(false)
       return
     }
     this.el.style.display = 'block'
@@ -88,6 +106,55 @@ export class MobileHud implements HudView {
       this.contactsEl.style.display = 'flex'
       this.contactsEl.innerHTML = chips.map(c => this.chip(c)).join('')
     }
+
+    // M3: kolo rozkazů — FAB vždy, akce jen když je vysunuté (data-act se re-
+    // renderuje volně, akce míří na delegaci Panels, ne na listenery tlačítek)
+    this.wheelEl.style.display = 'block'
+    const acts = wheelActions(ship, ui.targetId != null, ui.courseMode)
+    this.wheelArc.innerHTML = acts.map((a, i) => this.wheelBtn(a, i, acts.length)).join('')
+  }
+
+  /** jedno tlačítko kola na svém místě v oblouku (vlevo-nahoru od FAB) */
+  private wheelBtn(a: WheelAction, i: number, n: number): string {
+    const deg = 180 + 90 * (n > 1 ? i / (n - 1) : 0) // 180° (vlevo) → 270° (nahoru)
+    const rad = (deg * Math.PI) / 180
+    const R = 94
+    const tx = (R * Math.cos(rad)).toFixed(1)
+    const ty = (R * Math.sin(rad)).toFixed(1)
+    const label = t(a.labelKey) + (a.count != null ? ` ${a.count}` : '')
+    return `<button class="mw-act${a.active ? ' active' : ''}" data-act="${a.act}"`
+      + ` style="--tx:${tx}px;--ty:${ty}px"${a.disabled ? ' disabled' : ''}`
+      + ` aria-label="${esc(label)}"><span class="mw-g">${a.glyph}</span>`
+      + `<span class="mw-l">${esc(label)}</span></button>`
+  }
+
+  private setWheelOpen(open: boolean): void {
+    this.wheelOpen = open
+    this.wheelEl.classList.toggle('open', open)
+    this.wheelEl.querySelector('.mw-fab')?.setAttribute('aria-expanded', String(open))
+    // pod scrim schovej proužek kontaktů, ať se vizuálně nebije
+    document.body.classList.toggle('mw-open', open)
+  }
+
+  private wireWheel(): void {
+    const fab = this.wheelEl.querySelector('.mw-fab')!
+    fab.addEventListener('pointerdown', e => { e.stopPropagation(); this.setWheelOpen(!this.wheelOpen) })
+    this.wheelEl.querySelector('.mw-scrim')!
+      .addEventListener('pointerdown', () => this.setWheelOpen(false))
+    // akce odešle data-act delegace Panels (bublá přes plot-container); kolo pak
+    // zavřeme. Zakázaná (disabled) tlačítka pointer events nedostávají.
+    this.wheelArc.addEventListener('pointerdown', e => {
+      const b = (e.target as Element | null)?.closest('.mw-act') as HTMLButtonElement | null
+      if (b && !b.disabled) this.setWheelOpen(false)
+    })
+    // klávesnice / AT: Enter/mezerník na akci → bublající pointerdown (jako čipy)
+    this.wheelArc.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      const b = (e.target as Element | null)?.closest('.mw-act') as HTMLButtonElement | null
+      if (!b || b.disabled) return
+      e.preventDefault()
+      b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    })
   }
 
   /** jeden čip kontaktu; `data-sel` zaměří přes stávající delegaci Panels */

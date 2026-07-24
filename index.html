@@ -368,6 +368,36 @@
     .mc-chip.mc-surr .mc-code { color: #9fbfe0; }
     .mc-chip.sel { background: #1c3a1e; border-color: #58e06a; box-shadow: 0 0 8px #2c5a2e; }
 
+    /* M3: palcové radiální kolo rozkazů (mobil). FAB v pravém dolním rohu
+       (vyhrazený okap v liště rozkazů), po klepnutí se z něj vysune oblouk
+       6 jádrových bojových akcí (salva/plošiny/energie/kurz/klín/senzory).
+       Akce míří na data-act — stejnou delegaci Panels jako lišta. */
+    #mobile-wheel { display: none; }
+    body.phone #mobile-wheel { display: block; }
+    /* okap pro FAB, ať pod ním nemizí tlačítka lišty rozkazů */
+    body.phone #hud-bottom { padding-right: calc(64px + env(safe-area-inset-right)); }
+    .mw-fab { position: absolute; right: calc(8px + env(safe-area-inset-right)); bottom: calc(8px + env(safe-area-inset-bottom));
+      z-index: 14; width: 52px; height: 52px; border-radius: 50%; font-size: 22px;
+      background: #0b1a0cf2; border: 2px solid #2a5a2e; color: #9fd8a0;
+      box-shadow: 0 0 10px #05080a; display: flex; align-items: center; justify-content: center; }
+    #mobile-wheel.open .mw-fab { border-color: #58e06a; color: #eaffea; }
+    .mw-scrim { position: absolute; inset: 0; z-index: 12; display: none; background: #05080a00; }
+    #mobile-wheel.open .mw-scrim { display: block; background: #05080a6e; }
+    .mw-arc { position: absolute; right: calc(34px + env(safe-area-inset-right)); bottom: calc(34px + env(safe-area-inset-bottom)); z-index: 13; width: 0; height: 0; }
+    .mw-act { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px;
+      border-radius: 50%; transform: translate(0, 0); opacity: 0; pointer-events: none;
+      transition: transform .16s ease, opacity .16s ease;
+      background: #0b1a0cf5; border: 1px solid #2a5a2e; color: #cfeecf;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+      box-shadow: 0 0 8px #05080a; }
+    #mobile-wheel.open .mw-act { transform: translate(var(--tx), var(--ty)); opacity: 1; pointer-events: auto; }
+    .mw-act .mw-g { font-size: 20px; line-height: 1; }
+    .mw-act .mw-l { font-size: 8px; letter-spacing: .3px; text-align: center; max-width: 52px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mw-act.active { border-color: #58e06a; color: #eaffea; box-shadow: 0 0 8px #2c5a2e; }
+    #mobile-wheel.open .mw-act:disabled { opacity: .3; pointer-events: none; }
+    body.mw-open #mobile-contacts { visibility: hidden; }
+
     /* ---------- iPad / tablet (body.tablet, viz main.ts) ----------
        Hrubý pointer + velký displej. Drží bohatší rozvržení než telefon
        (na šířku plné desktop panely, na výšku kompaktní vrstvu) a jen zvětší
@@ -395,6 +425,10 @@
     body.tablet.phone #mobile-contacts { width: 94px; top: 140px; bottom: 108px; }
     body.tablet.phone .mc-chip .mc-code { font-size: 15px; }
     body.tablet.phone .mc-chip .mc-rng { font-size: 13px; }
+    body.tablet.phone .mw-fab { width: 62px; height: 62px; font-size: 26px; }
+    body.tablet.phone .mw-act { width: 64px; height: 64px; left: -32px; top: -32px; }
+    body.tablet.phone .mw-act .mw-g { font-size: 23px; }
+    body.tablet.phone .mw-act .mw-l { font-size: 9px; max-width: 60px; }
 
     /* portrét na dotyku: taktický plot potřebuje šířku — vyzvi k otočení.
        Práh 1100 px pokryje i iPad Pro 12,9" na výšku (1024 px), aby i velké
