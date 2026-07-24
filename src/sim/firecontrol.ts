@@ -6,7 +6,7 @@
  *   - druhá vlna vrstvené salvy (pendingWave) — HI follow-up časovaný
  *     tak, aby dorazil ±10 s s hlavní LO vlnou.
  */
-import type { FireControl, ShipState, Side, SimState } from './types'
+import type { Contact, FireControl, ShipState, Side, SimState, Vec2 } from './types'
 import { ENERGY_MAX_RANGE } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
 import { dist } from './vec'
@@ -15,6 +15,25 @@ import { fireEnergy, launchSalvo, poweredEnvelope } from './weapons'
 
 const hostileTo = (a: Side, b: Side): boolean =>
   (a === 'player' && b === 'enemy') || (a === 'enemy' && b === 'player')
+
+/**
+ * Rozdělení tažených plošin eskadry mezi RŮZNÉ cíle: každé střílející lodi
+ * (podle id) přiřadí vlastní cíl z klasifikovaných živých kontaktů (bez
+ * paměťových pinů), seřazených podle vzdálenosti od `from`. Deterministické;
+ * víc lodí než cílů → přebývající se cyklicky opakují (mod). Prázdné, není-li
+ * koho napadnout. Zabrání plýtvání, kdy 6×N raket spadne na jednu loď.
+ */
+export function spreadPodTargets(
+  shooterIds: readonly number[], contacts: readonly Contact[], from: Vec2,
+): { shipId: number; targetId: number }[] {
+  const cands = contacts
+    .filter(c => c.memory !== true && c.idQuality >= 1)
+    .map(c => ({ id: c.shipId, d: dist(from, c.pos) }))
+    .sort((a, b) => a.d - b.d || a.id - b.id)
+  if (cands.length === 0) return []
+  return [...shooterIds].sort((a, b) => a - b)
+    .map((shipId, i) => ({ shipId, targetId: cands[i % cands.length].id }))
+}
 
 /**
  * Doktríny palby eskadry (nearest/biggest/spread): DETERMINISTICKÝ výběr

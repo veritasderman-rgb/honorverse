@@ -1071,6 +1071,7 @@ export class Panels {
       .filter((s): s is ShipState => !!s && !s.destroyed)
     const allMode = (m: string): boolean =>
       selShips.length > 0 && selShips.every(s => s.fireControl.mode === m)
+    const squadPods = selShips.reduce((n, s) => n + s.pods, 0)
     const squadTips: Record<string, string> = {
       fleetNearest: 'Doktrína NEJBLIŽŠÍ: každá vybraná loď si sama drží palbu na svůj nejbližší nepřátelský kontakt a po jeho zničení plynule přejde na další. Rozptýlená sebeobrana — ideální proti dotírající zástěně.',
       fleetBiggest: 'Doktrína NEJVĚTŠÍ: každá vybraná loď pálí na nejtěžší známý trup — celá eskadra se tak sama koncentruje (saturace obrany!) a po zničení roluje na další nejtěžší. Doktrína stěny proti stěně.',
@@ -1079,6 +1080,7 @@ export class Panels {
       fleetHold: 'DRŽET PALBU: všechny vybrané lodě přestanou střílet (doktríny i AUTO vypnuty).',
       fleetSalvo: 'SALVA VÝBĚRU: každá vybraná loď s nabitými šachtami TEĎ odpálí plnou salvu na tebou vybraný cíl — koordinovaný úder bez přepínání lodí. Připravenost šachet vidíš v rosteru FLOTILA (✓/⌛).',
       fleetAlpha: 'SROVNAT TUBY (sesazená alfa-salva): vybrané lodě naplánují plnou salvu na SPOLEČNÝ dopad — bližší lodě odpal zpozdí, aby všechny salvy dorazily naráz a ZAHLTILY obranu cíle. Klasický Honorverse úder časovaný na cíl (time-on-target). Vyžaduje vybraný cíl a nabité šachty; vyprázdní zásobníky.',
+      fleetPods: 'PLOŠINY ⇒ CÍLE: každá vybraná loď odpálí VŠECHNY tažené plošiny (6 raket na plošinu) — ale na VLASTNÍ cíl, rozdělené mezi nejbližší klasifikované nepřátele. Zabrání plýtvání, kdy 6×N raket spadne na jednu loď. Vyžaduje živé kontakty; plošiny jsou jednorázové.',
     }
     const squadSeg = fleetCount >= 3
       ? `<span class="obg" title="Velení eskadry: doktríny palby pro celý výběr — cíle si lodě volí samy (deterministicky), i při kompresi času.">${lbl('ESKADRA:', 'E:')}`
@@ -1087,6 +1089,7 @@ export class Panels {
         + `<button data-act="fleetSpread" class="${allMode('spread') ? 'active' : ''}" title="${esc(squadTips.fleetSpread)}"${dis(!noShip)}>${lbl('Rozdělit', 'Rozd.')}</button>`
         + `<button data-act="fleetSalvo" title="${esc(squadTips.fleetSalvo)}"${dis(canFire)}>${lbl('Salva výběru', 'S⊞')}</button>`
         + `<button data-act="fleetAlpha" title="${esc(squadTips.fleetAlpha)}"${dis(canFire)}>${lbl('Srovnat tuby', 'Alfa')}</button>`
+        + `<button data-act="fleetPods" title="${esc(squadTips.fleetPods)}"${dis(squadPods > 0)}>${lbl('Plošiny ⇒ cíle', 'P⇒')}</button>`
         + `<button data-act="fleetFocus" title="${esc(squadTips.fleetFocus)}"${dis(canFire)}>${lbl('Soustředit', 'Soustř.')}</button>`
         + `<button data-act="fleetHold" title="${esc(squadTips.fleetHold)}"${dis(!noShip)}>${lbl('Držet palbu', '✋')}</button>`
         + xN

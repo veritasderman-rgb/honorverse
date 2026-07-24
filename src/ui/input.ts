@@ -11,6 +11,7 @@ import { contactEstPos, type PanelAction, type Panels, type UiState } from './pa
 import {
   boxSelectShips, normalizeSelection, resolveOwnShipId, rosterPick, toggleShipSelection,
 } from './roster'
+import { spreadPodTargets } from '../sim/firecontrol'
 
 const COMP_LADDER = [0, 1, 10, 100, 1000, 10000]
 
@@ -291,6 +292,17 @@ export class UIController {
       const ids = this.selectedShips().map(sh => sh.id)
       if (ids.length > 0) this.send({ kind: 'alphaStrike', shipIds: ids, targetId: t })
       this.refresh()
+      return
+    }
+    // rozprostřený odpal plošin: každá vybraná loď s plošinami na VLASTNÍ cíl,
+    // rozdělené mezi nejbližší klasifikované nepřátele (ne 6×N raket na jednu loď).
+    // Přiřazení je deterministické (spreadPodTargets); pošleme stávající launchPods.
+    if (act === 'fleetPods') {
+      const ids = this.selectedShips().filter(sh => sh.pods > 0).map(sh => sh.id)
+      if (ids.length === 0) return
+      const assign = spreadPodTargets(ids, s.contacts.player, own.pos)
+      for (const a of assign) this.send({ kind: 'launchPods', shipId: a.shipId, targetId: a.targetId })
+      if (assign.length > 0) this.refresh()
       return
     }
     if (act === 'fleetHold') {
