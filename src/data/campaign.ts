@@ -75,27 +75,65 @@ function mulberry32(seed: number): () => number {
   }
 }
 
+/** hvězda galaktického pozadí: pozice, poloměr, jas (0..1) a barevný nádech */
+export interface GalaxyStar { x: number; y: number; r: number; b: number; hue: number }
+
 /**
- * Dekorativní hvězdné pole na pozadí mapy (deterministické z pevného seedu —
- * stabilní mezi rendery, nezávislé na sim RNG). Menší tečky = vzdálené hvězdy.
+ * Procedurální spirální galaxie na pozadí mapy — mise jsou jednotlivé soustavy
+ * v jejích ramenech. Deterministické z pevného seedu (stabilní mezi rendery,
+ * nezávislé na sim RNG). Dvě logaritmická ramena hustě u jádra, řídnoucí ven;
+ * galaxie je zploštělá (pohled zešikma) a mírně natočená mimo osu koridoru.
  */
-export const STARFIELD: { x: number; y: number; r: number }[] = (() => {
-  const rnd = mulberry32(0x5741_4c4c) // "WALL"
-  const stars: { x: number; y: number; r: number }[] = []
-  for (let i = 0; i < 90; i++) {
+export const GALAXY: GalaxyStar[] = (() => {
+  const rnd = mulberry32(0x47414c58) // "GALX"
+  const stars: GalaxyStar[] = []
+  const CX = 500, CY = 300
+  const ARMS = 2
+  const MAXR = 540
+  const SQUASH = 0.6          // zploštění do elipsy (pohled zešikma)
+  const WIND = 3.1            // vinutí ramen
+  const N = 460
+  for (let i = 0; i < N; i++) {
+    const arm = i % ARMS
+    const t = rnd() ** 1.3     // víc bodů blíž jádru
+    const radius = 26 + t * MAXR
+    // úhel podél ramene + rozostření ramene (u jádra užší)
+    const spread = (rnd() - 0.5) * (0.5 + (radius / MAXR) * 0.7)
+    const theta = arm * ((Math.PI * 2) / ARMS) + (radius / MAXR) * WIND + spread
+    const jitter = (rnd() - 0.5) * (18 + radius * 0.14)
+    const rr = radius + jitter
+    const x = CX + Math.cos(theta) * rr
+    const y = CY + Math.sin(theta) * rr * SQUASH
+    // jas a velikost klesají ven; barva teplá u jádra, chladná na okraji
+    const core = 1 - radius / MAXR
+    const b = Math.max(0.12, core * (0.65 + rnd() * 0.35))
+    const r = 0.4 + core * 1.7 + rnd() * 0.35
+    const hue = 210 + core * 40 + (rnd() - 0.5) * 30  // 195(okraj)–250(jádro)
     stars.push({
-      x: Math.round(rnd() * 1000),
-      y: Math.round(rnd() * 600),
-      r: Math.round((0.3 + rnd() * 1.1) * 10) / 10,
+      x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10,
+      r: Math.round(r * 10) / 10, b: Math.round(b * 100) / 100,
+      hue: Math.round(hue),
+    })
+  }
+  // řídké vzdálené pole hvězd po celém rámu (mimo galaxii)
+  for (let i = 0; i < 70; i++) {
+    stars.push({
+      x: Math.round(rnd() * 1000), y: Math.round(rnd() * 600),
+      r: Math.round((0.3 + rnd() * 0.5) * 10) / 10,
+      b: Math.round((0.14 + rnd() * 0.3) * 100) / 100,
+      hue: 205 + Math.round((rnd() - 0.5) * 40),
     })
   }
   return stars
 })()
 
-/** mlhoviny na pozadí mapy (soft elipsy) — barevný nádech sektoru */
+/** natočení celé galaxie na mapě (stupně) — vizuálně mimo osu koridoru misí */
+export const GALAXY_TILT = -16
+
+/** mlhovinný prach v rovině galaxie (soft elipsy) — barevný nádech ramen */
 export const NEBULAE: { x: number; y: number; rx: number; ry: number; hue: number }[] = [
-  { x: 250, y: 470, rx: 240, ry: 150, hue: 205 }, // Pomezí — chladná modrá
-  { x: 780, y: 210, rx: 280, ry: 180, hue: 275 }, // hloubka sektoru — fialová
+  { x: 500, y: 300, rx: 470, ry: 250, hue: 250 }, // hlavní disk — fialová
+  { x: 300, y: 340, rx: 240, ry: 150, hue: 205 }, // rameno — chladná modrá
 ]
 
 /** je mise odemčená? (start nebo splněný požadavek); vyčištěné zůstávají hratelné */

@@ -167,9 +167,11 @@
     .starmap { position: relative; width: 100%; margin-bottom: 12px; }
     .starmap-svg { display: block; width: 100%; height: auto; aspect-ratio: 1000 / 600;
       overflow: visible; border: 1px solid #17331c; border-radius: 4px;
-      background: radial-gradient(ellipse 70% 60% at 50% 45%, #0a1420 0%, #060b12 55%, #03060a 100%); }
-    .starmap-svg .neb { opacity: .16; filter: blur(26px); }
-    .starmap-svg .star { fill: #cfe6ff; opacity: .55; }
+      background: radial-gradient(ellipse 75% 70% at 50% 50%, #0b1526 0%, #070c16 55%, #02040a 100%); }
+    /* spirální galaxie */
+    .starmap-svg .neb { opacity: .14; filter: blur(34px); }
+    .starmap-svg .gx-core { fill: url(#gxCore); filter: blur(10px); }
+    .starmap-svg .gx-core2 { fill: #fff6e6; opacity: .5; filter: blur(8px); }
     /* hyperkoridory */
     .starmap-svg .lane { stroke-width: 2; fill: none; }
     .starmap-svg .lane.done { stroke: #3fae7a; stroke-opacity: .85;

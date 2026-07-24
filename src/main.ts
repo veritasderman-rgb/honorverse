@@ -22,7 +22,7 @@ import {
 } from './data/loadout'
 import { CAMPAIGN_INTRO, DEFEAT_GENERIC, MISSION_STORY } from './data/story'
 import {
-  CAMPAIGN_NODES, isMissionUnlocked, NEBULAE, podReward, STARFIELD,
+  CAMPAIGN_NODES, GALAXY, GALAXY_TILT, isMissionUnlocked, NEBULAE, podReward,
   type CampaignNode,
 } from './data/campaign'
 import { scoreMission } from './sim/score'
@@ -252,12 +252,19 @@ function starMapSvg(cleared: ReadonlySet<string>): string {
     cleared.has(n.id) ? 'done' : avail(n) ? 'open' : 'locked'
   const byId = (id: string): CampaignNode | undefined => CAMPAIGN_NODES.find(n => n.id === id)
 
-  // pozadí — hvězdy a mlhoviny (dekorace z campaign.ts)
-  const stars = STARFIELD.map(s =>
-    `<circle class="star" cx="${s.x}" cy="${s.y}" r="${s.r}"/>`).join('')
+  // pozadí — spirální galaxie: prachový disk + jádro + hvězdy v ramenech
   const nebulae = NEBULAE.map(n =>
     `<ellipse class="neb" cx="${n.x}" cy="${n.y}" rx="${n.rx}" ry="${n.ry}" `
     + `style="fill:hsl(${n.hue} 60% 45%)"/>`).join('')
+  const galaxyStars = GALAXY.map(s =>
+    `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" fill="hsl(${s.hue} 70% 82%)" fill-opacity="${s.b}"/>`
+  ).join('')
+  const core = `<ellipse class="gx-core" cx="500" cy="300" rx="150" ry="92"/>`
+    + `<ellipse class="gx-core2" cx="500" cy="300" rx="60" ry="40"/>`
+  // clip na vnější (neotočené) skupině ořeže do rámu; rotace uvnitř
+  const galaxy = `<g class="galaxy" clip-path="url(#gxClip)">`
+    + `<g transform="rotate(${GALAXY_TILT} 500 300)">`
+    + nebulae + core + galaxyStars + `</g></g>`
 
   // hyperkoridory — čára z uzlu k jeho požadavku, obarvená podle stavu cíle
   const lanes = CAMPAIGN_NODES.filter(n => n.requires).map(n => {
@@ -303,7 +310,16 @@ function starMapSvg(cleared: ReadonlySet<string>): string {
 
   return `<svg class="starmap-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" `
     + `role="group" aria-label="Hvězdná mapa kampaně">`
-    + `<g class="bg">${nebulae}${stars}</g>`
+    + `<defs>`
+    + `<radialGradient id="gxCore" cx="50%" cy="50%" r="50%">`
+    + `<stop offset="0%" stop-color="#fff6e6" stop-opacity="0.95"/>`
+    + `<stop offset="28%" stop-color="#ffe6b0" stop-opacity="0.5"/>`
+    + `<stop offset="70%" stop-color="#d8b46a" stop-opacity="0.12"/>`
+    + `<stop offset="100%" stop-color="#d8b46a" stop-opacity="0"/>`
+    + `</radialGradient>`
+    + `<clipPath id="gxClip"><rect x="0" y="0" width="1000" height="600"/></clipPath>`
+    + `</defs>`
+    + galaxy
     + `<g class="lanes">${lanes}</g>`
     + `<g class="systems">${systems}</g>`
     + hereMark
