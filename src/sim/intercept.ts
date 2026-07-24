@@ -39,7 +39,7 @@ export function interceptSolution(
   /** přebytek dráhy: kladný ⇔ za čas t doletíme dál, než je cíl */
   const f = (t: number): number => 0.5 * accel * t * t - len(add(R, scale(V, t)))
 
-  // --- tlumená iterace pevného bodu ---
+  // --- tlumená iterace pevného bodu (dá horní odhad kořene) ---
   let t = Math.sqrt((2 * d0) / accel)
   for (let i = 0; i < 64; i++) {
     const d = len(add(R, scale(V, t)))
@@ -56,19 +56,28 @@ export function interceptSolution(
   const converged =
     Number.isFinite(t) && t >= 0 && Math.abs(f(t)) <= 1e-4 * (0.5 * accel * t * t + d0)
 
-  if (!converged) {
-    // --- fallback: najdi první znaménkovou změnu f a bisekuj ---
+  // --- vždy preferuj NEJČASNĚJŠÍ kořen ---
+  // Rovnice může mít víc kořenů: časný = „dojezd po směru letu" (průlet /
+  // korekce), pozdní = „otočka a brzdění" (aim míří retrográdně). Iterace
+  // pevného bodu při vysoké rychlosti konverguje k POZDNÍMU — loď pak
+  // couvala mezi waypointy a flip-and-burn dělala i na cíl přímo před sebou.
+  // Projdi mřížku od 0 po (konvergovaný odhad | 24h) a bisekuj PRVNÍ přechod.
+  {
+    const T = converged ? t : MAX_INTERCEPT_TIME
     let lo = 0
     let hi = Number.NaN
     for (let i = 1; i <= 256; i++) {
-      const probe = (MAX_INTERCEPT_TIME * i) / 256
+      const probe = (T * i) / 256
       if (f(probe) >= 0) {
         hi = probe
         break
       }
       lo = probe
     }
-    if (!Number.isFinite(hi)) return null // do 24 h nedosažitelný
+    if (!Number.isFinite(hi)) {
+      if (!converged) return null // do 24 h nedosažitelný
+      hi = t // kořen numericky přesně na konvergovaném odhadu
+    }
     for (let i = 0; i < 128; i++) {
       const mid = 0.5 * (lo + hi)
       if (f(mid) >= 0) hi = mid

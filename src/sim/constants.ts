@@ -9,6 +9,14 @@ export const C = 299_792.458
 /** max. rychlost válečné lodi (částicové clony) */
 export const SHIP_MAX_SPEED = 0.5 * C
 
+/**
+ * Průletová rychlost bojového interceptu (km/s): guvernér dojezdu — loď
+ * brzdí (kilt k cíli), jakmile by NEBRZDĚNÝ dolet překročil tuhle relativní
+ * rychlost. Drží tempo střetu stěn (řízené sblížení místo prosvištění
+ * tisíci km/s skrz obálku protivníka); brzdí se až kdy je to nutné.
+ */
+export const INTERCEPT_PASS_SPEED = 500
+
 /** max. rychlost rakety */
 export const MISSILE_MAX_SPEED = 0.8 * C
 
