@@ -126,7 +126,179 @@ const MISSION01_STEPS: TutorialStep[] = [
   },
 ]
 
+/** MISE 2 — palba a obrana (eskorta konvoje proti nájezdníkům) */
+const MISSION02_STEPS: TutorialStep[] = [
+  {
+    anchor: null,
+    text: {
+      cs: 'Eskorta konvoje: čtyři obchodníci, ty jsi jediná válečná loď. '
+        + 'Zpravodajství hlásí nájezdníky — dnes se naučíš STŘÍLET. '
+        + 'Drž se poblíž konvoje: piráti jdou po obchodnících, ne po tobě.',
+      en: 'Convoy escort: four merchantmen, and you are the only warship. '
+        + 'Intelligence reports raiders — today you learn to SHOOT. Stay '
+        + 'near the convoy: pirates hunt the merchants, not you.',
+    },
+  },
+  {
+    anchor: '[data-fold="contacts"]',
+    text: {
+      cs: 'Až se objeví nepřátelský kontakt (rudý ◆), vyber ho jako cíl — '
+        + 'klepni na něj v seznamu KONTAKTŮ nebo na displeji.',
+      en: 'When a hostile contact appears (red ◆), select it as your '
+        + 'target — tap it in the CONTACTS list or on the display.',
+    },
+    done: (s, ui) => {
+      const tgt = s.ships.find(x => x.id === ui.targetId)
+      return tgt?.side === 'enemy' && !tgt.destroyed
+    },
+  },
+  {
+    anchor: '[data-act="salvo2"]',
+    text: {
+      cs: 'Odpal SALVU 2 raket. Poletí minuty — sleduj je na displeji. '
+        + 'Obrana cíle (protirakety, bodová obrana) část salvy sestřelí; '
+        + 'čím blíž odpálíš, tím míň času na obranu cíli dáš.',
+      en: 'Fire a SALVO of 2 missiles. They fly for minutes — watch them on '
+        + 'the display. The target\'s defences (counter-missiles, point '
+        + 'defence) will kill part of the salvo; the closer you launch, the '
+        + 'less time you give them.',
+    },
+    done: (_s, ui) => ui.report.ourLaunched > 0,
+  },
+  {
+    anchor: '[data-act="autoFire"]',
+    text: {
+      cs: 'Ruční salvy tě u víc cílů zdrží. Zapni AUTO palbu — loď sama '
+        + 'opakuje salvy, dokud je cíl v dosahu, a řídí i energetické '
+        + 'baterie zblízka.',
+      en: 'Manual salvos slow you down with multiple targets. Switch AUTO '
+        + 'fire on — the ship repeats salvos while the target is in range '
+        + 'and handles the energy batteries up close.',
+    },
+    done: (s, ui) => own(s, ui)?.fireControl.mode === 'auto',
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'Obrana běží sama: protirakety a bodová obrana sestřelují '
+        + 'příchozí rakety automaticky. Tvoje práce je pozice — loď MEZI '
+        + 'piráty a konvojem chrání obchodníky vlastní obranou.',
+      en: 'Defence runs itself: counter-missiles and point defence engage '
+        + 'incoming fire automatically. Your job is position — a ship '
+        + 'BETWEEN the pirates and the convoy shields the merchants with '
+        + 'its own defences.',
+    },
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'Znič prvního nájezdníka. Sleduj BOJOVOU STATISTIKU vlevo — '
+        + 'vidíš v ní úspěšnost svých salv i skóre obrany.',
+      en: 'Destroy your first raider. Watch the COMBAT STATS panel on the '
+        + 'left — it tracks your salvo hit rate and your defence score.',
+    },
+    done: s => s.ships.some(sh => sh.side === 'enemy' && sh.destroyed),
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'První zářez na pažbě! Dokonči práci: zažeň nebo znič zbytek '
+        + 'nájezdníků a doveď konvoj domů. Hodně štěstí, kapitáne.',
+      en: 'First notch on the stock! Finish the job: drive off or destroy '
+        + 'the remaining raiders and bring the convoy home. Good luck, '
+        + 'captain.',
+    },
+  },
+]
+
+/** MISE 3 — obrana zblízka (eskorta Mercatoru; „obchodník", který nesedí) */
+const MISSION03_STEPS: TutorialStep[] = [
+  {
+    anchor: null,
+    text: {
+      cs: 'Doprovod „poškozeného obchodníka" ke stanici Sázava. Rozkaz zní: '
+        + 'drž se do 2,5 milionu km. Zpravodajství o Mercatoru nemá žádné '
+        + 'záznamy… měj oči otevřené.',
+      en: 'Escort a "damaged merchantman" to Sázava Station. Orders: stay '
+        + 'within 2.5 million km. Intelligence has no records on Mercator '
+        + 'at all… keep your eyes open.',
+    },
+  },
+  {
+    anchor: '[data-act="course"]',
+    text: {
+      cs: 'Tentokrát letíš vlastní trasou: aktivuj KURZ SEM a klepni na '
+        + 'displej poblíž Mercatoru. SHIFT-klepnutím přidáš další body '
+        + 'trasy — loď je proletí širokou zatáčkou bez zastavení.',
+      en: 'This time you fly your own route: activate COURSE and tap the '
+        + 'display near Mercator. SHIFT-tap adds more waypoints — the ship '
+        + 'flies through them in a wide turn without stopping.',
+    },
+    done: (s, ui) => own(s, ui)?.nav?.kind === 'course',
+  },
+  {
+    anchor: '[data-act="sensors"]',
+    text: {
+      cs: 'Loď bez záznamů si zaslouží pořádný pohled. Zapni AKTIVNÍ '
+        + 'SENZORY a drž se blízko — plná identifikace ti může zachránit '
+        + 'život.',
+      en: 'A ship with no records deserves a hard look. Switch ACTIVE '
+        + 'SENSORS on and stay close — full identification may save your '
+        + 'life.',
+    },
+    done: (s, ui) => own(s, ui)?.activeSensors === true,
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'Drž eskortní pozici (do 2,5 M km) a sleduj Mercator. Jestli je '
+        + 'to past, sklapne najednou — a zblízka.',
+      en: 'Hold escort station (within 2.5 M km) and watch Mercator. If '
+        + 'this is a trap, it will spring all at once — and up close.',
+    },
+    // past sklapla: Mercator odhodil masku (doktrína hunter)
+    done: s => s.ships.some(sh => sh.name === 'Mercator' && sh.doctrine === 'hunter'),
+  },
+  {
+    anchor: '[data-act="deployDecoy"]',
+    text: {
+      cs: 'PAST! Mercator je pomocný křižník. Na příchozí salvu vypusť '
+        + 'NÁVNADU — tažený klamný cíl na sebe stáhne část raket. Jedna '
+        + 'návnada ≈ jedna pohlcená raketa.',
+      en: 'A TRAP! Mercator is an auxiliary cruiser. Against the incoming '
+        + 'salvo, deploy a DECOY — a towed false target that soaks up '
+        + 'missiles. One decoy ≈ one absorbed missile.',
+    },
+    done: (s, ui) => own(s, ui)?.decoyActive === true,
+  },
+  {
+    anchor: '[data-act="energy"]',
+    text: {
+      cs: 'Jste blízko — tohle je souboj na nože. Použij ENERGETICKÉ '
+        + 'ZBRANĚ: pod 500 tisíc km pálí lasery a grasery skrz boky '
+        + 'okamžitě, bez letu rakety.',
+      en: 'You are close — this is a knife fight. Use ENERGY weapons: '
+        + 'under 500 thousand km, lasers and grasers hit through flanks '
+        + 'instantly, no missile flight time.',
+    },
+    done: (s, ui) => (own(s, ui)?.energyCooldown ?? 0) > 0,
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'Teď je to bitva jako každá jiná — a ty už víš všechno, co '
+        + 'potřebuješ. Potop Mercator, kapitáne. Admiralita bude chtít '
+        + 'jeho navigační jádro.',
+      en: 'Now it\'s a battle like any other — and you already know '
+        + 'everything you need. Sink Mercator, captain. The Admiralty will '
+        + 'want its navigation core.',
+    },
+  },
+]
+
 /** tutoriály po misích; mise bez záznamu tutoriál nemá */
 export const TUTORIALS: Record<string, TutorialStep[]> = {
   mission01: MISSION01_STEPS,
+  mission02: MISSION02_STEPS,
+  mission03: MISSION03_STEPS,
 }
