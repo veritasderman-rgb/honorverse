@@ -9,6 +9,7 @@ import { sceneFor } from './ui/scenes'
 import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
+import { track } from './ui/analytics'
 import { getLang, t, toggleLang } from './ui/i18n'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
@@ -146,6 +147,9 @@ for (const evt of ['resize', 'orientationchange']) {
   window.addEventListener(evt, () => applyDeviceClasses())
 }
 
+// analytika: start aplikace (po detekci zařízení, ať je device správně)
+track('app_start')
+
 // výsuvné šuplíky HUD sloupců (telefonní breakpoint — záložky ◧/◨)
 for (const [tabId, hudId] of [['tab-tl', 'hud-tl'], ['tab-tr', 'hud-tr']] as const) {
   const tab = document.getElementById(tabId)
@@ -208,6 +212,7 @@ function startCampaignMission(id: string, preset?: LoadoutId): void {
   applyBonusRewards(clone, loadCleared())  // + kořist z bočních operací (plošiny + lodě)
   bridge.startScenario(clone)
   tutorial.start(id)                       // guided steps (má-li je mise a nebyl dokončen)
+  track('mission_start', { loadout: preset ?? loadPreset() }, id)
 }
 
 /** localStorage flag „úvod kampaně už hráč viděl" */
@@ -395,7 +400,11 @@ function showStarMap(): void {
   onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
   onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
   // přepínač jazyka (CS ⟷ EN) — překreslí menu v novém jazyce
-  onTap(el.querySelector('#btn-lang'), () => { toggleLang(); el.remove(); showStarMap() })
+  onTap(el.querySelector('#btn-lang'), () => {
+    track('lang_set', { to: toggleLang() })
+    el.remove()
+    showStarMap()
+  })
   // testovací přepínač: odemkne/zamkne všechny soustavy a překreslí mapu
   onTap(el.querySelector('#btn-unlock-all'), () => {
     setUnlockAll(!unlockAllOn())
@@ -564,6 +573,7 @@ function showSkirmishBuilder(): void {
     el.remove()
     setMenuBg(false)
     bridge.startScenario(buildSkirmish(cfg))
+    track('mission_start', {}, 'skirmish')
   })
   refresh()
 }
@@ -715,6 +725,7 @@ function voPlayer(name: string): HTMLElement {
     wrap.style.display = 'block'
     void audio.play().catch(() => { /* autoplay blokován — zůstane ▶ */ })
     setLabel()
+    track('vo_play', { name })
   }, { once: true })
   for (const ev of ['play', 'pause', 'ended']) audio.addEventListener(ev, setLabel)
   // selhání VŠECH zdrojů hlásí error na posledním <source> — řádek se uklidí
@@ -873,6 +884,16 @@ function showOutcome(state: SimState): void {
     launched: stats.ourLaunched,
     hits: stats.ourHits,
   })
+  // analytika: výsledek mise (anonymně — viz docs/ANALYTICS.md)
+  track('mission_end', {
+    win,
+    t: Math.round(state.t),
+    score: score.total,
+    launched: stats.ourLaunched,
+    hits: stats.ourHits,
+    own_losses: state.ships.filter(s => s.side === 'player' && s.destroyed).length,
+  }, currentMissionId)
+
   // volná bitva nemá skóre do žebříčku (jen rozbor + skóre pro info)
   const isSkirmish = currentMissionId === 'skirmish'
   const scoreHtml = win
