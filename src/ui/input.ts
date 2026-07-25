@@ -9,6 +9,7 @@ import type { SimBridge } from '../worker/bridge'
 import type { TacticalPlot } from './plot'
 import { contactEstPos, type HudView, type PanelAction, type UiState } from './panels'
 import { CombatStatsTracker } from './combatStats'
+import { helpBoxHtml } from './help'
 import {
   boxSelectShips, normalizeSelection, resolveOwnShipId, rosterPick, toggleShipSelection,
 } from './roster'
@@ -587,112 +588,7 @@ export class UIController {
     }
     const el = document.createElement('div')
     el.className = 'overlay'
-    el.innerHTML = `<div class="box help-box"><h2>NÁPOVĚDA</h2>
-      <h4>Klávesy</h4>
-      <div class="help-grid">
-        <b>mezerník</b><span>pauza / pokračovat</span>
-        <b>+ / −</b><span>komprese času (1× až 10 000×)</span>
-        <b>A</b><span>AUTO palba na vybraný cíl</span>
-        <b>1–9</b><span>přepnutí aktivní lodi flotily (panel FLOTILA)</span>
-        <b>H nebo ?</b><span>tato nápověda</span>
-        <b>kolečko</b><span>zoom plotu, tažení = posun kamery</span>
-        <b>klik</b><span>výběr lodi/kontaktu; vlastní loď = převzetí</span>
-        <b>Shift-klik</b><span>přidá/odebere vlastní ovladatelnou loď z hromadného výběru (plot i panel FLOTILA)</span>
-        <b>Shift-tažení</b><span>obdélníkový výběr vlastních lodí na plotu (čárkovaný rám); bez Shiftu posun kamery</span>
-      </div>
-      <h4>Rozkazy</h4>
-      <div class="help-grid">
-        <b>Intercept</b><span>autopilot spočítá stíhací kurz na cíl</span>
-        <b>Kurz sem</b><span>klikni do plotu — loď poletí na bod; u vybrané lodi plot kreslí PREDIKOVANOU KŘIVKU manévru (otáčení + setrvačnost, značka = 1 minuta letu) — čím rychleji letíš, tím širší oblouk</span>
-        <b>Trasa (Shift)</b><span>v režimu kurzu SHIFT-klik přidává další waypointy (kosočtverce spojené čarou); obyčejný klik zadá poslední bod a režim ukončí — predikovaná křivka ukáže skutečný průlet body včetně setrvačnosti</span>
-        <b>Salva 2/4/plná</b><span>odpal raket na vybraný cíl; POHON VOLÍ ŘÍZENÍ PALBY SAMO — zblízka (do ~1,6 M km) rychlé HI, na dálku LO (dostřel ~7 M km)</span>
-        <b>ŠKOLA VZDÁLENOSTI</b><span>obrana cíle slábne s krátícím se letem salvy: nad ~7 M km jen balistický dojezd (mizivá šance), na 5+ M km má obrana plný reakční čas, pod ~1,5 M km protirakety stihnou max. 1 pokus a bodová obrana střílí nepřipravená — ZBLÍZKA JE SALVA VRAŽEDNÁ</span>
-        <b>Plošiny</b><span>tažené raketové plošiny (6 raket/ks; DD 1, CL 2, CA 4, BC 6, DN 8): odpal VŠECH najednou mimo šachty — drtivá první salva, která saturuje obranu; jednorázové</span>
-        <b>Salva X+Y</b><span>vrstvená salva: LO vlna + zpožděná HI vlna dorazí spolu a saturují bodovou obranu</span>
-        <b>Obě salvy</b><span>dvojitá boční salva: levobok LO, otočka (8 s, bez palby), pravobok HI na společný dopad — dvojnásobná vlna</span>
-        <b>AUTO palba</b><span>loď sama opakuje salvy, dokud je cíl v poháněné obálce — a řídí i ENERGETICKÉ baterie (pálí na cíl či nejbližšího nepřítele v dosahu 500 tis. km)</span>
-        <b>Energie</b><span>lasery/grasery — drtivé pod 100 tis. km, max. 500 tis. km</span>
-        <b>Návnada</b><span>tažená návnada: příchozí raketa na ni může přeskočit (šance dle kvality ECM lodi, víc při slabém zámku) a návnadu ZNIČÍ — jedna návnada ≈ jedna raketa, další lze vypustit hned; omezená zásoba</span>
-        <b>+rušička</b><span>salva obětuje 1 raketu jako eskortní rušičku — zbytek má proti bodové obraně cíle Pk ×0,75 (min. 3 rakety)</span>
-        <b>Klín VYP</b><span>EMCON: skoro neviditelná, ale bez akcelerace a bočních štítů</span>
-        <b>Akt. senzory</b><span>plná identifikace zblízka + lepší zámek našich raket; pozor — vyzařování zlepšuje řešení nepříteli o 15 %</span>
-      </div>
-      <h4>Výkon pohonu a rozpočet reaktoru</h4>
-      <div class="help-grid">
-        <b>Akcelerace, ne rychlost</b><span>klín dává ZRYCHLENÍ — rychlost se střádá (torpédoborec na 100 % ≈ +300 km/s každou minutu) a otočka/brzdění trvá stejně dlouho jako rozjezd; kdo zrychlí dřív, jeho náskok roste kvadraticky — honičky se vyhrávají v prvních minutách</span>
-        <b>Vektor jako zbraň</b><span>rakety DĚDÍ vektor lodi: odpal po směru letu doletí dál a dorazí rychleji (obálka na plotu se natahuje) — někdy je cílem se NEPOTKAT: prolétnout kolem s převýšením rychlosti, udeřit po směru a nenechat se zatáhnout do boje za podmínek pomalejšího</span>
-        <b>tah 20–120 %</b><span>stupňovitý přepínač v liště rozkazů; 80 % je standard s bezpečnostní rezervou kompenzátoru</span>
-        <b>100 %</b><span>plný projektovaný výkon — bez rizika, ale bez rezervy</span>
-        <b>120 % (červeně)</b><span>NOUZOVÝ výkon „za červenou čarou": +20 % akcelerace, ale se zapnutým klínem hrozí poškození impelerového prstence (v průměru ~1× za 33 minut) — inženýr varuje</span>
-        <b>Tah vs. boční štíty</b><span>reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ boční štíty 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 % — rychlý přílet znamená papírové boky (readout „výkon bočních štítů" v panelu lodi)</span>
-        <b>Hromadně</b><span>přepínač platí pro celý hromadný výběr — „(×N)" u tlačítka</span>
-      </div>
-      <h4>Poškození a opravy</h4>
-      <div class="help-grid">
-        <b>Boční štíty tlumí, neblokují</b><span>boční zásah VŽDY něco prosákne (silný boční štít slabý paprsek čtvrtí); absorbovaná energie navíc generátory bočního štítu opotřebovává — soustavná palba štít postupně mele</span>
-        <b>Umírání po částech</b><span>loď vydrží řádově 10–15 zásahů; každý prošlý paprsek má slušnou šanci vyřadit kus vybavení (šachty, impelery, senzory…) — bojeschopnost klesá dřív, než dojde trup</span>
-        <b>Poškozené impelery</b><span>akcelerace klesá s průměrem obou prstenců — loď se zásahem do pohonu reálně zpomaluje v manévru</span>
-        <b>Polní opravy</b><span>poškozené subsystémy se BĚHEM boje samy opravují (~7 % za minutu do 70 %, pak dolaďování polovičním tempem do 90 % — plných 100 % vrátí jen dok); šipka ↗ u baru = čety na systému pracují; buff inženýra opravy ×4</span>
-        <b>Priorita oprav</b><span>v panelu VLASTNÍ LOĎ (řádek „opravy:"): Rovnoměrně / Zbraně / Pohon / Obrana — prioritní skupina se opravuje ×3, ostatní ×0,5 (čety nejsou nafukovací); TRUP se v poli opravit nedá — strukturální poškození spraví jen loděnice</span>
-      </div>
-      <h4>Eskadra a formace</h4>
-      <div class="help-grid">
-        <b>Hromadný výběr</b><span>Shift-klik / Shift-tažení; rozkazy s „(×N)" (kurz, intercept, tah, klín, senzory, AUTO, roll) platí všem vybraným</span>
-        <b>Palba výběru</b><span>salvy pálí jen aktivní loď — hromadná palba jde přes AUTO palbu na vybraný cíl</span>
-        <b>FORMACE</b><span>při výběru ≥ 2 lodí: aktivní loď = leader, ostatní dostanou sloty a drží je samy (vlastní kurz ignorují); rozpad při ztrátě leadera</span>
-        <b>Stěna Σ</b><span>kolmá řada (400 tis. km): disciplinovaná palebná síť — protirakety Pk ×1,15, příchozí rakety −5 % zámku</span>
-        <b>Šíp V</b><span>šíp za leaderem (60°): sdílený senzorový obraz — +5 % palebného řešení členů</span>
-        <b>Rozptyl ◦</b><span>mřížka 1,5 M km: útočník nesaturuje eskadru jako celek, členové +3 % efektivního ECM</span>
-        <b>Plot</b><span>členové mají tenkou čáru k leaderovi; v panelu FLOTILA značky Σ / V / ◦</span>
-        <b>ESKADRA (≥ 3 lodě)</b><span>doktríny palby pro celý výběr — lodě si cíle volí SAMY a po zničení plynule přejdou na další: Nejbližší (každá na svůj nejbližší kontakt), Největší (všechny na nejtěžší trup — koncentrace saturuje obranu), Rozdělit (každá loď jiný cíl — proti hejnu slabších), Salva výběru (všechny nabité lodě TEĎ plnou salvu na vybraný cíl — koordinovaný úder bez přepínání), Soustředit (AUTO všech na tebou vybraný cíl), Držet palbu (vše vypnout)</span>
-        <b>Roster = velín</b><span>panel FLOTILA ukazuje u každé lodi rakety, plošiny (+NP), režim palby a připravenost šachet (✓ = nabito, ⌛ = přebíjí) — koordinuješ eskadru bez přepínání lodí</span>
-        <b>Doktrína + energie</b><span>doktríny řídí i energetické baterie a pálí dál energií, i když dojdou rakety; v rosteru FLOTILA vidíš režim každé lodi (AUTO·nejbl. …)</span>
-      </div>
-      <h4>Senzorový duel (EMCON)</h4>
-      <div class="help-grid">
-        <b>Palebné řešení</b><span>počáteční zámek raket: 70 % jen z pasivních dat, 100 % s aktivními senzory a cílem v jejich dosahu</span>
-        <b>Vyzařující cíl</b><span>cíl se zapnutými aktivními senzory dává +15 % k řešení PROTI sobě — ticho má cenu</span>
-        <b>Kvalitní track</b><span>plná identifikace cíle (ident.) přidává +10 %; poškozené senzory řešení srážejí</span>
-        <b>Aktivní vedení</b><span>střelec s aktivy a cílem v dosahu drží track — ECM cíle eroduje zámek raket pomaleji</span>
-        <b>AI to hraje taky</b><span>nepřítel „rozsvítí" aktivy, když zahajuje palbu, a zhasne při ústupu — čti to na plotu ([AKT])</span>
-      </div>
-      <h4>Řízení salv</h4>
-      <div class="help-grid">
-        <b>Výběr salvy</b><span>klikni na vlastní raketu v plotu — panel SALVA ukáže počet, zámek, fázi a čas do cíle</span>
-        <b>Přesměrování</b><span>letící salvu lze poslat na jiný klasifikovaný cíl (zámek ×0,75) — jen do 10 M km od lodi</span>
-        <b>Řízená salva</b><span>loď ji vede: při ztrátě kontaktu na cíl nebo za dosahem řízení zámek eroduje</span>
-        <b>Dno zámku</b><span>posádky se ECM propálí: řízená salva s aktivními senzory neklesne pod 40 % zámku, raketa s vlastním seekerem pod 30 %; jen balistický dojezd bez vedení eroduje dál</span>
-        <b>Odhad průniku</b><span>detail cíle ukazuje očekávaný průnik plné salvy (CM · PDLC · ECM) — odhad, ne slib</span>
-        <b>Autonomní salva</b><span>zámek ×0,85 při odpalu, ale letí sama — „vystřel a zhasni" s vypnutým klínem</span>
-        <b>⚠ v topbaru</b><span>auto-zpomalování času u důležitých událostí — přepínač ZAP/VYP (odpaly už nezpomalují)</span>
-      </div>
-      <h4>Mechaniky</h4>
-      <div class="help-grid">
-        <b>Poháněná obálka</b><span>dostřel raket = pohon + vektor lodi při odpalu; odpal „po směru" dostřel natahuje</span>
-        <b>Vrstvená obrana</b><span>ECM → protirakety → PDLC → klín; z velké salvy projde jen zlomek — ale projde: úspěšná salva poškozuje, opotřebovávací boj</span>
-        <b>Reakční čas obrany</b><span>protirakety stihnou max. 2 pokusy na raketu — a jen když mají čas: rychlá HI salva zblízka (pod ~1 M km) nechá obraně čas na JEDEN pokus, pod ~300 tis. km na žádný. Zblízka se zabíjí</span>
-        <b>Asymetrie stran</b><span>Avalon sází na technologickou převahu (lepší raketová elektronika — zámek salv ×1,08), Impérium na tonáž a kvantitu (víc trupů a šachet, horší senzory); pirátská elektronika je o generaci pozadu (×0,9)</span>
-        <b>Saturace</b><span>víc raket ve stejném okně = PDLC nestíhá (vrstvená salva!)</span>
-        <b>Poškození</b><span>subsystémy po částech; posádka provizorně opravuje do 70 %</span>
-        <b>Trysky</b><span>s vypnutým klínem má loď ~5 g na korekce driftu — neviditelné, ale plánuj hodiny dopředu</span>
-        <b>Light-lag</b><span>kontakty jsou staré vzdálenost/c sekund — u 30 M km ~100 s</span>
-        <b>Hyperlimit</b><span>jantarová čára — za ní lodě unikají do hyperprostoru</span>
-      </div>
-      <h4>Kapitulace</h4>
-      <div class="help-grid">
-        <b>Výzva</b><span>v detailu cíle „Vyzvat ke kapitulaci" — jen na klasifikovaný nepřátelský kontakt</span>
-        <b>Šance</b><span>≈ (poškození − 20 %) × morálka posádky; +15 % při vyřazených šachtách či prázdných zásobnících</span>
-        <b>Odpověď</b><span>letí rychlostí světla tam i zpět (2×vzdálenost/c); další výzva na týž cíl až po 180 s</span>
-        <b>Po kapitulaci</b><span>loď vypne klín a přestane bojovat — na plotu šedá se symbolem ▽; nestřílej na ni</span>
-      </div>
-      <h4>Bojová statistika</h4>
-      <div class="help-grid">
-        <b>Panel nad logem</b><span>NAŠE PALBA: odpáleno / sestřeleno / zásahy / úspěšnost; PŘÍCHOZÍ: odpáleno na nás / pobráno obranou / zásahy do nás</span>
-        <b>Šachty</b><span>panel vlastní lodi ukazuje „šachty N/M funkční" — poškozené šachty zmenšují salvu</span>
-        <b>Nabíjení</b><span>bary „šachty nabití" a „energetika nabití" v panelu vlastní lodi — plný bar = zbraň připravena</span>
-      </div>
-      <div style="margin-top:12px"><button id="btn-help-close">ZAVŘÍT (Esc)</button></div>
-    </div>`
+    el.innerHTML = helpBoxHtml()
     el.querySelector('#btn-help-close')?.addEventListener('click', () => {
       el.remove()
       this.helpEl = null

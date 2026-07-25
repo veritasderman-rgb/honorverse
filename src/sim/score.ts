@@ -21,8 +21,13 @@ export interface ScoreInput {
 }
 
 export interface ScoreLine {
+  /** český popisek (kanonický — UI ho při angličtině překládá dle key/n) */
   label: string
   points: number
+  /** stabilní klíč složky pro překlad v UI (score.<key>) */
+  key: 'win' | 'objectives' | 'speed' | 'losses' | 'noLosses' | 'accuracy' | 'difficulty'
+  /** číselný parametr složky (počet cílů/ztrát, % přesnosti, násobič) */
+  n?: number
 }
 
 export interface MissionScore {
@@ -56,28 +61,42 @@ export function scoreMission(input: ScoreInput): MissionScore {
   const cfg = MISSION_PAR[input.missionId] ?? { par: 7_000, mult: 1.0 }
 
   const breakdown: ScoreLine[] = []
-  breakdown.push({ label: 'vítězství', points: 1000 })
+  breakdown.push({ label: 'vítězství', points: 1000, key: 'win' })
   if (input.objectivesDone > 0) {
-    breakdown.push({ label: `splněné cíle (${input.objectivesDone}×)`, points: 250 * input.objectivesDone })
+    breakdown.push({
+      label: `splněné cíle (${input.objectivesDone}×)`,
+      points: 250 * input.objectivesDone, key: 'objectives', n: input.objectivesDone,
+    })
   }
   // rychlost: plných 800 do par času, lineárně k nule na 3× par
   const speed = Math.round(800 * clamp01((3 * cfg.par - input.t) / (2 * cfg.par)))
-  if (speed > 0) breakdown.push({ label: 'rychlost', points: speed })
+  if (speed > 0) breakdown.push({ label: 'rychlost', points: speed, key: 'speed' })
   // ztráty: −150 za loď; bez ztrát +300
   if (input.ownLosses > 0) {
-    breakdown.push({ label: `ztráty (${input.ownLosses}×)`, points: -150 * input.ownLosses })
+    breakdown.push({
+      label: `ztráty (${input.ownLosses}×)`,
+      points: -150 * input.ownLosses, key: 'losses', n: input.ownLosses,
+    })
   } else {
-    breakdown.push({ label: 'bez ztrát', points: 300 })
+    breakdown.push({ label: 'bez ztrát', points: 300, key: 'noLosses' })
   }
   // přesnost: 10 % zásahů = 500 b, 20 %+ = plných 1000
   const hitRate = input.launched > 0 ? input.hits / input.launched : 0
   const acc = Math.round(1000 * clamp01(hitRate * 5))
-  if (acc > 0) breakdown.push({ label: `přesnost raket (${Math.round(hitRate * 100)} %)`, points: acc })
+  if (acc > 0) {
+    breakdown.push({
+      label: `přesnost raket (${Math.round(hitRate * 100)} %)`,
+      points: acc, key: 'accuracy', n: Math.round(hitRate * 100),
+    })
+  }
 
   const subtotal = breakdown.reduce((s, l) => s + l.points, 0)
   const total = Math.max(1, Math.round(subtotal * cfg.mult))
   if (cfg.mult !== 1.0) {
-    breakdown.push({ label: `obtížnost ×${cfg.mult.toFixed(1).replace('.', ',')}`, points: total - subtotal })
+    breakdown.push({
+      label: `obtížnost ×${cfg.mult.toFixed(1).replace('.', ',')}`,
+      points: total - subtotal, key: 'difficulty', n: cfg.mult,
+    })
   }
   return { total, breakdown }
 }

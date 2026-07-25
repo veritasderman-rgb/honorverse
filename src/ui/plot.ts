@@ -16,6 +16,7 @@ import {
   type HullPalette,
 } from './hull3d'
 import { sceneFor, type SceneDef } from './scenes'
+import { t, tf } from './i18n'
 import { bodyStyleFor, drawBody } from './celestial'
 import type {
   Contact, DecorField, Hyperlimit, MissileState, ShipState, SimState, Vec2,
@@ -97,10 +98,10 @@ const HULL_PAL: Record<string, HullPalette> = {
  */
 function telegraph(foe: ShipState): { text: string; warn: boolean } | null {
   if (foe.destroyed) return null
-  if (foe.rolledTo !== null) return { text: '⟳ roluje – klín k nám', warn: true }
-  if (foe.pendingWave) return { text: '⚠ chystá salvu', warn: true }
-  if (foe.doctrine === 'runner') return { text: '⇗ prchá', warn: false }
-  if (foe.activeSensors) return { text: '◎ vysílá', warn: false }
+  if (foe.rolledTo !== null) return { text: t('plot.rolled'), warn: true }
+  if (foe.pendingWave) return { text: t('plot.preparing'), warn: true }
+  if (foe.doctrine === 'runner') return { text: t('plot.fleeing'), warn: false }
+  if (foe.activeSensors) return { text: t('plot.radiating'), warn: false }
   return null
 }
 
@@ -851,7 +852,7 @@ export class TacticalPlot {
     }
     // popisek měřítka pod topbarem (y=64) — v y=14 ho překrýval topbar,
     // na mobilu (vyšší tlačítka) úplně
-    ctx.fillText('dílek = ' + fmtDist(step) + '   měřítko ' + fmtDist(this.kmPerPx) + '/px', 4, 64)
+    ctx.fillText(tf('plot.scale', { a: fmtDist(step), b: fmtDist(this.kmPerPx) }), 4, 64)
   }
 
   /** čárkovaná jantarová hyperlimitní čára/kružnice s popiskem */
@@ -1359,11 +1360,13 @@ export class TacticalPlot {
     if (surrendered) {
       // vlajka kapitulace nad značkou
       ctx.fillText('▽', p.x - 4, p.y - 10)
-      ctx.fillText(`${cls} · kapituloval`, p.x + 10, p.y + 14)
+      ctx.fillText(`${cls} · ${t('contact.surrendered')}`, p.x + 10, p.y + 14)
     } else if (memory) {
       // paměťový pin: poslední známé zakreslení (statika trvale, lodě stárnou)
       ctx.fillText(
-        c.staticObject === true ? `${cls} · zakresleno` : `${cls} · paměť ${Math.round(c.age)} s`,
+        c.staticObject === true
+          ? `${cls} · ${t('plot.charted')}`
+          : `${cls} · ${tf('plot.memory', { s: Math.round(c.age) })}`,
         p.x + 10, p.y + 14)
     } else {
       ctx.fillText(`${cls} · ${Math.round(c.age)} s`, p.x + 10, p.y + 14)
