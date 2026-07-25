@@ -305,8 +305,13 @@ export class Panels implements HudView {
     el.className = `toast ${cls}`
     el.innerHTML = html
     this.toasts.appendChild(el)
-    // max 4 toasty najednou
-    while (this.toasts.children.length > 4) this.toasts.firstElementChild?.remove()
+    // max 4 toasty najednou; při úklidu přednostně obětuj běžné zprávy —
+    // intro karty postav se ukazují jen jednou za misi a nesmí zmizet neviděné
+    while (this.toasts.children.length > 4) {
+      const kids = [...this.toasts.children]
+      const victim = kids.find(k => !k.classList.contains('toast-intro')) ?? kids[0]
+      victim.remove()
+    }
     setTimeout(() => { el.classList.add('fade'); setTimeout(() => el.remove(), 600) }, ms)
   }
 
@@ -361,23 +366,27 @@ export class Panels implements HudView {
 
       // komunikace → comm log + výrazný toast
       if (ev.kind === 'comm' && ev.speaker) {
+        this.commLog.unshift({ t: ev.t, speaker: ev.speaker, text: ev.text })
+        if (this.commLog.length > 8) this.commLog.length = 8
         // PRVNÍ replika mluvčího v misi → intro karta postavy (jméno, role,
-        // medailonek) — postavy se představují, jak vstupují do příběhu
+        // medailonek) — a NESE rovnou i tu repliku: jeden toast místo dvou,
+        // jinak by kartu v dávce komunikací vytlačil strop 4 toastů dřív,
+        // než by se stihla ukázat
         const ch = CHARACTERS[ev.speaker]
         if (ch && !this.introduced.has(ev.speaker)) {
           this.introduced.add(ev.speaker)
           this.showToast(
             `${avatarHtml(ev.speaker)}<span class="toast-body">`
             + `<b>${esc(ch.name)}</b><span class="intro-role">${esc(t(ch.roleKey))}</span>`
-            + `<span class="intro-bio">${esc(ch.bio[getLang()])}</span></span>`,
-            'toast-comm toast-intro', 11000)
+            + `<span class="intro-bio">${esc(ch.bio[getLang()])}</span>`
+            + `<span>${esc(ev.text)}</span></span>`,
+            'toast-comm toast-intro', 12000)
+        } else {
+          this.showToast(
+            `${avatarHtml(ev.speaker)}<span class="toast-body"><b>${esc(speakerName(ev.speaker))}</b>`
+            + `<span>${esc(ev.text)}</span></span>`,
+            'toast-comm', 9000)
         }
-        this.commLog.unshift({ t: ev.t, speaker: ev.speaker, text: ev.text })
-        if (this.commLog.length > 8) this.commLog.length = 8
-        this.showToast(
-          `${avatarHtml(ev.speaker)}<span class="toast-body"><b>${esc(speakerName(ev.speaker))}</b>`
-          + `<span>${esc(ev.text)}</span></span>`,
-          'toast-comm', 9000)
       }
       // vlastní zásah → červený toast „ZÁSAH — …"
       if (ev.kind === 'subsystemHit' && ev.side === 'player') {
