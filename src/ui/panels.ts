@@ -23,6 +23,7 @@ import type { AudioManager } from './audio'
 import { type CombatStats } from './combatStats'
 import { getLang, t } from './i18n'
 import { CHARACTERS } from '../data/characters'
+import { objectiveText } from '../data/briefings'
 
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
 export interface UiState {
@@ -1150,7 +1151,8 @@ export class Panels implements HudView {
   private panelObjectives(state: SimState): string {
     const rows = state.objectives.map(o => {
       const mark = o.state === 'done' ? '■' : o.state === 'failed' ? '✗' : '□'
-      return `<div class="obj ${o.state}">${mark} ${esc(o.text)}</div>`
+      // texty cílů se překládají dle (scenarioId, id) — fallback český text
+      return `<div class="obj ${o.state}">${mark} ${esc(objectiveText(state.scenarioId, o.id, o.text))}</div>`
     }).join('')
     return this.panel('objectives', t('panel.objectives'), rows || '<div class="dim">—</div>')
   }
