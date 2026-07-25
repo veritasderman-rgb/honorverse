@@ -155,6 +155,15 @@
     .story-section .story { margin-top: 8px; font-size: 12px; }
     .overlay button { padding: 6px 22px; font-size: 13px; }
     .brief-img { width: 100%; max-height: 260px; object-fit: cover; border: 1px solid #2a5a2e; margin-bottom: 12px; display: block; }
+    /* Ken Burns: pomalý pan/zoom scény briefingu (filmový prolog k VO).
+       Kontejner ořezává přesah transformace; respektuje reduced-motion. */
+    #prep-media { overflow: hidden; }
+    .brief-img.kb { animation: kenburns 26s ease-in-out infinite alternate; will-change: transform; }
+    @keyframes kenburns {
+      from { transform: scale(1) translate(0, 0); }
+      to { transform: scale(1.09) translate(-1.6%, -1.2%); }
+    }
+    @media (prefers-reduced-motion: reduce) { .brief-img.kb { animation: none; } }
     .brief-vid { width: 100%; max-height: 300px; object-fit: cover; border: 1px solid #2a5a2e; margin-bottom: 12px; display: block; background: #05080a; }
     /* voiceover řádek (skrytý, dokud nahrávka neexistuje — viz voPlayer) */
     .vo-row { margin: 6px 0 10px; }
@@ -258,6 +267,12 @@
     .toast.fade { opacity: 0; }
     .toast-comm { border-color: #8a6a1f; }
     .toast-comm .toast-body { display: flex; flex-direction: column; gap: 2px; }
+    /* intro karta postavy (první replika mluvčího v misi) */
+    .toast-intro { border-color: #d8b34f; box-shadow: 0 0 22px #d8b34f26; }
+    .toast-intro .comm-ava { flex-basis: 48px; width: 48px; height: 48px; border-color: #d8b34f; }
+    .toast-intro b { color: #f2d97a; }
+    .toast-intro .intro-role { color: #d8b34f; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+    .toast-intro .intro-bio { color: #9fd8a0; font-size: 11px; line-height: 1.45; max-width: 320px; }
     .toast-comm b { color: #d8b34f; }
     .toast-hit { border-color: #7a2a1f; color: #e06c5a; }
     .toast-hit b { color: #ff8a75; letter-spacing: 1px; }
