@@ -65,6 +65,8 @@ const DICT: Record<string, { cs: string; en: string }> = {
   // voiceover (namluvené prology/epilogy)
   'vo.play': { cs: '🔊 ▶ komentář', en: '🔊 ▶ voiceover' },
   'vo.pause': { cs: '🔊 ⏸ komentář', en: '🔊 ⏸ voiceover' },
+  // briefing
+  'brief.admiral': { cs: 'ADMIRALITA — BRIEFING', en: 'ADMIRALTY — BRIEFING' },
   // tutoriál (guided steps)
   'tut.title': { cs: 'VÝCVIK', en: 'TRAINING' },
   'tut.next': { cs: 'POKRAČOVAT', en: 'CONTINUE' },

@@ -158,6 +158,15 @@
     /* Ken Burns: pomalý pan/zoom scény briefingu (filmový prolog k VO).
        Kontejner ořezává přesah transformace; respektuje reduced-motion. */
     #prep-media { overflow: hidden; }
+    /* mluvící admirál: okno přes scénu (smyčka bez zvuku — hlas dodává VO) */
+    .brief-scene { position: relative; overflow: hidden; }
+    .brief-admiral { position: absolute; right: 10px; bottom: 22px; width: 27%;
+      border: 1px solid #d8b34f; border-radius: 4px; overflow: hidden;
+      background: #05080a; box-shadow: 0 4px 16px #05080acc; }
+    .brief-admiral video { width: 100%; display: block; }
+    .brief-admiral-tag { position: absolute; left: 0; right: 0; bottom: 0;
+      background: #05080ac9; color: #d8b34f; font-size: 9px; letter-spacing: 1px;
+      text-align: center; padding: 2px 0; }
     .brief-img.kb { animation: kenburns 26s ease-in-out infinite alternate; will-change: transform; }
     @keyframes kenburns {
       from { transform: scale(1) translate(0, 0); }
