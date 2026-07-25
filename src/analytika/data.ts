@@ -61,20 +61,32 @@ export function orderFunnel<T extends { mission_id: string }>(rows: T[]): T[] {
 }
 
 export interface Kpis {
-  /** součet denních unikátů za posledních 7 dní (hráčské dny) */
+  /** součet denních unikátů v kalendářním okně ⟨dnes−6, dnes⟩ (hráčské dny) */
   playerDays7: number
   sessions7: number
   starts7: number
   ends7: number
-  /** dnešek (poslední den v datech, je-li dnešní) se počítá také */
+  /** za celou historii (view vrací jen dny se záznamem) */
   totalEvents: number
   days: number
 }
 
-/** klíčová čísla z denní řady (řazená sestupně dle dne, jak ji vrací view) */
-export function kpis(daily: DailyRow[]): Kpis {
+/** ISO datum (YYYY-MM-DD) o `n` dní dřív — čistá aritmetika nad UTC */
+export function isoDaysBefore(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Klíčová čísla z denní řady. „7 dní" je kalendářní okno ⟨dnes−6, dnes⟩ —
+ * view vrací jen dny se záznamem, takže řez posledních 7 ŘÁDKŮ by po
+ * hluchých dnech tiše natáhl období.
+ */
+export function kpis(daily: DailyRow[], todayIso: string): Kpis {
   const sorted = [...daily].sort((a, b) => b.day.localeCompare(a.day))
-  const last7 = sorted.slice(0, 7)
+  const cutoff = isoDaysBefore(todayIso, 6)
+  const last7 = sorted.filter(r => r.day >= cutoff && r.day <= todayIso)
   const sum = (f: (r: DailyRow) => number): number => last7.reduce((s, r) => s + f(r), 0)
   return {
     playerDays7: sum(r => r.players),

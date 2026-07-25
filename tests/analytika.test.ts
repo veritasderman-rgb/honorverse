@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
-  fmtDur, kpis, MISSION_ORDER, orderFunnel, tutorialFunnel,
+  fmtDur, isoDaysBefore, kpis, MISSION_ORDER, orderFunnel, tutorialFunnel,
   type DailyRow, type TutorialRow,
 } from '../src/analytika/data'
 import { SCENARIOS } from '../src/data/missions'
@@ -31,10 +31,10 @@ describe('kpis', () => {
   const day = (day: string, players: number, sessions: number): DailyRow =>
     ({ day, players, sessions, mission_starts: players * 2, mission_ends: players, events: players * 10 })
 
-  it('sčítá posledních 7 dní a celkové události', () => {
+  it('sčítá kalendářních 7 dní a celkové události', () => {
     const rows = Array.from({ length: 10 }, (_, i) =>
       day(`2026-07-${String(25 - i).padStart(2, '0')}`, 10, 12))
-    const k = kpis(rows)
+    const k = kpis(rows, '2026-07-25')
     expect(k.playerDays7).toBe(70)
     expect(k.sessions7).toBe(84)
     expect(k.starts7).toBe(140)
@@ -42,14 +42,31 @@ describe('kpis', () => {
     expect(k.days).toBe(10)
   })
 
+  it('„7 dní" je kalendářní okno — hluché dny období nenatahují', () => {
+    // jeden dnešní řádek + šest z minulého měsíce: do 7denních karet patří
+    // jen dnešek (view vrací pouze dny se záznamem)
+    const rows = [day('2026-07-25', 5, 5),
+      ...Array.from({ length: 6 }, (_, i) => day(`2026-06-${20 - i}`, 10, 10))]
+    const k = kpis(rows, '2026-07-25')
+    expect(k.playerDays7).toBe(5)
+    expect(k.days).toBe(7)
+    expect(k.totalEvents).toBe(650)
+  })
+
   it('nezávisí na pořadí vstupu (samo si řadí dle dne)', () => {
     const rows = [day('2026-07-20', 1, 1), day('2026-07-25', 5, 5), day('2026-07-22', 2, 2)]
-    expect(kpis(rows)).toEqual(kpis([...rows].reverse()))
+    expect(kpis(rows, '2026-07-25')).toEqual(kpis([...rows].reverse(), '2026-07-25'))
   })
 
   it('prázdná řada = nuly (žádné dělení nulou)', () => {
-    expect(kpis([]).playerDays7).toBe(0)
-    expect(kpis([]).days).toBe(0)
+    expect(kpis([], '2026-07-25').playerDays7).toBe(0)
+    expect(kpis([], '2026-07-25').days).toBe(0)
+  })
+
+  it('isoDaysBefore počítá přes hranice měsíce i roku', () => {
+    expect(isoDaysBefore('2026-07-25', 6)).toBe('2026-07-19')
+    expect(isoDaysBefore('2026-03-03', 6)).toBe('2026-02-25')
+    expect(isoDaysBefore('2026-01-02', 6)).toBe('2025-12-27')
   })
 })
 

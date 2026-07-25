@@ -25,7 +25,7 @@ function missionName(id: string): string {
 // ---------- KPI karty ----------
 
 function renderKpis(daily: DailyRow[]): void {
-  const k = kpis(daily)
+  const k = kpis(daily, new Date().toISOString().slice(0, 10))
   $('kpis').innerHTML = [
     ['hráčské dny · 7 dní', num(k.playerDays7)],
     ['sezení · 7 dní', num(k.sessions7)],
@@ -138,8 +138,9 @@ function renderTutorial(rows: TutorialRow[]): void {
     const steps = perMission[m]
     return `<div class="tut-block"><h3>${esc(missionName(m))} <span class="dim">${esc(m)}</span></h3>`
       + `<table><tr><th>krok</th><th>dosáhlo</th><th></th><th>% z 1. kroku</th><th>přeskočilo tady</th></tr>`
+      // kroky jsou už jedničkové (tutorialView trackuje idx + 1)
       + steps.map(s =>
-        `<tr><td>${s.step + 1}</td><td>${num(s.reached)}</td><td>${bar(s.pctOfFirst, 'b-tut')}</td>`
+        `<tr><td>${s.step}</td><td>${num(s.reached)}</td><td>${bar(s.pctOfFirst, 'b-tut')}</td>`
         + `<td>${s.pctOfFirst} %</td><td class="${s.skipped > 0 ? 'amber' : 'dim'}">${num(s.skipped)}</td></tr>`).join('')
       + `</table></div>`
   }).join('')
@@ -166,8 +167,11 @@ let lastDaily: DailyRow[] = []
 
 async function load(): Promise<void> {
   $('status').textContent = 'načítám…'
+  // wob_daily bez limitu: řádek = den se záznamem, i roky provozu jsou
+  // stovky řádků — celkové karty nesmí být tiše oříznuté (graf si bere
+  // posledních 30 dní sám)
   const [daily, funnel, tutorial, segments] = await Promise.all([
-    fetchView<DailyRow>('wob_daily', '?order=day.desc&limit=60'),
+    fetchView<DailyRow>('wob_daily', '?order=day.desc'),
     fetchView<FunnelRow>('wob_funnel'),
     fetchView<TutorialRow>('wob_tutorial'),
     fetchView<SegmentRow>('wob_segments'),
