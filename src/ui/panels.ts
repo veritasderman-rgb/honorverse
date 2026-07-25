@@ -21,7 +21,7 @@ import { controllableShips, fleetShips, isControllable, rosterVisible } from './
 import type { Contact, ShipClassDef, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { AudioManager } from './audio'
 import { type CombatStats } from './combatStats'
-import { getLang, t } from './i18n'
+import { fmtDec, fmtNum, getLang, t, tf } from './i18n'
 import { CHARACTERS } from '../data/characters'
 import { objectiveText } from '../data/briefings'
 
@@ -133,8 +133,8 @@ export const fmtTime = (t: number): string => {
 
 export const fmtKm = (km: number): string => {
   const a = Math.abs(km)
-  if (a >= 1e6) return (km / 1e6).toFixed(2) + ' M km'
-  if (a >= 1e4) return Math.round(km / 1e3) + ' tis. km'
+  if (a >= 1e6) return fmtDec(km / 1e6, 2) + ' M km'
+  if (a >= 1e4) return Math.round(km / 1e3) + ' ' + t('unit.kkm')
   return Math.round(km) + ' km'
 }
 
@@ -343,19 +343,19 @@ export class Panels implements HudView {
       this.salvoTallies.set(ev.salvoId, { launched: ev.count ?? 0, resolved: 0, hits: 0, loss: {} })
       return
     }
-    const t = this.salvoTallies.get(ev.salvoId)
-    if (!t) return
-    if (ev.kind === 'missileHit') { t.hits++; t.resolved++ }
+    const tal = this.salvoTallies.get(ev.salvoId)
+    if (!tal) return
+    if (ev.kind === 'missileHit') { tal.hits++; tal.resolved++ }
     else if (ev.kind === 'missileKilled' || ev.kind === 'missileMiss') {
       const cause = ev.cause ?? 'link'
-      t.loss[cause] = (t.loss[cause] ?? 0) + 1
-      t.resolved++
+      tal.loss[cause] = (tal.loss[cause] ?? 0) + 1
+      tal.resolved++
     } else return
-    if (t.resolved >= t.launched) {
-      const parts = lossBreakdown(t.loss)
+    if (tal.resolved >= tal.launched) {
+      const parts = lossBreakdown(tal.loss)
       this.log.unshift({
         t: ev.t,
-        text: `Taktický důstojník: salva dostřílena — ${t.hits}/${t.launched} zásahů`
+        text: `${t('speaker.tactical')}: ${tf('log.salvoDone', { h: tal.hits, l: tal.launched })}`
           + (parts ? ` (${parts})` : ''),
         warn: false,
       })
@@ -398,7 +398,7 @@ export class Panels implements HudView {
       // vlastní zásah → červený toast „ZÁSAH — …"
       if (ev.kind === 'subsystemHit' && ev.side === 'player') {
         const detail = ev.text.replace(/^.*?zásah — /, '')
-        this.showToast(`<b>ZÁSAH</b> — ${esc(detail)}`, 'toast-hit', 5000)
+        this.showToast(`<b>${t('toast.hit')}</b> — ${esc(detail)}`, 'toast-hit', 5000)
       }
     }
     if (this.log.length > 40) this.log.length = 40
@@ -419,14 +419,14 @@ export class Panels implements HudView {
     const bar = document.createElement('span')
     bar.className = 'tb-audio'
     bar.innerHTML =
-      `<button class="tb-gfx" title="Vzhled plotu: objemové (3D shora, Homeworld) ⟷ klasické vektorové siluety">◈</button>`
-      + `<button class="tb-crt" title="CRT vzhled: scanlines + vinětace (jen kosmetika)">📺</button>`
-      + `<button class="tb-info" title="režim nápovědy (dotyk): klepnutí na prvek ukáže jeho vysvětlení místo akce">ⓘ</button>`
-      + `<button class="tb-mobile" title="mobilní UI: kompaktní rozvržení pro telefon (jinak se zapne samo na malém dotykovém displeji)">🖐</button>`
-      + `<button class="tb-mute" title="ztlumit / zapnout zvuk">${audio.muted ? '🔇' : '🔊'}</button>`
-      + `<label title="hlasitost hudby">♪ <input class="tb-vol-music" type="range" min="0" max="100"`
+      `<button class="tb-gfx" title="${esc(t('tb.gfxTip'))}">◈</button>`
+      + `<button class="tb-crt" title="${esc(t('tb.crtTip'))}">📺</button>`
+      + `<button class="tb-info" title="${esc(t('tb.infoTip'))}">ⓘ</button>`
+      + `<button class="tb-mobile" title="${esc(t('tb.mobileTip'))}">🖐</button>`
+      + `<button class="tb-mute" title="${esc(t('tb.muteTip'))}">${audio.muted ? '🔇' : '🔊'}</button>`
+      + `<label title="${esc(t('tb.musicTip'))}">♪ <input class="tb-vol-music" type="range" min="0" max="100"`
       + ` value="${Math.round(audio.musicVolume * 100)}"></label>`
-      + `<label title="hlasitost efektů">FX <input class="tb-vol-sfx" type="range" min="0" max="100"`
+      + `<label title="${esc(t('tb.fxTip'))}">FX <input class="tb-vol-sfx" type="range" min="0" max="100"`
       + ` value="${Math.round(audio.sfxVolume * 100)}"></label>`
     // CRT overlay: persistentní, default VYP na dotyku (výkon — fáze D)
     const crt = bar.querySelector<HTMLButtonElement>('.tb-crt')!
@@ -489,14 +489,12 @@ export class Panels implements HudView {
     const btns = COMP_BTNS
       .map(b => `<button data-comp="${b.f}" class="tb-cb tb-cb-${b.f}${b.f === ui.compression ? ' active' : ''}">${b.label}</button>`)
       .join('')
-    const autoSlowTip = 'Auto-zpomalování: u důležitých událostí (zásah do naší lodi, nový kontakt, '
-      + 'komunikace, cíle mise) spadne komprese na 1×. Vypnuto: událost jen blikne v liště.'
     this.tbMain.innerHTML =
       `<span class="tb-time">${t('topbar.time')} ${fmtTime(state.t)}</span>`
       + `<span class="tb-comp">${btns}</span>`
       + `<button data-act="autoSlow" class="${ui.autoSlowEnabled ? 'active' : ''}"`
-      + ` title="${esc(autoSlowTip)}">⚠ ${ui.autoSlowEnabled ? t('state.on') : t('state.off')}</button>`
-      + `<button data-act="help" title="nápověda (H)">?</button>`
+      + ` title="${esc(t('tb.autoSlowTip'))}">⚠ ${ui.autoSlowEnabled ? t('state.on') : t('state.off')}</button>`
+      + `<button data-act="help" title="${esc(t('tb.helpTip'))}">?</button>`
       + (ui.slowdownText ? `<span class="tb-slow">⚠ ${t('topbar.slowed')}: ${esc(ui.slowdownText)}</span>` : '')
   }
 
@@ -539,26 +537,30 @@ export class Panels implements HudView {
   /** rozklikávací detail třídy lodi: „▸ třída …" → lore (+ parametry) */
   private classDetail(def: ShipClassDef, key: string, showParams: boolean): string {
     const open = this.classDetailOpen.has(key)
-    // názvy tříd už často začínají „třída …" — nezdvojovat prefix
-    const label = def.name.startsWith('třída') ? def.name : `třída: ${def.name}`
+    // názvy tříd už často začínají „třída …" — nezdvojovat prefix; anglicky
+    // z „třída Sokol" uděláme „Sokol class"
+    const label = getLang() === 'en'
+      ? (def.name.startsWith('třída ')
+        ? `${def.name.slice('třída '.length)} class` : `${t('cls.class')} ${def.name}`)
+      : (def.name.startsWith('třída') ? def.name : `${t('cls.class')} ${def.name}`)
     let out = `<div class="cls-row" data-clsdetail="${key}">${open ? '▾' : '▸'}`
       + ` ${esc(label)} (${esc(def.hullCode)})</div>`
     if (!open) return out
     if (def.lore) out += `<div class="cls-lore">${esc(def.lore)}</div>`
     if (showParams) {
       const kv: [string, string][] = [
-        ['tonáž', `${Math.round(def.tonnage / 1000).toLocaleString('cs-CZ')} kt`],
-        ['max. akcelerace', `${def.maxAccelG} g`],
-        ['šachty / bok', String(def.tubesPerBroadside)],
-        ['CM odpalovače', String(def.cmLaunchers)],
-        ['PDLC clustery', String(def.pdlcClusters)],
-        ['energetika / bok', def.energyMountsPerBroadside > 0
+        [t('cls.tonnage'), `${fmtNum(def.tonnage / 1000)} kt`],
+        [t('cls.maxAccel'), `${def.maxAccelG} g`],
+        [t('cls.tubes'), String(def.tubesPerBroadside)],
+        [t('cls.cmL'), String(def.cmLaunchers)],
+        [t('cls.pdlc'), String(def.pdlcClusters)],
+        [t('cls.energy'), def.energyMountsPerBroadside > 0
           ? `${def.energyMountsPerBroadside}× (${def.energyDamage} dmg)` : '—'],
-        ['zásobníky', `${def.magazineMissiles} raket · ${def.magazineCMs} CM`],
-        ['detekce klínu', fmtKm(def.wedgeDetectionRange)],
-        ['aktivní senzory', fmtKm(def.activeSensorRange)],
-        ['ECM', `${Math.round(def.ecm * 100)} %`],
-        ['boční štíty', String(def.sidewallStrength)],
+        [t('cls.mags'), tf('cls.magsVal', { m: def.magazineMissiles, c: def.magazineCMs })],
+        [t('cls.wedgeDet'), fmtKm(def.wedgeDetectionRange)],
+        [t('cls.activeSens'), fmtKm(def.activeSensorRange)],
+        [t('cls.ecm'), `${Math.round(def.ecm * 100)} %`],
+        [t('cls.sidewalls'), String(def.sidewallStrength)],
       ]
       out += `<div class="cls-table">`
         + kv.map(([k, v]) => `<span class="dim">${k}</span><span>${v}</span>`).join('')
@@ -590,15 +592,14 @@ export class Panels implements HudView {
         ? ` <span class="amber">${({ wall: 'Σ', vee: 'V', dispersed: '◦' } as const)[s.formation.kind]}</span>`
         : ''
       return `<div class="fleet-row${active ? ' sel' : ''}${inSel ? ' msel' : ''}${ctrl ? '' : ' dim'}"`
-        + (ctrl ? ` data-act="ownShip:${s.id}" title="převzít loď (klávesa ${idx + 1}); Shift-klik = přidat/odebrat z výběru"` : ' title="AI spojenec — nelze převzít"')
+        + (ctrl ? ` data-act="ownShip:${s.id}" title="${esc(tf('fr.takeTip', { n: idx + 1 }))}"` : ` title="${esc(t('fr.aiTip'))}"`)
         + `><div class="row"><span>${mark}${key}${esc(s.name)} <span class="dim">(${esc(def?.hullCode ?? '?')})</span>${fmark}</span>`
         + `<b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></div>`
-        + `<div class="row dim"><span>${t('fleet.missiles')} ${s.missiles}${s.pods > 0 ? ` <span class="amber" title="tažené raketové plošiny (${s.pods}×6 raket — alfa úder)">+${s.pods}P</span>` : ''} · CM ${s.cms}</span>`
+        + `<div class="row dim"><span>${t('fleet.missiles')} ${s.missiles}${s.pods > 0 ? ` <span class="amber" title="${esc(tf('fr.podsTip', { n: s.pods }))}">+${s.pods}P</span>` : ''} · CM ${s.cms}</span>`
         + `<span>${ctrl ? (FIRE_MODE_LABELS[s.fireControl.mode] ? t(FIRE_MODE_LABELS[s.fireControl.mode]) : '') : t('fleet.ai')}`
-        + `${ctrl ? (s.tubeCooldown > 0 ? ` <span title="šachty přebíjejí">⌛${Math.ceil(s.tubeCooldown)}s</span>` : ' <span class="ok" title="šachty připraveny k salvě">✓</span>') : ''}</span></div></div>`
+        + `${ctrl ? (s.tubeCooldown > 0 ? ` <span title="${esc(t('fr.reloadTip'))}">⌛${Math.ceil(s.tubeCooldown)}s</span>` : ` <span class="ok" title="${esc(t('fr.readyTip'))}">✓</span>`) : ''}</span></div></div>`
     }).join('')
-    return this.panel('fleet', t('panel.fleet'), rows,
-      'klávesy 1–9 přepínají aktivní loď · Shift-klik přidá/odebere loď z hromadného výběru')
+    return this.panel('fleet', t('panel.fleet'), rows, t('fr.footer'))
   }
 
   private panelOwnShip(own: ShipState | null, state: SimState): string {
@@ -613,7 +614,7 @@ export class Panels implements HudView {
       const cls = pctClass(v)
       // ↗ = damage-control čety na subsystému pracují (polní oprava běží)
       const fixing = v < REPAIR_CAP_LIGHT && !own.destroyed
-        ? `<span class="ok" title="polní oprava běží (~7 %/min do 70 %, pak dolaďování do 90 %)">↗</span>`
+        ? `<span class="ok" title="${esc(t('os.fixingTip'))}">↗</span>`
         : ''
       return `<div class="subsys ${cls}"><span class="nm">${t(s.label)}</span>`
         + `<span class="bar"><i style="width:${Math.round(v * 100)}%"></i></span>`
@@ -625,11 +626,11 @@ export class Panels implements HudView {
     const rBtn = (f: string, label: string, tip: string): string =>
       `<button data-act="repair:${f}" class="${rf === f ? 'active' : ''}" title="${esc(tip)}"${own.destroyed ? ' disabled' : ''}>${label}</button>`
     const repairRow = anyDamage
-      ? `<div class="row"><span title="Polní opravy: plné tempo do 70 %, doladění do 90 % (víc dá jen dok). Priorita soustředí čety: skupina ×3, ostatní ×0,5. Trup se v poli opravit nedá — strukturální poškození spraví jen loděnice.">${t('ownShip.repairs')}</span>`
-        + `<span>${rBtn('balanced', t('repair.balanced'), 'Rovnoměrné opravy všech subsystémů (výchozí).')}`
-        + `${rBtn('weapons', t('repair.weapons'), 'Priorita: raketové šachty a energetické baterie ×3, ostatní ×0,5.')}`
-        + `${rBtn('drive', t('repair.drive'), 'Priorita: impelerové prstence ×3 (akcelerace!), ostatní ×0,5.')}`
-        + `${rBtn('defense', t('repair.defense'), 'Priorita: boční štíty, PDLC a protirakety ×3, ostatní ×0,5.')}</span></div>`
+      ? `<div class="row"><span title="${esc(t('os.repairTip'))}">${t('ownShip.repairs')}</span>`
+        + `<span>${rBtn('balanced', t('repair.balanced'), t('os.repBalTip'))}`
+        + `${rBtn('weapons', t('repair.weapons'), t('os.repWeapTip'))}`
+        + `${rBtn('drive', t('repair.drive'), t('os.repDriveTip'))}`
+        + `${rBtn('defense', t('repair.defense'), t('os.repDefTip'))}</span></div>`
       : ''
     const status = own.destroyed
       ? `<div class="bad">${t('ownShip.destroyed')}</div>`
@@ -641,7 +642,7 @@ export class Panels implements HudView {
         + (() => {
           const sw = sidewallPowerFactor(own.throttle)
           const cls = sw >= 1 ? 'ok' : sw >= 0.6 ? 'amber' : 'bad'
-          return `<div class="row" title="Reaktor neutáhne pohon i štítové generátory: tah ≤ 40 % ⇒ boční štíty 120 %, 60 % ⇒ 100 %, 80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 %.">`
+          return `<div class="row" title="${esc(t('os.reactorTip'))}">`
             + `<span>${t('ownShip.sidewallPower')}</span><b class="${cls}">${Math.round(sw * 100)} %</b></div>`
         })()
 
@@ -694,9 +695,9 @@ export class Panels implements HudView {
     return this.panel('own', `${t('panel.ownShip')} — ${esc(own.name)}`,
       (def ? this.classDetail(def, 'own', true) : '')
       + `<div class="row"><span>${t('ownShip.hull')} <b class="${pctClass(hullPct)}">${Math.round(hullPct * 100)} %</b></span>`
-      + `<span>${t('ownShip.speed')} ${Math.round(speed).toLocaleString('cs-CZ')} km/s · ${t('ownShip.accel')} ${Math.round(accG)} g</span></div>`
+      + `<span>${t('ownShip.speed')} ${fmtNum(speed)} km/s · ${t('ownShip.accel')} ${Math.round(accG)} g</span></div>`
       + `<div class="row"><span>${t('ownShip.missiles')} ${own.missiles}`
-      + `${own.pods > 0 ? ` · <span class="amber" title="tažené raketové plošiny: ${own.pods} ks × 6 raket — odpal VŠECH najednou (alfa úder), jednorázové">${t('ownShip.pods')} ${own.pods}×6</span>` : ''}`
+      + `${own.pods > 0 ? ` · <span class="amber" title="${esc(tf('os.podsTip', { n: own.pods }))}">${t('ownShip.pods')} ${own.pods}×6</span>` : ''}`
       + ` · CM ${own.cms}</span>`
       + `<span>${t('ownShip.decoy')} ${own.decoyActive ? `<b class="ok">${t('decoy.active')}</b>` : '—'}`
       + ` · ${t('ownShip.decoyStock')} ${own.decoys}</span></div>`
@@ -728,7 +729,7 @@ export class Panels implements HudView {
       const clsColor = capitulated ? 'dim' : c.idQuality === 0 ? 'amber' : 'bad'
       return `<div class="contact-row${sel}" data-sel="${c.shipId}">`
         + `<div class="row"><span class="${clsColor}">${mark} ${esc(cls)} #${c.shipId}${capitulated ? ` — ${t('contact.surrendered')}` : ''}</span><span>${fmtKm(range)}</span></div>`
-        + `<div class="row dim"><span>${Math.round(speed).toLocaleString('cs-CZ')} km/s · ${q}</span><span>${t('contact.age')} ${Math.round(c.age)} s</span></div>`
+        + `<div class="row dim"><span>${fmtNum(speed)} km/s · ${q}</span><span>${t('contact.age')} ${Math.round(c.age)} s</span></div>`
         + `</div>`
     }).join('')
     const more = withRange.length > MAX_ROWS
@@ -753,18 +754,18 @@ export class Panels implements HudView {
     const uy = d > 0 ? dy / d : 0
     const vr = (c.vel.x - own.vel.x) * ux + (c.vel.y - own.vel.y) * uy
     const closingTxt = vr < -0.5
-      ? `<span class="bad">přibližuje se ${Math.round(-vr).toLocaleString('cs-CZ')} km/s</span>`
+      ? `<span class="bad">${tf('tg.closing', { v: fmtNum(-vr) })}</span>`
       : vr > 0.5
-        ? `vzdaluje se ${Math.round(vr).toLocaleString('cs-CZ')} km/s`
-        : 'drží vzdálenost'
-    const qLabel = ['jen impelerový klín', 'přibližná klasifikace', 'plná identifikace'][c.idQuality]
+        ? tf('tg.receding', { v: fmtNum(vr) })
+        : t('tg.holding')
+    const qLabel = [t('tg.q0'), t('tg.q1'), t('tg.q2')][c.idQuality]
     const tgtShip = state.ships.find(s => s.id === c.shipId) ?? null
 
     let body =
-      `<div class="row"><span>vzdálenost:</span><b>${fmtKm(d)}</b></div>`
-      + `<div class="row"><span>radiálně:</span><span>${closingTxt}</span></div>`
-      + `<div class="row"><span>stáří dat:</span><span>${Math.round(c.age)} s (light-lag)</span></div>`
-      + `<div class="row"><span>klasifikace:</span><span>${qLabel}</span></div>`
+      `<div class="row"><span>${t('tg.distance')}</span><b>${fmtKm(d)}</b></div>`
+      + `<div class="row"><span>${t('tg.radial')}</span><span>${closingTxt}</span></div>`
+      + `<div class="row"><span>${t('tg.dataAge')}</span><span>${Math.round(c.age)} s (light-lag)</span></div>`
+      + `<div class="row"><span>${t('tg.classification')}</span><span>${qLabel}</span></div>`
 
     // neherní objekt z map (planeta, bóje, sonda…): bez bojových řádků
     const civil = tgtShip?.side === 'neutral' && tgtShip.doctrine === 'buoy'
@@ -774,21 +775,19 @@ export class Panels implements HudView {
       const sol = fireSolution(state, own, tgtShip)
       const ownDef = SHIP_CLASSES[own.classId]
       const fullActive = own.activeSensors && !!ownDef && d < ownDef.activeSensorRange
-      const hint = tgtShip.activeSensors ? ' (+15 % — cíl vyzařuje)' : ''
-      body += `<div class="row"><span>kvalita řešení:</span>`
+      const hint = tgtShip.activeSensors ? t('tg.solutionHint') : ''
+      body += `<div class="row"><span>${t('tg.solution')}</span>`
         + `<b class="${sol >= 0.95 ? 'ok' : sol >= 0.8 ? 'amber' : 'bad'}">${Math.round(sol * 100)} %${hint}</b></div>`
       if (!fullActive) {
         const near = !!ownDef && d < ownDef.activeSensorRange
-        body += `<div class="row dim"><span>${near
-          ? 'zapni aktivní senzory pro plné řešení'
-          : 'zapni aktivní senzory a přibliž se pro plné řešení'}</span></div>`
+        body += `<div class="row dim"><span>${near ? t('tg.activateNear') : t('tg.activateFar')}</span></div>`
       }
     }
 
     // kapitulace — výrazný stav (loď se vzdala, nestřílet)
     if (tgtShip?.surrendered) {
-      body += `<div class="row surrendered"><b class="ok">▽ KAPITULOVAL</b>`
-        + `<span>klín vypnut, loď se vzdala</span></div>`
+      body += `<div class="row surrendered"><b class="ok">▽ ${t('tg.surrendered')}</b>`
+        + `<span>${t('tg.surrenderedDetail')}</span></div>`
     }
 
     // odhad poškození: idQuality 1 → kvantování 25 %, idQuality 2 → 10 %
@@ -798,8 +797,8 @@ export class Panels implements HudView {
       const dmg = realDef ? 1 - Math.max(0, tgtShip.hull) / realDef.hullPoints : 0
       const step = c.idQuality >= 2 ? 0.1 : 0.25
       estDamage = Math.min(1, Math.round(dmg / step) * step)
-      const label = estDamage >= 0.995 ? 'kritické' : `~${Math.round(estDamage * 100)} %`
-      body += `<div class="row"><span>odhad poškození:</span>`
+      const label = estDamage >= 0.995 ? t('tg.critical') : `~${Math.round(estDamage * 100)} %`
+      body += `<div class="row"><span>${t('tg.damageEst')}</span>`
         + `<b class="${estDamage >= 0.75 ? 'bad' : estDamage >= 0.25 ? 'amber' : 'ok'}">${label}</b></div>`
     }
 
@@ -813,10 +812,10 @@ export class Panels implements HudView {
       // odhad třídy / tonáže / akcelerace + rozklikávací detail třídy
       // (lore od klasifikace, kompletní parametry až při plné identifikaci)
       body += this.classDetail(tDef, 'tgt', c.idQuality >= 2)
-        + `<div class="row"><span>tonáž:</span><span>~${Math.round(tDef.tonnage / 1000).toLocaleString('cs-CZ')} kt</span></div>`
-        + `<div class="row"><span>max. akcel.:</span><span>~${tDef.maxAccelG} g</span></div>`
+        + `<div class="row"><span>${t('tg.tonnage')}</span><span>~${fmtNum(tDef.tonnage / 1000)} kt</span></div>`
+        + `<div class="row"><span>${t('tg.maxAccel')}</span><span>~${tDef.maxAccelG} g</span></div>`
     } else if (c.idQuality >= 1) {
-      body += `<div class="row dim"><span>třída neznámá — přibliž se / aktivní senzory</span></div>`
+      body += `<div class="row dim"><span>${t('tg.classUnknown')}</span></div>`
     }
 
     // popisek objektu ze scénáře (planety, stanice, sondy, bóje, civilní
@@ -827,54 +826,53 @@ export class Panels implements HudView {
 
     if (c.idQuality >= 2 && tDef && !civil) {
       // výzbroj + porovnání raketových obálek (dle aktuální geometrie)
-      body += `<div class="row"><span>výzbroj:</span>`
-        + `<span>${tDef.tubesPerBroadside}× šachta/bok · ${tDef.energyMountsPerBroadside}× energet.</span></div>`
+      body += `<div class="row"><span>${t('tg.armament')}</span>`
+        + `<span>${tf('tg.armamentVal', { t: tDef.tubesPerBroadside, e: tDef.energyMountsPerBroadside })}</span></div>`
       // odhad funkčních šachet (plná identifikace — zaokrouhlený stav subsystémů)
       if (tDef.tubesPerBroadside > 0 && tgtShip) {
         const best = Math.max(tgtShip.subsystems.tubesPort, tgtShip.subsystems.tubesStbd)
         const estTubes = Math.round(tDef.tubesPerBroadside * best)
-        body += `<div class="row"><span>odhad funkčních šachet:</span>`
+        body += `<div class="row"><span>${t('tg.estTubes')}</span>`
           + `<span class="${estTubes < tDef.tubesPerBroadside ? 'amber' : ''}">~${estTubes}/${tDef.tubesPerBroadside}</span></div>`
       }
       const ourEnv = poweredEnvelope(own.pos, own.vel, est, c.vel, 0)
       const hisEnv = tDef.tubesPerBroadside > 0
         ? poweredEnvelope(est, c.vel, own.pos, own.vel, 0)
         : 0
-      const fmtEnv = (km: number): string => (km / 1e6).toFixed(1).replace('.', ',')
+      const fmtEnv = (km: number): string => fmtDec(km / 1e6, 1)
       const timeTo = (env: number): string => {
-        if (d <= env) return 'TEĎ'
+        if (d <= env) return t('tg.now')
         if (vr >= -0.5) return '—'
         const min = (d - env) / -vr / 60
         return min > 600 ? '—' : `~${Math.max(1, Math.round(min))} min`
       }
-      body += `<div class="row"><span>naše obálka:</span><span>${fmtEnv(ourEnv)} M km · dostřel ${timeTo(ourEnv)}</span></div>`
+      body += `<div class="row"><span>${t('tg.ourEnv')}</span><span>${tf('tg.envReach', { km: fmtEnv(ourEnv), t: timeTo(ourEnv) })}</span></div>`
       body += tDef.tubesPerBroadside > 0
-        ? `<div class="row"><span>jeho obálka:</span><span class="amber">${fmtEnv(hisEnv)} M km · dostřelí nás ${timeTo(hisEnv)}</span></div>`
-        : `<div class="row dim"><span>raketami neozbrojen</span></div>`
+        ? `<div class="row"><span>${t('tg.hisEnv')}</span><span class="amber">${tf('tg.envReachUs', { km: fmtEnv(hisEnv), t: timeTo(hisEnv) })}</span></div>`
+        : `<div class="row dim"><span>${t('tg.noMissiles')}</span></div>`
       // odhad průniku aktuální salvy (velikost = funkční šachty, režim dle LO/HI)
       if (tgtShip && !tgtShip.destroyed && !own.destroyed) {
         const n = Math.min(effectiveTubes(own), own.missiles)
         if (n > 0) {
           const est = estimatePenetration(state, own, tgtShip, n,
             autoDriveMode(own.pos, own.vel, tgtShip.pos, tgtShip.vel))
-          const tip = 'Hrubý deterministický odhad vrstvené obrany cíle (CM, PDLC, ECM) '
-            + 'pro plnou salvu v aktuálním režimu pohonu. Není to slib — skutečnost '
-            + 'závisí na náhodě, manévrech, saturaci a obraně cíle za letu.'
-          body += `<div class="row" title="${esc(tip)}"><span>odhad průniku salvy ${n}:</span>`
-            + `<b class="${est.through >= 1 ? 'ok' : 'amber'}">~${est.through < 0.95
-              ? est.through.toFixed(1).replace('.', ',') : Math.round(est.through)} raket</b></div>`
+          const tip = t('tg.penTip')
+          body += `<div class="row" title="${esc(tip)}"><span>${tf('tg.penEst', { n })}</span>`
+            + `<b class="${est.through >= 1 ? 'ok' : 'amber'}">${tf('tg.penVal', {
+              x: est.through < 0.95 ? fmtDec(est.through, 1) : Math.round(est.through),
+            })}</b></div>`
             + `<div class="row dim" title="${esc(tip)}"><span>${esc(est.breakdown)}</span></div>`
         }
       }
     } else if (c.idQuality < 2) {
-      body += `<div class="row dim"><span>výzbroj neznámá (ident. vyžaduje aktivní senzory zblízka)</span></div>`
+      body += `<div class="row dim"><span>${t('tg.armUnknown')}</span></div>`
     }
 
     if (!civil) body += this.surrenderControls(state, own, c, tgtShip, estDamage)
 
     // neutrální objekty (planety, stanice, sondy, civilní provoz) nejsou „cíl"
     return this.panel('target',
-      tgtShip?.side === 'neutral' ? `Objekt #${c.shipId}` : `Detail cíle #${c.shipId}`, body)
+      tf(tgtShip?.side === 'neutral' ? 'tg.objectTitle' : 'tg.targetTitle', { id: c.shipId }), body)
   }
 
   /** tlačítko VYZVAT KE KAPITULACI + odhad šance (z KVANTOVANÉHO poškození) */
@@ -885,8 +883,8 @@ export class Panels implements HudView {
     if (!tgtShip || tgtShip.destroyed || tgtShip.surrendered) return ''
     if (tgtShip.side !== 'enemy') {
       // neválečný neutrál — výzva nedává smysl (disabled s vysvětlením)
-      return `<div class="btnrow"><button disabled title="Neutrální plavidlo — výzva ke kapitulaci nemá smysl.">`
-        + `Vyzvat ke kapitulaci</button></div>`
+      return `<div class="btnrow"><button disabled title="${esc(t('sur.neutralTip'))}">`
+        + `${esc(t('sur.demand'))}</button></div>`
     }
     const cdLeft = Math.ceil(SURRENDER_COOLDOWN - (state.t - tgtShip.lastSurrenderDemandAt))
     const inCooldown = cdLeft > 0
@@ -898,17 +896,16 @@ export class Panels implements HudView {
       ? surrenderChance(estDamage, moraleFor(tgtShip.doctrine), c.idQuality >= 2 && weaponsOut(tgtShip))
       : null
     const label = chance != null
-      ? `Vyzvat ke kapitulaci (šance ~${Math.round(chance * 100)} %)`
-      : 'Vyzvat ke kapitulaci'
+      ? tf('sur.demandChance', { p: Math.round(chance * 100) })
+      : t('sur.demand')
     const title = !classified
-      ? 'Nejdřív kontakt klasifikuj (přibliž se / aktivní senzory).'
+      ? t('sur.classifyTip')
       : inCooldown
-        ? `Neodpovídá — další výzva za ${cdLeft} s. Mezitím zvyš tlak.`
-        : 'Pošle výzvu ke kapitulaci. Odpověď letí rychlostí světla tam a zpět (2×vzdálenost/c). '
-          + 'Šance roste s poškozením cíle a klesá s morálkou posádky; +15 % při vyřazených zbraních.'
+        ? tf('sur.cooldownTip', { s: cdLeft })
+        : t('sur.tip')
     return `<div class="btnrow"><button data-act="demandSurrender" title="${esc(title)}"`
       + `${enabled ? '' : ' disabled'}>${esc(label)}</button></div>`
-      + (inCooldown ? `<div class="row dim"><span>na výzvu neodpovídá — počkej ${cdLeft} s</span></div>` : '')
+      + (inCooldown ? `<div class="row dim"><span>${tf('sur.waiting', { s: cdLeft })}</span></div>` : '')
   }
 
   /** SALVA: vybraná vlastní letící salva — počet, zámek, fáze, přesměrování */
@@ -921,8 +918,10 @@ export class Panels implements HudView {
     const avgLock = ms.reduce((a, m) => a + Math.max(0, Math.min(1, m.lock)), 0) / ms.length
     const boost = ms.filter(m => m.phase === 'boost').length
     const ball = ms.length - boost
-    const phaseTxt = [boost > 0 ? `boost ${boost}` : '', ball > 0 ? `balistika ${ball}` : '']
-      .filter(Boolean).join(' · ')
+    const phaseTxt = [
+      boost > 0 ? tf('sv.boost', { n: boost }) : '',
+      ball > 0 ? tf('sv.ballistic', { n: ball }) : '',
+    ].filter(Boolean).join(' · ')
     const autonomous = ms.every(m => m.autonomous === true)
 
     // čas do cíle: nejkratší odhad přes rakety (vzdálenost / přibližovací rychlost)
@@ -946,37 +945,37 @@ export class Panels implements HudView {
     }
     const inRange = minD < CONTROL_RANGE
     const ctrlRow = autonomous
-      ? `<div class="row dim"><span>autonomní salva — letí bez řídicího spoje</span></div>`
-      : `<div class="row"><span>řízení:</span><span class="${inRange ? 'ok' : 'amber'}">`
+      ? `<div class="row dim"><span>${t('sv.autonomous')}</span></div>`
+      : `<div class="row"><span>${t('sv.control')}</span><span class="${inRange ? 'ok' : 'amber'}">`
         + `${Number.isFinite(minD)
-          ? (inRange ? `v dosahu (${fmtKm(minD)})` : `mimo dosah řízení (${fmtKm(minD)})`)
+          ? (inRange ? tf('sv.inRange', { d: fmtKm(minD) }) : tf('sv.outRange', { d: fmtKm(minD) }))
           : '—'}</span></div>`
 
     // přesměrování: vyžaduje vybraný klasifikovaný kontakt + dosah řízení
     const c = ui.targetId != null ? state.contacts.player.find(x => x.shipId === ui.targetId) : undefined
     const tgtShip = c ? state.ships.find(s => s.id === c.shipId) : undefined
-    const tgtLabel = c ? `${SHIP_CLASSES[c.classGuess]?.hullCode ?? '???'} #${c.shipId}` : 'vybraný cíl'
+    const tgtLabel = c ? `${SHIP_CLASSES[c.classGuess]?.hullCode ?? '???'} #${c.shipId}` : t('sv.selTarget')
     const canRetarget = !!own && !own.destroyed && !!c && c.idQuality >= 1
       && !!tgtShip && !tgtShip.destroyed && !tgtShip.surrendered && inRange
     const title = !c
-      ? 'Nejdřív vyber cílový kontakt (klik v plotu nebo v kontaktech).'
+      ? t('sv.tipPick')
       : c.idQuality < 1
-        ? 'Nový cíl musí být klasifikovaný kontakt (přibliž se / aktivní senzory).'
+        ? t('sv.tipClassify')
         : tgtShip?.surrendered
-          ? 'Cíl kapituloval — nestřílíme na něj.'
+          ? t('sv.tipSurrendered')
           : !inRange
-            ? 'Salva je mimo dosah řízení (10 M km) — povel k ní nedoletí.'
-            : 'Přesměruje všechny letící rakety salvy (boost/balistika) na vybraný cíl. Penalizace zámku ×0,75.'
+            ? t('sv.tipRange')
+            : t('sv.tipGo')
 
-    return this.panel('salvo', `Salva #${ui.selectedSalvoId}`,
-      `<div class="row"><span>živých raket:</span><b>${ms.length}</b></div>`
-      + `<div class="row"><span>průměrný zámek:</span>`
+    return this.panel('salvo', tf('sv.title', { id: ui.selectedSalvoId }),
+      `<div class="row"><span>${t('sv.alive')}</span><b>${ms.length}</b></div>`
+      + `<div class="row"><span>${t('sv.avgLock')}</span>`
       + `<b class="${avgLock >= 0.7 ? 'ok' : avgLock >= 0.4 ? 'amber' : 'bad'}">${Math.round(avgLock * 100)} %</b></div>`
-      + `<div class="row"><span>fáze:</span><span>${phaseTxt || '—'}</span></div>`
-      + `<div class="row"><span>čas do cíle:</span><span>${ttTxt}</span></div>`
+      + `<div class="row"><span>${t('sv.phase')}</span><span>${phaseTxt || '—'}</span></div>`
+      + `<div class="row"><span>${t('sv.timeToTarget')}</span><span>${ttTxt}</span></div>`
       + ctrlRow
       + `<div class="btnrow"><button data-act="retargetSalvo" title="${esc(title)}"${canRetarget ? '' : ' disabled'}>`
-      + `Přesměrovat na ${esc(tgtLabel)}</button></div>`)
+      + `${esc(tf('sv.retarget', { t: tgtLabel }))}</button></div>`)
   }
 
   private panelOrders(state: SimState, own: ShipState | null, ui: UiState): string {
@@ -995,58 +994,34 @@ export class Panels implements HudView {
     const xN = selN > 1 ? ` <span class="dim">(×${selN})</span>` : ''
 
     // čísla mechanik do tooltipů (z defs/constants — žádná magie v textech)
-    const fmtM = (km: number): string => (km / 1e6).toFixed(1).replace(/\.0$/, '').replace('.', ',')
+    const fmtM = (km: number): string => {
+      const s = (km / 1e6).toFixed(1).replace(/\.0$/, '')
+      return getLang() === 'cs' ? s.replace('.', ',') : s
+    }
     const mdef = MISSILES['std-shipkiller']
     const envLo = 0.5 * mdef.accelG[0] * G * mdef.driveTime[0] ** 2
     const envHi = 0.5 * mdef.accelG[1] * G * mdef.driveTime[1] ** 2
     const sensM = fmtM(def?.activeSensorRange ?? 5_000_000)
     const tip = {
-      intercept: 'Autopilot spočítá a drží stíhací kurz na vybraný cíl. Intercepty na miliony km trvají desítky minut.',
-      course: 'Klikni do plotu — autopilot poletí na zvolený bod. '
-        + 'SHIFT-klik přidává další waypointy trasy (režim zůstává aktivní); '
-        + 'obyčejný klik zadá poslední bod. Predikovaná křivka ukáže, jak se '
-        + 'loď pokusí body proletět i se setrvačností.',
+      intercept: t('tip.intercept'),
+      course: t('tip.course'),
       salvo: (n: string): string =>
-        `Odpálí ${n} raket na vybraný cíl; přebíjení šachet ${TUBE_COOLDOWN} s. `
-        + `Pohon volí řízení palby SAMO: zblízka (do ~${fmtM(envHi)} M km) rychlé HI, `
-        + `na dálku LO (dostřel ~${fmtM(envLo)} M km). Pamatuj: čím blíž odpálíš, `
-        + `tím míň času má obrana cíle — pod ~1,5 M km je salva vražedná.`,
-      pods: 'Odhodí VŠECHNY tažené raketové plošiny najednou — 6 raket na plošinu v jediné '
-        + 'vlně mimo šachty i zásobníky (nepodléhá přebíjení). Drtivá první salva, která '
-        + 'saturuje obranu cíle. Jednorázové — nové plošiny až v doku.',
-      layered: `Vrstvená salva: ${loC}× LO hned + ${hiC}× HI se zpožděním tak, aby obě vlny dorazily spolu `
-        + `a saturovaly bodovou obranu (víc raket v okně = nižší Pk obrany).`,
-      autoFire: 'AUTO palba: loď sama opakuje plné salvy, dokud je cíl v poháněné obálce, '
-        + 'a řídí i energetické baterie (cíl či nejbližší nepřítel do 500 tis. km). A',
-      autonomous: 'Režim dalších odpalů. ŘÍZENÁ salva: plný zámek dle palebného řešení, loď ji vede '
-        + '(drží zámek, lze ji přesměrovat) — ale eroduje při ztrátě kontaktu na cíl nebo za dosahem '
-        + 'řízení 10 M km. AUTONOMNÍ: zámek ×0,85, ale letí sama — ideální „vystřel a zhasni" '
-        + 's vypnutým klínem.',
-      energy: `Lasery/grasery: plné poškození pod ${Math.round(ENERGY_DECISIVE_RANGE / 1000)} tis. km, `
-        + `dosah ${Math.round(ENERGY_MAX_RANGE / 1000)} tis. km, nabíjení ${ENERGY_COOLDOWN} s.`,
-      jammer: `+rušička: salva obětuje 1 raketu jako eskortní rušičku — zbytek salvy má proti `
-        + `bodové obraně cíle Pk ×0,75. Vyžaduje salvu aspoň 3 raket.`,
-      decoy: 'Vypustí taženou návnadu: příchozí raketa na ni může přeskočit (šance dle kvality '
-        + 'ECM lodi, víc při slabém zámku raket). Svedená raketa návnadu ZNIČÍ — jedna návnada '
-        + '≈ jedna pohlcená raketa; další lze vypustit hned. Omezená zásoba.',
-      double: `Plná salva z obou boků s otočkou: levobok LO hned, otočka ${ROLL_TIME} s, pravobok `
-        + 'HI časovaný na společný dopad — dvojnásobná vlna saturuje obranu. Loď se během '
-        + 'otočky nemůže bránit palbou.',
-      wedge: 'Vypnutý klín = EMCON: loď je téměř neviditelná (jen aktivní senzory zblízka), '
-        + 'bez bočních štítů; k dispozici jen manévrovací trysky ~5 g na korekce driftu.',
-      sensors: `Plná identifikace cílů do ${sensM} mil. km + lepší zámek našich raket (plné palebné `
-        + 'řešení 100 % místo 70 %); pozor — vyzařování zlepšuje řešení nepříteli o 15 %. '
-        + 'Pasivní detekce cizího klínu funguje vždy.',
-      throttle: 'Výkon pohonu (kompenzátoru): 80 % je standard, 100 % plný výkon, '
-        + '120 % = NOUZOVÝ výkon „za červenou čarou" (riziko poškození prstence ~1× za 33 min). '
-        + 'POZOR — reaktor neutáhne pohon i boční štíty: tah ≤ 40 % ⇒ boční štíty 120 %, 60 % ⇒ 100 %, '
-        + '80 % ⇒ 60 %, 100 % ⇒ 40 %, 120 % ⇒ 25 %. Rychlý přílet = papírové boky. Platí pro celý výběr.',
-      formation: 'Formace eskadry (aktivní při výběru ≥ 2 ovladatelných lodí; aktivní loď = leader, '
-        + 'ostatní dostanou sloty a drží je automaticky — vlastní kurz ignorují). '
-        + 'STĚNA: kolmá řada, rozestup 400 tis. km — disciplinovaná palebná síť: Pk protiraket ×1,15, '
-        + 'příchozí rakety −5 % zámku. ŠÍP: sdílený senzorový obraz — +5 % palebného řešení členů. '
-        + 'ROZPTYL: rozestupy 1,5 M km — útočník nesaturuje eskadru jako celek, členové +3 % efektivního ECM. '
-        + '„—" formaci zruší. Rozpad při ztrátě leadera.',
+        tf('tip.salvo', { n, cd: TUBE_COOLDOWN, hi: fmtM(envHi), lo: fmtM(envLo) }),
+      pods: t('tip.pods'),
+      layered: tf('tip.layered', { lo: loC, hi: hiC }),
+      autoFire: t('tip.autoFire'),
+      autonomous: t('tip.autonomous'),
+      energy: tf('tip.energy', {
+        full: Math.round(ENERGY_DECISIVE_RANGE / 1000),
+        max: Math.round(ENERGY_MAX_RANGE / 1000), cd: ENERGY_COOLDOWN,
+      }),
+      jammer: t('tip.jammer'),
+      decoy: t('tip.decoy'),
+      double: tf('tip.double', { roll: ROLL_TIME }),
+      wedge: t('tip.wedge'),
+      sensors: tf('tip.sensors', { r: sensM }),
+      throttle: t('tip.throttle'),
+      formation: t('tip.formation'),
     }
 
     // stupňovitý přepínač výkonu pohonu 20–120 % (120 = nouzový, červeně)
@@ -1084,17 +1059,17 @@ export class Panels implements HudView {
       selShips.length > 0 && selShips.every(s => s.fireControl.mode === m)
     const squadPods = selShips.reduce((n, s) => n + s.pods, 0)
     const squadTips: Record<string, string> = {
-      fleetNearest: 'Doktrína NEJBLIŽŠÍ: každá vybraná loď si sama drží palbu na svůj nejbližší nepřátelský kontakt a po jeho zničení plynule přejde na další. Rozptýlená sebeobrana — ideální proti dotírající zástěně.',
-      fleetBiggest: 'Doktrína NEJVĚTŠÍ: každá vybraná loď pálí na nejtěžší známý trup — celá eskadra se tak sama koncentruje (saturace obrany!) a po zničení roluje na další nejtěžší. Doktrína stěny proti stěně.',
-      fleetSpread: 'Doktrína ROZDĚLIT: vybrané lodě si cíle rozdělí (každá jiný) — proti hejnu slabších lodí, kde koncentrace plýtvá salvami.',
-      fleetFocus: 'SOUSTŘEDIT: všechny vybrané lodě AUTO palbou na TEBOU vybraný cíl (klikni na kontakt). Jednorázové přiřazení — po zničení cíle se lodě zastaví.',
-      fleetHold: 'DRŽET PALBU: všechny vybrané lodě přestanou střílet (doktríny i AUTO vypnuty).',
-      fleetSalvo: 'SALVA VÝBĚRU: každá vybraná loď s nabitými šachtami TEĎ odpálí plnou salvu na tebou vybraný cíl — koordinovaný úder bez přepínání lodí. Připravenost šachet vidíš v rosteru FLOTILA (✓/⌛).',
-      fleetAlpha: 'SROVNAT TUBY (sesazená alfa-salva): vybrané lodě naplánují plnou salvu na SPOLEČNÝ dopad — bližší lodě odpal zpozdí, aby všechny salvy dorazily naráz a ZAHLTILY obranu cíle. Klasický Honorverse úder časovaný na cíl (time-on-target). Vyžaduje vybraný cíl a nabité šachty; vyprázdní zásobníky.',
-      fleetPods: 'PLOŠINY ⇒ CÍLE: každá vybraná loď odpálí VŠECHNY tažené plošiny (6 raket na plošinu) — ale na VLASTNÍ cíl, rozdělené mezi nejbližší klasifikované nepřátele. Zabrání plýtvání, kdy 6×N raket spadne na jednu loď. Vyžaduje živé kontakty; plošiny jsou jednorázové.',
+      fleetNearest: t('tip.fleetNearest'),
+      fleetBiggest: t('tip.fleetBiggest'),
+      fleetSpread: t('tip.fleetSpread'),
+      fleetFocus: t('tip.fleetFocus'),
+      fleetHold: t('tip.fleetHold'),
+      fleetSalvo: t('tip.fleetSalvo'),
+      fleetAlpha: t('tip.fleetAlpha'),
+      fleetPods: t('tip.fleetPods'),
     }
     const squadSeg = fleetCount >= 3
-      ? `<span class="obg" title="Velení eskadry: doktríny palby pro celý výběr — cíle si lodě volí samy (deterministicky), i při kompresi času.">${lbl(t('order.squad'), t('order.squadShort'))}`
+      ? `<span class="obg" title="${esc(t('tip.squadHdr'))}">${lbl(t('order.squad'), t('order.squadShort'))}`
         + `<button data-act="fleetNearest" class="${allMode('nearest') ? 'active' : ''}" title="${esc(squadTips.fleetNearest)}"${dis(!noShip)}>${lbl(t('squad.nearest'), t('squad.nearestShort'))}</button>`
         + `<button data-act="fleetBiggest" class="${allMode('biggest') ? 'active' : ''}" title="${esc(squadTips.fleetBiggest)}"${dis(!noShip)}>${lbl(t('squad.biggest'), t('squad.biggestShort'))}</button>`
         + `<button data-act="fleetSpread" class="${allMode('spread') ? 'active' : ''}" title="${esc(squadTips.fleetSpread)}"${dis(!noShip)}>${lbl(t('squad.spread'), t('squad.spreadShort'))}</button>`
@@ -1110,8 +1085,9 @@ export class Panels implements HudView {
     // vodorovná command lišta: [pohyb] | [palba] | [obrana/EMCON]
     // progres přebíjení šachet jako tenká linka pod tlačítky
     const ready = own ? 1 - Math.min(1, own.tubeCooldown / TUBE_COOLDOWN) : 1
-    const cdLine = `<div class="ob-cd ${ready >= 1 ? '' : 'amber'}" title="přebíjení šachet`
-      + `${own && own.tubeCooldown > 0 ? ` — zbývá ${Math.ceil(own.tubeCooldown)} s` : ' — připraveno'}">`
+    const cdTip = own && own.tubeCooldown > 0
+      ? tf('ord.cdReload', { s: Math.ceil(own.tubeCooldown) }) : t('ord.cdReady')
+    const cdLine = `<div class="ob-cd ${ready >= 1 ? '' : 'amber'}" title="${esc(cdTip)}">`
       + `<i style="width:${Math.round(ready * 100)}%"></i></div>`
     return this.panel('orders', t('panel.orders'),
       `<div class="ob">`
@@ -1120,12 +1096,12 @@ export class Panels implements HudView {
       + `<button data-act="course" title="${esc(tip.course)}" class="${ui.courseMode ? 'active' : ''}"${dis(!noShip)}>${ui.courseMode ? lbl(t('order.courseActive'), t('order.courseActiveShort')) : `${lbl(t('order.course'), t('order.courseShort'))}${xN}`}</button>`
       + throttleSeg
       + `<button data-act="selectMode" class="${ui.selectMode ? 'active' : ''}" `
-      + `title="Režim hromadného výběru (na dotyku nahrazuje Shift): tap přidá/odebere loď z výběru, tažení po plotu = obdélníkový výběr. Vypni pro běžný pan a výběr cílů.">${t('order.selectMode')}</button>`
+      + `title="${esc(t('tip.selectMode'))}">${t('order.selectMode')}</button>`
       + `</span>`
       + `<span class="obg">`
       + `<button data-act="salvo2" title="${esc(tip.salvo('2'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${lbl(`${t('order.salvoLayered')} 2`, 'S2')}</button>`
       + `<button data-act="salvo4" title="${esc(tip.salvo('4'))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${lbl(`${t('order.salvoLayered')} 4`, 'S4')}</button>`
-      + `<button data-act="salvoFull" title="${esc(tip.salvo(`všechny (${tubes})`))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${t('order.salvoFull')}</button>`
+      + `<button data-act="salvoFull" title="${esc(tip.salvo(tf('tip.salvoAll', { n: tubes })))}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${t('order.salvoFull')}</button>`
       + `<button data-act="salvoLayered" title="${esc(tip.layered)}"${dis(canFire && (own?.missiles ?? 0) > 0)}>${lbl(`${t('order.salvoLayered')} ${loC}+${hiC}`, `${loC}+${hiC}`)}</button>`
       + `<button data-act="salvoDouble" title="${esc(tip.double)}"${dis(canFire && (own?.missiles ?? 0) > 0 && !rolled)}>${lbl(t('order.salvoDouble'), t('order.salvoDoubleShort'))}</button>`
       + `<button data-act="launchPods" title="${esc(tip.pods)}"${dis(canFire && (own?.pods ?? 0) > 0)}>${lbl(`${t('order.launchPods')} ${own?.pods ?? 0}×6`, `P${own?.pods ?? 0}`)}</button>`
@@ -1145,7 +1121,7 @@ export class Panels implements HudView {
       + squadSeg
       + `</div>`
       + cdLine,
-      'mezerník pauza · +/− komprese · A auto · H nápověda')
+      t('ord.footer'))
   }
 
   private panelObjectives(state: SimState): string {

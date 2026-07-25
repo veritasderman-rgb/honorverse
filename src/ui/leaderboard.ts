@@ -4,6 +4,7 @@
  * (wob_leaderboard, wob_overall) — e-mail nikdy neopouští databázi.
  * Všechny síťové chyby degradují na null — hra bez sítě funguje dál.
  */
+import { t, tf } from './i18n'
 
 const API = 'https://asvvsygcxdixwgmdumjm.supabase.co/rest/v1'
 /** publishable klíč — je určený do klienta, práva hlídá RLS na serveru */
@@ -116,19 +117,19 @@ export function rankSummary(
   const parts: string[] = []
   if (total > 0) {
     const pct = Math.max(1, Math.round((rank / total) * 100))
-    parts.push(`Jsi ${rank}. z ${total} kapitánů (top ${pct} %).`)
+    parts.push(tf('rank.position', { rank, total, pct }))
   }
   const best = top[0]
   if (best && best.score > myScore) {
-    parts.push(`Na 1. místo ti chybí ${best.score - myScore} bodů.`)
+    parts.push(tf('rank.toFirst', { pts: best.score - myScore }))
   } else if (best && rank === 1) {
-    parts.push('Držíš 1. místo!')
+    parts.push(t('rank.first'))
   }
   if (rank > 10 && top.length >= 10) {
     const tenth = top[9]
-    if (tenth.score > myScore) parts.push(`Do TOP 10 chybí ${tenth.score - myScore} bodů.`)
+    if (tenth.score > myScore) parts.push(tf('rank.toTop10', { pts: tenth.score - myScore }))
   } else if (total > 0 && rank <= 10) {
-    parts.push('Jsi v TOP 10 téhle mise!')
+    parts.push(t('rank.inTop10'))
   }
   return parts.join(' ')
 }

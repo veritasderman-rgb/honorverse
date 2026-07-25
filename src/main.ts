@@ -10,7 +10,7 @@ import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
-import { getLang, t, t as tr, toggleLang } from './ui/i18n'
+import { fmtDec, getLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
@@ -21,7 +21,7 @@ import {
   buildSkirmish, fleetTotal, RANGE_PRESETS, SKIRMISH_CLASSES, type SkirmishConfig,
 } from './data/skirmish'
 import {
-  applyVeterancy, loadFleet, recordMissionResult, resetFleet, TIER_LABEL, tierOf,
+  applyVeterancy, loadFleet, recordMissionResult, resetFleet, tierOf,
 } from './ui/fleetlog'
 import {
   applyLoadout, LOADOUTS, loadPreset, presetById, savePreset, type LoadoutId,
@@ -344,7 +344,7 @@ function starMapSvg(cleared: ReadonlySet<string>): string {
     : ''
 
   return `<svg class="starmap-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" `
-    + `role="group" aria-label="Hvězdná mapa kampaně">`
+    + `role="group" aria-label="${esc(t('map.aria'))}">`
     + `<defs>`
     + `<radialGradient id="gxCore" cx="50%" cy="50%" r="50%">`
     + `<stop offset="0%" stop-color="#fff6e6" stop-opacity="0.95"/>`
@@ -403,6 +403,7 @@ function showStarMap(): void {
   // přepínač jazyka (CS ⟷ EN) — překreslí menu v novém jazyce
   onTap(el.querySelector('#btn-lang'), () => {
     track('lang_set', { to: toggleLang() })
+    applyStaticI18n()
     el.remove()
     showStarMap()
   })
@@ -462,27 +463,27 @@ function showFleetHall(): void {
   const log = loadFleet()
   const active = Object.entries(log.ships).sort((a, b) => b[1].battles - a[1].battles)
   const activeHtml = active.length === 0
-    ? `<div class="dim">Zatím žádné veterány — dokonči kampaňovou misi a lodě si začnou nést zkušenost.</div>`
+    ? `<div class="dim">${esc(t('fh.noVets'))}</div>`
     : active.map(([name, r]) => {
       const tier = tierOf(r.battles)
       const hull = SHIP_CLASSES[r.classId]?.hullCode ?? '?'
+      const battles = r.battles === 1 ? t('fh.battle1') : r.battles < 5 ? t('fh.battle2') : t('fh.battle5')
       return `<div class="row"><span>${esc(name)} <span class="dim">(${esc(hull)})</span></span>`
-        + `<span class="${tier === 'elite' ? 'ok' : ''}">${TIER_LABEL[tier]} · ${r.battles} ${r.battles === 1 ? 'bitva' : r.battles < 5 ? 'bitvy' : 'bitev'}</span></div>`
+        + `<span class="${tier === 'elite' ? 'ok' : ''}">${t(`fh.tier.${tier}`)} · ${r.battles} ${battles}</span></div>`
     }).join('')
   const lostHtml = log.lost.length === 0
-    ? `<div class="dim">Zatím bez ztrát. Drž to tak.</div>`
+    ? `<div class="dim">${esc(t('fh.noLosses'))}</div>`
     : log.lost.map(l =>
       `<div class="row"><span class="bad">✕ ${esc(l.name)}</span><span class="dim">${esc(SHIP_CLASSES[l.classId]?.hullCode ?? '?')}</span></div>`).join('')
 
   const el = overlay(
-    `<h2>SÍŇ FLOTILY</h2>`
-    + `<div class="brief">Vlastní lodě si mezi misemi kampaně nesou zkušenost — veteráni střílejí těsnější salvy. `
-    + `Ztráta lodi je trvalá. Nepřátel zničeno celkem: <b>${log.kills}</b>.</div>`
-    + `<div class="score-block"><div class="score-total">POSÁDKY</div>${activeHtml}</div>`
-    + `<div class="score-block"><div class="score-total">PAMÁTNÍK</div>${lostHtml}</div>`
+    `<h2>${t('fh.title')}</h2>`
+    + `<div class="brief">${tf('fh.intro', { kills: `<b>${log.kills}</b>` })}</div>`
+    + `<div class="score-block"><div class="score-total">${t('fh.crews')}</div>${activeHtml}</div>`
+    + `<div class="score-block"><div class="score-total">${t('fh.memorial')}</div>${lostHtml}</div>`
     + `<div style="margin-top:14px">`
-    + `<button id="fl-back">ZPĚT</button> `
-    + `<button id="fl-reset" class="dim">Vynulovat kariéru</button></div>`,
+    + `<button id="fl-back">${t('prep.back')}</button> `
+    + `<button id="fl-reset" class="dim">${t('fh.reset')}</button></div>`,
   )
   onTap(el.querySelector('#fl-back'), () => { el.remove(); showStarMap() })
   onTap(el.querySelector('#fl-reset'), () => {
@@ -513,19 +514,19 @@ function showSkirmishBuilder(): void {
   const col = (side: 'player' | 'enemy', title: string): string =>
     `<div class="sk-col"><div class="sk-col-h">${title}</div>`
     + SKIRMISH_CLASSES.map(c => clsRow(side, c)).join('')
-    + `<div class="sk-total">celkem <b id="sk-total-${side}">${fleetTotal(cfg[side])}</b></div></div>`
-  const ranges = RANGE_PRESETS.map(r =>
-    `<button class="sk-range${r.km === cfg.rangeKm ? ' active' : ''}" data-km="${r.km}">${esc(r.label)}</button>`).join('')
+    + `<div class="sk-total">${t('sk.total')} <b id="sk-total-${side}">${fleetTotal(cfg[side])}</b></div></div>`
+  const ranges = RANGE_PRESETS.map((r, i) =>
+    `<button class="sk-range${r.km === cfg.rangeKm ? ' active' : ''}" data-km="${r.km}">${esc(t(`sk.range${i}`))}</button>`).join('')
 
   const el = overlay(
-    `<h2>VOLNÁ BITVA</h2>`
-    + `<div class="sk-grid">${col('player', 'TVOJE FLOTILA')}${col('enemy', 'NEPŘÍTEL')}</div>`
-    + `<div class="sk-opts"><span>Vzdálenost:</span> ${ranges}</div>`
+    `<h2>${t('sk.title')}</h2>`
+    + `<div class="sk-grid">${col('player', t('sk.yours'))}${col('enemy', t('sk.enemy'))}</div>`
+    + `<div class="sk-opts"><span>${t('sk.distance')}</span> ${ranges}</div>`
     + `<div class="sk-opts"><span>Seed:</span> <b id="sk-seed">${cfg.seed}</b> `
-    + `<button id="sk-dice" title="náhodný seed">🎲</button></div>`
+    + `<button id="sk-dice" title="${esc(t('sk.dice'))}">🎲</button></div>`
     + `<div style="margin-top:14px">`
-    + `<button id="sk-fight">⚔ BOJ</button> `
-    + `<button id="sk-back">ZPĚT</button></div>`
+    + `<button id="sk-fight">${t('sk.fight')}</button> `
+    + `<button id="sk-back">${t('prep.back')}</button></div>`
     + `<div id="sk-warn" class="dim" style="margin-top:8px"></div>`,
   )
 
@@ -541,7 +542,7 @@ function showSkirmishBuilder(): void {
     const ok = fleetTotal(cfg.player) > 0 && fleetTotal(cfg.enemy) > 0
     const fight = el.querySelector<HTMLButtonElement>('#sk-fight')!
     fight.disabled = !ok
-    el.querySelector('#sk-warn')!.textContent = ok ? '' : 'Obě flotily potřebují aspoň jednu loď.'
+    el.querySelector('#sk-warn')!.textContent = ok ? '' : t('sk.warn')
   }
 
   // delegace kliknutí (steppery, vzdálenost) — jeden posluchač na overlay
@@ -812,10 +813,10 @@ const savePref = (key: string, v: string): void => {
   try { localStorage.setItem(key, v) } catch { /* noop */ }
 }
 
-/** české popisky příčin zániku rakety (rozpad obrany v rozboru) */
-const CAUSE_LABEL: Record<string, string> = {
-  cm: 'protirakety', pdlc: 'bodová obrana', wedge: 'klín', decoy: 'návnady',
-  ecm: 'ECM', dud: 'selhání', link: 'ztráta zámku', fizzle: 'minula',
+/** příčina zániku rakety → i18n klíč (rozpad obrany v rozboru) */
+const CAUSE_KEYS: Record<string, string> = {
+  cm: 'loss.cm', pdlc: 'loss.pdlc', wedge: 'loss.wedge', decoy: 'loss.decoy',
+  ecm: 'loss.ecm', dud: 'loss.dud', link: 'loss.link', fizzle: 'loss.fizzle',
 }
 
 /** top 2 příčiny z rozpadu (např. „protirakety 12, bodová obrana 5") */
@@ -823,24 +824,24 @@ function causeBreakdown(rec: Record<string, number>): string {
   return Object.entries(rec)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 2)
-    .map(([k, v]) => `${CAUSE_LABEL[k] ?? k} ${v}`)
+    .map(([k, v]) => `${CAUSE_KEYS[k] ? t(CAUSE_KEYS[k]) : k} ${v}`)
     .join(', ')
 }
 
-/** rozhodující faktor bitvy — poučná věta „proč to dopadlo takhle" (D1) */
+/** rozhodující faktor bitvy — i18n klíč věty „proč to dopadlo takhle" (D1) */
 function decisiveFactor(
   win: boolean, r: CombatStats, succ: number, defPct: number, ownLoss: number,
 ): string {
   if (win) {
-    if (succ >= 30 && r.ourLaunched >= 6) return 'přesné soustředěné salvy prolomily obranu'
-    if (defPct >= 60 && r.incLaunched >= 6) return 'vaše protiraketová clona udržela loď celou'
-    if (ownLoss === 0) return 'čisté vítězství bez ztrát'
-    return 'cíl padl dřív, než stačila rozhodnout přesila'
+    if (succ >= 30 && r.ourLaunched >= 6) return 'aa.v.winSalvos'
+    if (defPct >= 60 && r.incLaunched >= 6) return 'aa.v.winScreen'
+    if (ownLoss === 0) return 'aa.v.winClean'
+    return 'aa.v.winFast'
   }
-  if (r.incHits >= 3) return 'nepřátelské salvy prošly obranou — příště hustší clona nebo klín do dráhy'
-  if (succ < 12 && r.ourLaunched >= 6) return 'palte z kratší vzdálenosti — na dálku obrana cíle stíhá vše'
-  if (ownLoss > 0) return 'ztráty rozhodly — chraňte lodě rolováním a bočními štíty'
-  return 'rozhodla přesila nepřítele'
+  if (r.incHits >= 3) return 'aa.v.loseLeaks'
+  if (succ < 12 && r.ourLaunched >= 6) return 'aa.v.loseRange'
+  if (ownLoss > 0) return 'aa.v.loseLosses'
+  return 'aa.v.loseOdds'
 }
 
 /** After-action rozbor (D1): co se stalo a co o výsledku rozhodlo */
@@ -852,16 +853,16 @@ function afterActionHtml(state: SimState, r: CombatStats): string {
   const foeKilled = state.ships.filter(s => s.side === 'enemy' && s.destroyed).length
   const defPct = r.incLaunched > 0 ? Math.round((100 * r.incKilled) / r.incLaunched) : 0
   const defParts = causeBreakdown(r.incLoss)
-  const verdict = decisiveFactor(win, r, succ, defPct, ownLoss)
+  const verdict = t(decisiveFactor(win, r, succ, defPct, ownLoss))
   return `<div class="score-block aa">`
-    + `<div class="score-total">ROZBOR BITVY</div>`
-    + `<div class="row"><span>naše palba</span><span>${r.ourLaunched} raket · ${r.ourHits} zásahů (${succ} %)</span></div>`
+    + `<div class="score-total">${t('aa.title')}</div>`
+    + `<div class="row"><span>${t('aa.ourFire')}</span><span>${tf('aa.ourFireVal', { l: r.ourLaunched, h: r.ourHits, p: succ })}</span></div>`
     + (r.incLaunched > 0
-      ? `<div class="row"><span>naše obrana</span><span>${r.incKilled}/${r.incLaunched} sestřeleno (${defPct} %)${defParts ? ` · ${esc(defParts)}` : ''}</span></div>`
+      ? `<div class="row"><span>${t('aa.ourDefense')}</span><span>${tf('aa.ourDefenseVal', { k: r.incKilled, l: r.incLaunched, p: defPct })}${defParts ? ` · ${esc(defParts)}` : ''}</span></div>`
       : '')
-    + (r.incHits > 0 ? `<div class="row"><span>zásahy do nás</span><span class="bad">${r.incHits}</span></div>` : '')
-    + `<div class="row"><span>bilance</span><span>zničeno ${foeKilled} · vlastní ztráty ${ownLoss}</span></div>`
-    + `<div class="row"><span><b>rozhodlo</b></span><span class="${win ? 'ok' : 'bad'}">${esc(verdict)}</span></div>`
+    + (r.incHits > 0 ? `<div class="row"><span>${t('aa.hitsOnUs')}</span><span class="bad">${r.incHits}</span></div>` : '')
+    + `<div class="row"><span>${t('aa.balance')}</span><span>${tf('aa.balanceVal', { k: foeKilled, o: ownLoss })}</span></div>`
+    + `<div class="row"><span><b>${t('aa.decisive')}</b></span><span class="${win ? 'ok' : 'bad'}">${esc(verdict)}</span></div>`
     + `</div>`
 }
 
@@ -897,17 +898,20 @@ function showOutcome(state: SimState): void {
 
   // volná bitva nemá skóre do žebříčku (jen rozbor + skóre pro info)
   const isSkirmish = currentMissionId === 'skirmish'
+  // řádek skóre: překlad dle stabilního klíče složky (fallback český label)
+  const scoreLine = (l: (typeof score.breakdown)[number]): string =>
+    tf(`score.${l.key}`, { n: l.key === 'difficulty' ? fmtDec(l.n ?? 1) : l.n ?? 0 })
   const scoreHtml = win
     ? `<div class="score-block">`
       + `<div class="score-total">${t('outcome.score')}: <b>${score.total}</b></div>`
       + score.breakdown.map(l =>
-        `<div class="row"><span>${esc(l.label)}</span><span class="${l.points >= 0 ? 'ok' : 'bad'}">${l.points >= 0 ? '+' : ''}${l.points}</span></div>`).join('')
+        `<div class="row"><span>${esc(scoreLine(l))}</span><span class="${l.points >= 0 ? 'ok' : 'bad'}">${l.points >= 0 ? '+' : ''}${l.points}</span></div>`).join('')
       + (isSkirmish ? '' :
         `<div class="lb-form">`
-        + `<input id="lb-nick" maxlength="24" placeholder="přezdívka (2–24 znaků)" value="${esc(loadPref(NICK_KEY))}">`
-        + `<input id="lb-email" maxlength="254" placeholder="e-mail (nepovinný — celkové pořadí)" value="${esc(loadPref(EMAIL_KEY))}">`
-        + `<label class="lb-consent"><input type="checkbox" id="lb-consent"${loadPref(EMAIL_KEY) ? ' checked' : ''}> souhlasím s uložením e-mailu pro historické skóre</label>`
-        + `<button id="btn-lb-submit">ODESLAT DO ŽEBŘÍČKU</button>`
+        + `<input id="lb-nick" maxlength="24" placeholder="${esc(t('lb.nickPh'))}" value="${esc(loadPref(NICK_KEY))}">`
+        + `<input id="lb-email" maxlength="254" placeholder="${esc(t('lb.emailPh'))}" value="${esc(loadPref(EMAIL_KEY))}">`
+        + `<label class="lb-consent"><input type="checkbox" id="lb-consent"${loadPref(EMAIL_KEY) ? ' checked' : ''}> ${esc(t('lb.consent'))}</label>`
+        + `<button id="btn-lb-submit">${t('lb.submit')}</button>`
         + `</div>`
         + `<div id="lb-result" class="lb-box"></div>`)
       + `</div>`
@@ -946,17 +950,17 @@ function showOutcome(state: SimState): void {
     const email = (el.querySelector<HTMLInputElement>('#lb-email')?.value ?? '').trim()
     const consent = el.querySelector<HTMLInputElement>('#lb-consent')?.checked === true
     if (nick.length < 2) {
-      result.innerHTML = `<span class="bad">Zadej přezdívku (aspoň 2 znaky).</span>`
+      result.innerHTML = `<span class="bad">${esc(t('lb.errNick'))}</span>`
       return
     }
     if (email && !consent) {
-      result.innerHTML = `<span class="bad">E-mail uložíme jen se souhlasem — zaškrtni ho, nebo e-mail smaž.</span>`
+      result.innerHTML = `<span class="bad">${esc(t('lb.errConsent'))}</span>`
       return
     }
     savePref(NICK_KEY, nick)
     savePref(EMAIL_KEY, consent ? email : '')
     submitBtn!.disabled = true
-    result.innerHTML = `<span class="dim">odesílám…</span>`
+    result.innerHTML = `<span class="dim">${esc(t('lb.sending'))}</span>`
     void (async () => {
       const ok = await submitScore({
         mission_id: currentMissionId, nickname: nick,
@@ -967,22 +971,22 @@ function showOutcome(state: SimState): void {
       })
       if (!ok) {
         submitBtn!.disabled = false
-        result.innerHTML = `<span class="bad">Odeslání selhalo (offline?). Zkus to znovu.</span>`
+        result.innerHTML = `<span class="bad">${esc(t('lb.failed'))}</span>`
         return
       }
       const [top, rank] = await Promise.all([
         fetchTop(currentMissionId, 10), fetchRank(currentMissionId, score.total),
       ])
-      let html = `<div class="ok">Skóre uloženo.</div>`
+      let html = `<div class="ok">${esc(t('lb.saved'))}</div>`
       if (top && rank) {
         html += `<div class="lb-rank">${esc(rankSummary(score.total, top, rank.better, rank.total))}</div>`
-        html += `<table class="lb-table"><tr><th>#</th><th>kapitán</th><th>body</th><th>čas</th><th>ztráty</th></tr>`
+        html += `<table class="lb-table"><tr><th>#</th><th>${t('hall.captain')}</th><th>${t('hall.points')}</th><th>${t('lb.time')}</th><th>${t('lb.losses')}</th></tr>`
           + top.map((r, i) =>
             `<tr><td>${i + 1}.</td><td>${esc(r.nickname)}</td><td>${r.score}</td>`
             + `<td>${fmtTime(r.time_s)}</td><td>${r.losses}</td></tr>`).join('')
           + `</table>`
       } else {
-        html += `<span class="dim">Žebříček se nepodařilo načíst.</span>`
+        html += `<span class="dim">${esc(t('lb.loadFailed'))}</span>`
       }
       result.innerHTML = html
     })()
@@ -1031,6 +1035,13 @@ bridge.onSnapshot = (state, compression) => {
     showOutcome(state)
   }
 }
+
+/** statické texty mimo overlaye (index.html) — přeložit při startu i přepnutí */
+function applyStaticI18n(): void {
+  const rot = document.getElementById('rotate-hint')
+  if (rot) rot.innerHTML = `${esc(t('rotate.title'))}<br>${esc(t('rotate.detail'))}`
+}
+applyStaticI18n()
 
 // start: ?mission=id přeskočí menu (tlačítko ZNOVU), jinak výběr mise;
 // při prvním spuštění kampaně se před výběrem jednou ukáže úvod příběhu

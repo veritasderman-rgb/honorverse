@@ -2,10 +2,13 @@
  * Skórování misí (score.ts) a shrnutí pořadí (leaderboard.rankSummary) —
  * čisté funkce, deterministické.
  */
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { MISSION_PAR, scoreMission } from '../src/sim/score'
 import { rankSummary, type LeaderRow } from '../src/ui/leaderboard'
 import { SCENARIOS } from '../src/data/missions'
+import { setLang } from '../src/ui/i18n'
+
+afterEach(() => setLang('cs'))
 
 const winInput = {
   missionId: 'mission01', outcome: 'win' as const, t: 7_000,
@@ -69,6 +72,7 @@ describe('rankSummary', () => {
     ({ nickname: 'x', score, time_s: 100, losses: 0, created_at: '' })
 
   it('„na 1. místo chybí X bodů" počítá rozdíl proti špičce', () => {
+    setLang('cs')
     const top = [row(2000), row(1500), row(1200)]
     const s = rankSummary(1000, top, 3, 12)
     expect(s).toContain('4. z 12')
@@ -77,14 +81,25 @@ describe('rankSummary', () => {
   })
 
   it('první místo gratuluje', () => {
+    setLang('cs')
     const top = [row(3000), row(2000)]
     expect(rankSummary(3000, top, 0, 5)).toContain('Držíš 1. místo')
   })
 
   it('mimo top 10 hlásí, kolik chybí do desítky', () => {
+    setLang('cs')
     const top = Array.from({ length: 10 }, (_, i) => row(2000 - i * 100)) // 10. má 1100
     const s = rankSummary(900, top, 14, 40)
     expect(s).toContain('15. z 40')
     expect(s).toContain('Do TOP 10 chybí 200 bodů')
+  })
+
+  it('anglicky mluví celou větou (EN mutace klíčů)', () => {
+    setLang('en')
+    const top = [row(2000), row(1500), row(1200)]
+    const s = rankSummary(1000, top, 3, 12)
+    expect(s).toContain('#4 of 12')
+    expect(s).toContain('1000 more points')
+    expect(rankSummary(2000, top, 0, 5)).toContain('1st place')
   })
 })
