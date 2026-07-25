@@ -69,6 +69,7 @@ const DICT: Record<string, { cs: string; en: string }> = {
   'tut.title': { cs: 'VÝCVIK', en: 'TRAINING' },
   'tut.next': { cs: 'POKRAČOVAT', en: 'CONTINUE' },
   'tut.skip': { cs: 'přeskočit výcvik', en: 'skip training' },
+  'tut.hide': { cs: 'schovat nápovědu', en: 'hide hint' },
   // hall of fame
   'hall.loading': { cs: 'načítám…', en: 'loading…' },
   'hall.empty': { cs: 'Žebříček je zatím prázdný — buď první!', en: 'Leaderboard is empty — be the first!' },
