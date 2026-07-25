@@ -178,10 +178,13 @@ export const mission02: Scenario = {
           },
         },
         {
+          // Hyena startuje o kus dál než Šakal: nováček (výcviková mise!)
+          // tak bojuje 1v1 sekvenčně, ne 2v1 naráz — síla přesily zůstává,
+          // jen je rozfázovaná v čase
           kind: 'spawnShip',
           ship: {
             classId: 'dd-korzar', side: 'enemy', name: 'Hyena',
-            pos: { x: 32_000_000, y: -25_000_000 }, vel: { x: 0, y: 150 },
+            pos: { x: 48_000_000, y: -34_000_000 }, vel: { x: 0, y: 150 },
             doctrine: 'pirate', activeSensors: true,
           },
         },
