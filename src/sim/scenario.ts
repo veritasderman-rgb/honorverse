@@ -141,7 +141,7 @@ function applyAction(state: SimState, a: TriggerAction): void {
     case 'comm':
       // komunikace (hail) — event se speaker, UI zobrazí avatar + toast
       state.events.push({
-        t: state.t, kind: 'comm', text: a.text ?? '', speaker: a.speaker, slowdown: true,
+        t: state.t, kind: 'comm', text: a.text ?? '', speaker: a.speaker, voId: a.vo, slowdown: true,
       })
       break
     case 'setDoctrine': {

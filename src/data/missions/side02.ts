@@ -88,7 +88,7 @@ export const side02: Scenario = {
       id: 'trg-comm-alarm', once: true,
       conditions: [{ kind: 'distanceBelow', shipA: RAMPART, shipB: GUARD1, distance: 22_000_000 }],
       actions: [{
-        kind: 'comm', speaker: 'pirate',
+        kind: 'comm', vo: 's02-c1', speaker: 'pirate',
         text: '„Máme společnost — námořnictvo našlo přístav! Kryjte sklad, ať stihnou naložit!"',
       }],
     },

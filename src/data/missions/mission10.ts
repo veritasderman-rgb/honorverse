@@ -132,7 +132,7 @@ export const mission10: Scenario = {
       conditions: [{ kind: 'time', t: 15 }],
       actions: [
         {
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm10-c1', speaker: 'xo',
           text: 'První důstojník: „Rozestavění hlídek sedí na Auroryny mapy do posledního kilometru, pane. A konvoj, co jsme potopili u Keravu, tady pořád chybí — základna má poloviční šachty. Jen ten dreadnought u ní je nový. Tohle okno jsme si vykoupili sami."',
         },
       ],
@@ -155,7 +155,7 @@ export const mission10: Scenario = {
         { kind: 'setDoctrine', shipId: PATROL[3], doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: GUARDIAN, doctrine: 'hunter' },
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm10-c2', speaker: 'enemy-captain',
           text: 'IDS Córdoba: „Avalonský svaze, tady hlídka soustavy Cádiz. Věděli jsme, že přijdete — předurčení Impéria zná i vaše souřadnice. Palba bez další výzvy."',
         },
       ],
@@ -170,7 +170,7 @@ export const mission10: Scenario = {
         { kind: 'podSalvo', shipId: BASE, targetId: FLAGSHIP, count: 32 },
         { kind: 'message', text: 'Pole podů! Salva 32 raket!' },
         {
-          kind: 'comm', speaker: 'tactical',
+          kind: 'comm', vo: 'm10-c3', speaker: 'tactical',
           text: 'Taktický: „Zaseli nám je přímo do osy útoku — věděli, kudy poletíme. Manévr a geometrie, kapitáne, municí tohle neustojíme!"',
         },
       ],
@@ -215,7 +215,7 @@ export const mission10: Scenario = {
       ],
       actions: [
         {
-          kind: 'comm', speaker: 'governor',
+          kind: 'comm', vo: 'm10-c4', speaker: 'governor',
           text: 'Guvernér: „Rozkaz Admirality: okamžitě přerušte útok a stáhněte se — diplomaté podepsali příměří. Opakuji: stáhněte se."',
         },
         { kind: 'setFlag', flag: 'order-given' },

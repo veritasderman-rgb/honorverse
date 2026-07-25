@@ -90,11 +90,11 @@ function doctrineTarget(state: SimState, ship: ShipState, fc: FireControl): void
 }
 
 /** hláška taktického důstojníka hráči */
-function say(state: SimState, ship: ShipState, text: string, slowdown = false): void {
+function say(state: SimState, ship: ShipState, text: string, slowdown = false, voId?: string): void {
   if (ship.doctrine !== 'player') return
   state.events.push({
     t: state.t, kind: 'message', shipId: ship.id, side: ship.side,
-    speaker: 'tactical', slowdown, text,
+    speaker: 'tactical', slowdown, text, voId,
   })
 }
 
@@ -141,7 +141,8 @@ export function updateFireControl(state: SimState): void {
       if (fc.engaged) {
         say(state, ship, capitulated
           ? 'Cíl kapituloval — zastavuji palbu.'
-          : 'Cíl zničen nebo ztracen — auto palba ukončena.')
+          : 'Cíl zničen nebo ztracen — auto palba ukončena.', false,
+        capitulated ? 'sys-autosurr' : 'sys-autodone')
       }
       fc.mode = 'hold'
       fc.engaged = false
@@ -150,7 +151,7 @@ export function updateFireControl(state: SimState): void {
 
     if (ship.missiles <= 0 && !doctrine) {
       if (fc.engaged || fc.mode === 'auto') {
-        say(state, ship, 'Prázdné zásobníky raket — auto palba ukončena.', true)
+        say(state, ship, 'Prázdné zásobníky raket — auto palba ukončena.', true, 'sys-autoempty')
       }
       fc.mode = 'hold'
       fc.engaged = false
@@ -162,13 +163,13 @@ export function updateFireControl(state: SimState): void {
     if (ship.rolledTo !== null) {
       if (fc.rolledWait !== true) {
         fc.rolledWait = true
-        say(state, ship, 'Jsme odvalení — AUTO palba čeká na návrat do normální polohy.')
+        say(state, ship, 'Jsme odvalení — AUTO palba čeká na návrat do normální polohy.', false, 'sys-autohold-roll')
       }
       continue
     }
     if (fc.rolledWait === true) {
       fc.rolledWait = false
-      say(state, ship, 'Zpět v normální poloze — AUTO palba pokračuje.')
+      say(state, ship, 'Zpět v normální poloze — AUTO palba pokračuje.', false, 'sys-autoresume')
     }
 
     const d = dist(ship.pos, target.pos)

@@ -50,16 +50,24 @@ function hashKey(key: string): number {
 /**
  * Deterministický výběr varianty: rand() nad forkem rng seedovaným
  * z aktuálního state.rng.s ⊕ hash(key). Hlavní proud se neposouvá.
+ * Vrací text + voId nahrávky (`<voPrefix>-<index od 1>`, viz docs/VO_LINES.md).
  */
-function pick(state: SimState, key: string, variants: string[]): string {
+function pick(
+  state: SimState, key: string, voPrefix: string, variants: string[],
+): { text: string; voId: string } {
   const fork = { s: (state.rng.s ^ hashKey(key)) >>> 0 }
-  return variants[Math.min(variants.length - 1, Math.floor(rand(fork) * variants.length))]
+  const i = Math.min(variants.length - 1, Math.floor(rand(fork) * variants.length))
+  return { text: variants[i], voId: `${voPrefix}-${i + 1}` }
 }
 
 /** hláška posádky (kind 'message' + speaker; UI slowdown řeší jiné eventy) */
-function say(state: SimState, ship: ShipState, speaker: Speaker, text: string): void {
+function say(
+  state: SimState, ship: ShipState, speaker: Speaker,
+  line: { text: string; voId: string },
+): void {
   state.events.push({
-    t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker, text,
+    t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker,
+    text: line.text, voId: line.voId,
   })
 }
 
@@ -71,7 +79,7 @@ export function voiceFirstContact(state: SimState, target: ShipState): void {
   const own = playerShip(state)
   if (!own) return
   if (!once(state, 'said:first-contact:mission')) return
-  say(state, own, 'comms', pick(state, 'first-contact', [
+  say(state, own, 'comms', pick(state, 'first-contact', 'crew-contact', [
     'Impelerový kontakt, označuji Alfa-1. Kurz a emise zapisuji do taktické mapy.',
     'Kontakt! Pasivní pole zachytilo cizí podpis. Předávám taktickému.',
     'Máme společnost — nový kontakt na scopech. Sledujeme a nahráváme.',
@@ -87,7 +95,7 @@ export function voiceWarshipClassified(state: SimState, target: ShipState): void
   const own = playerShip(state)
   if (!own) return
   if (!once(state, `said:warship:${target.id}`)) return
-  say(state, own, 'tactical', pick(state, `warship:${target.id}`, [
+  say(state, own, 'tactical', pick(state, `warship:${target.id}`, 'crew-warship', [
     `Potvrzeno: válečná loď, ${def.name}. Přepočítávám palebné řešení.`,
     `Klasifikace hotová — ${def.name}. To není obchodník, kapitáne.`,
     `Senzory potvrzují válečnou loď: ${def.name}. Doporučuji držet odstup, dokud nemáme řešení.`,
@@ -100,7 +108,7 @@ export function voiceIncomingSalvo(state: SimState, shooter: ShipState, target: 
   const own = playerShip(state)
   if (!own) return
   if (!once(state, 'said:first-vampire:mission')) return
-  say(state, own, 'tactical', pick(state, 'first-vampire', [
+  say(state, own, 'tactical', pick(state, 'first-vampire', 'crew-vampire', [
     `Odpaly raket! Vampýr, vampýr — počet ${count}, kurz na nás.`,
     `Raketové odpaly u nepřítele! Sledujeme ${count} vampýrů na příchodu.`,
     `Vampýr, vampýr! Salva ${count} raket ve vzduchu — obranné systémy připraveny.`,
@@ -113,14 +121,14 @@ export function voiceOwnHit(state: SimState, ship: ShipState, hullDamage: number
   if (ship.doctrine !== 'player' || ship.destroyed) return
   if (hullDamage >= HEAVY_HIT_DAMAGE) {
     if (!once(state, `said:hit-heavy:${ship.id}`)) return
-    say(state, ship, 'xo', pick(state, `hit-heavy:${ship.id}`, [
+    say(state, ship, 'xo', pick(state, `hit-heavy:${ship.id}`, 'crew-hitheavy', [
       'Těžký zásah! Hlášení škod jdou ze tří palub najednou — týmy nasazuji, kde se dá.',
       'To šlo hluboko, kapitáne. Prosekli boční štít — škody se teprve sčítají.',
       'Průnik trupem! Přetlakové přepážky drží… zatím.',
     ]))
   } else {
     if (!once(state, `said:hit-light:${ship.id}`)) return
-    say(state, ship, 'engineer', pick(state, `hit-light:${ship.id}`, [
+    say(state, ship, 'engineer', pick(state, `hit-light:${ship.id}`, 'crew-hitlight', [
       'Zásah do trupu — škody povrchové. Týmy oprav už běží.',
       'Dostali jsme šlehanec. Nic, co by se nedalo zalátat za provozu.',
       'Lehký zásah, kapitáne. Boční štít pohltil většinu.',
@@ -136,7 +144,7 @@ export function voiceEnemyHit(state: SimState, target: ShipState): void {
   // hlásíme jen zásah, který naše strana skutečně vidí (kontakt na cíl)
   if (!state.contacts.player.some(c => c.shipId === target.id)) return
   if (!once(state, `said:enemy-hit:${target.id}`)) return
-  say(state, own, 'tactical', pick(state, `enemy-hit:${target.id}`, [
+  say(state, own, 'tactical', pick(state, `enemy-hit:${target.id}`, 'crew-enemyhit', [
     'Zásah! Senzory hlásí únik atmosféry z cíle.',
     'Přímý zásah — na scopech úlomky trupu a oblak par.',
     'Dostal to. Impelerový podpis cíle kolísá.',
@@ -151,7 +159,7 @@ export function voiceEnemyFleeing(state: SimState, enemy: ShipState): void {
   // hláška jen když hráčova strana loď vidí (kontakt drží)
   if (!state.contacts.player.some(c => c.shipId === enemy.id)) return
   if (!once(state, `said:enemy-fleeing:${enemy.id}`)) return
-  say(state, own, 'tactical', pick(state, `enemy-fleeing:${enemy.id}`, [
+  say(state, own, 'tactical', pick(state, `enemy-fleeing:${enemy.id}`, 'crew-fleeing', [
     'Cíl se otáčí a prchá — vektor pryč od nás, plný výkon.',
     'Nepřítel má dost! Otočil se a maže z boje.',
     'Kontakt prchá, kapitáne. Můžeme ho nechat běžet — nebo dohnat.',
@@ -165,7 +173,7 @@ function checkHull(state: SimState, ship: ShipState): void {
   const def = SHIP_CLASSES[ship.classId]
   if (!def || ship.hull >= 0.5 * def.hullPoints) return
   if (!once(state, `said:hull50:${ship.id}`)) return
-  say(state, ship, 'xo', pick(state, `hull50:${ship.id}`, [
+  say(state, ship, 'xo', pick(state, `hull50:${ship.id}`, 'crew-hull50', [
     'Kapitáne, loď to dlouho nevydrží. Jestli máme plán, teď je čas ho použít.',
     'Trup pod polovinou, kapitáne. Ještě pár takových zásahů a rozpadneme se.',
     'Hlášení škod se přestávají vejít na jednu obrazovku. Dlouho už to nevydržíme.',
@@ -178,7 +186,7 @@ function checkMissiles(state: SimState, ship: ShipState): void {
   if (!def || def.magazineMissiles <= 0) return
   if (ship.missiles >= LOW_AMMO_FRACTION * def.magazineMissiles) return
   if (!once(state, `said:ammo-low:${ship.id}`)) return
-  say(state, ship, 'tactical', pick(state, `ammo-low:${ship.id}`, [
+  say(state, ship, 'tactical', pick(state, `ammo-low:${ship.id}`, 'crew-ammolow', [
     'Zásobníky raket pod čtvrtinou. Každou další salvu dvakrát zvažte, kapitáne.',
     'Docházejí nám rakety — zbývá míň než čtvrtina zásobníků.',
     'Munice na dně: pod 25 procent. Přecházím na úsporné salvy.',
@@ -191,7 +199,7 @@ function checkCMs(state: SimState, ship: ShipState): void {
   if (!def || def.magazineCMs <= 0) return
   if (ship.cms >= LOW_AMMO_FRACTION * def.magazineCMs) return
   if (!once(state, `said:cm-low:${ship.id}`)) return
-  say(state, ship, 'tactical', pick(state, `cm-low:${ship.id}`, [
+  say(state, ship, 'tactical', pick(state, `cm-low:${ship.id}`, 'crew-cmlow', [
     'Protirakety pod čtvrtinou zásobníků. Obrana bude řídnout.',
     'Zásobníky protiraket docházejí — pod 25 procent. Zbytek nechte na PDLC a klín.',
     'Málo protiraket, kapitáne. Šetřím je na salvy, které projdou nejblíž.',
@@ -205,7 +213,7 @@ function checkCMs(state: SimState, ship: ShipState): void {
 export function voiceTargetInEnvelope(state: SimState, ship: ShipState, target: ShipState): void {
   if (ship.doctrine !== 'player' || target.side !== 'enemy') return
   if (!once(state, `said:in-envelope:${target.id}`)) return
-  say(state, ship, 'tactical', pick(state, `in-envelope:${target.id}`, [
+  say(state, ship, 'tactical', pick(state, `in-envelope:${target.id}`, 'crew-envelope', [
     'Cíl vstoupil do naší poháněné obálky — čekám na rozkaz k palbě.',
     'Máme ho v obálce. Palebné řešení drží — stačí říct, kapitáne.',
     'Cíl v dosahu poháněného letu. Šachty nabité, čekám na rozkaz.',

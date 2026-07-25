@@ -106,7 +106,7 @@ export const mission07: Scenario = {
       conditions: [{ kind: 'time', t: 30 }],
       actions: [
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm07-c1', speaker: 'enemy-captain',
           text: 'IDS Centinela: „Avalonské plavidlo, tady eskorta zlaté flotily. Tento konvoj pluje pod ochranou caudilla a předurčení Impéria. Otočte se, dokud můžete — není bez zubů."',
         },
       ],
@@ -120,7 +120,7 @@ export const mission07: Scenario = {
       ],
       actions: [
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm07-c2', speaker: 'enemy-captain',
           text: 'IDS Centinela: „Máme pro tebe překvapení, avalonský pirátě."',
         },
         { kind: 'podSalvo', shipId: ESCORT_CL, targetId: PRAPOREC, count: 24 },

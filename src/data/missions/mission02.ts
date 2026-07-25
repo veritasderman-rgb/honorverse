@@ -123,7 +123,7 @@ export const mission02: Scenario = {
         { kind: 'revealClass', shipId: 4 },
         { kind: 'revealClass', shipId: 5 },
         {
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm02-c1', speaker: 'comms',
           text: 'Zachycený pirátský provoz: znají složení konvoje — půjdou po nákladních lodích, ne po nás.',
         },
       ],
@@ -136,7 +136,7 @@ export const mission02: Scenario = {
       ],
       actions: [
         {
-          kind: 'comm', speaker: 'pirate',
+          kind: 'comm', vo: 'm02-c2', speaker: 'pirate',
           text: '„Konvoji Pomezím: vypněte stroje a opusťte lodě, a možná vás necháme dýchat. Ta plechovka od námořnictva vás nezachrání."',
         },
       ],
@@ -147,7 +147,7 @@ export const mission02: Scenario = {
       conditions: [{ kind: 'flag', flag: 'ambush' }],
       actions: [
         {
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm02-c3', speaker: 'comms',
           text: 'Argonaut volá: „Doprovode, kde jste?! Máme impelerové kontakty ze dvou stran — proboha, vraťte se ke konvoji!"',
         },
       ],
@@ -163,7 +163,7 @@ export const mission02: Scenario = {
         { kind: 'setFlag', flag: 'ambush' },
         {
           // LEKCE: proti přesile nechat nepřítele přijít + plošiny na dobití
-          kind: 'comm', speaker: 'tactical',
+          kind: 'comm', vo: 'm02-c4', speaker: 'tactical',
           text: 'Tři na jednoho — ale ženou se k NÁM, a to je naše výhoda. Vraťte se ke konvoji, '
             + 'nechte je zkrátit vzdálenost a pak je berte zblízka jednoho po druhém. Táhneme '
             + 'i raketovou plošinu: šest raket v jedné vlně — až bude první pirát blízko, '

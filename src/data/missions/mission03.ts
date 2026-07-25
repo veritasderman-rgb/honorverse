@@ -64,7 +64,7 @@ export const mission03: Scenario = {
       conditions: [{ kind: 'time', t: 10 }],
       actions: [
         {
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm03-c1', speaker: 'comms',
           text: 'Mercator vysílá: „Díky, že jste tu, Dauntless. Přední prstenec sotva drží pohromadě — držte se blízko, prosím. Kdyby se něco utrhlo, ať to nikdo neschytá."',
         },
       ],
@@ -88,17 +88,17 @@ export const mission03: Scenario = {
         { kind: 'addObjective', objectiveId: 'obj-destroy', text: 'Znič pomocný křižník' },
         {
           // výsměšná zpráva imperiálního kapitána
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm03-c2', speaker: 'enemy-captain',
           text: '„Vaše Království si myslí, že mu Pomezí patří. Historické právo říká něco jiného — a tohle je odpověď Impéria, Dauntless. Doufám, že jste si užili eskortní službu."',
         },
         {
           // hráčova (automatická) výzva ke kapitulaci
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm03-c3', speaker: 'comms',
           text: 'Vysílám výzvu ke kapitulaci: „Mercatore, složte zbraně a vypněte klín." Odpovědí je odpal raket, kapitáne.',
         },
         {
           // LEKCE KONTROLY VZDÁLENOSTI: kiting proti těžší lodi
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm03-c4', speaker: 'xo',
           text: 'První důstojník: „OTEVŘÍT VZDÁLENOST, hned! Zblízka jsou salvy vražedné pro obě '
             + 'strany — a on má víc šachet. Držte ho na dvou až dvou a půl milionech: jeho salvy '
             + 'k nám poletí dost dlouho, aby obrana stihla dva pokusy na každou raketu. My jsme '

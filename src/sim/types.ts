@@ -411,6 +411,8 @@ export interface SimEvent {
   pos?: Vec2
   /** mluvčí hlášky/komunikace (id avataru z docs/ART_PROMPTS.md) */
   speaker?: Speaker
+  /** id namluvené repliky (docs/VO_LINES.md) — UI přehraje audio/vo/lines/<id>-<lang> */
+  voId?: string
   /** missileKilled/Miss: PŘÍČINA zániku rakety (rozpad bojové statistiky) */
   cause?: LossCause
   /** launch/missileKilled/Hit/Miss: id salvy (souhrn osudu salvy v UI) */
@@ -462,6 +464,8 @@ export interface TriggerAction {
   objectiveId?: string
   /** kind 'comm': mluvčí komunikace */
   speaker?: Speaker
+  /** kind 'comm': id namluvené repliky (docs/VO_LINES.md) */
+  vo?: string
   /** kind 'setSide': nová strana lodi (převlečené lodě — zvraty misí) */
   side?: Side
   /** kind 'podSalvo': cíl a počet raket salvy z raketových podů */

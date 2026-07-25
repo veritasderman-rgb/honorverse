@@ -160,7 +160,7 @@ export const mission09: Scenario = {
       conditions: [{ kind: 'time', t: 10 }],
       actions: [
         {
-          kind: 'comm', speaker: 'governor',
+          kind: 'comm', vo: 'm09-c1', speaker: 'governor',
           text: 'Guvernér: „Kapitáne Rowane, hyperprostorové senzory hlásí translační stopy na limitu. Za vámi jsou tři obydlené světy a Křižovatka, ze které se platí všechno ostatní. Admiralita vám svěřila Vladaře. Očekává, že invaze skončí tady. Nic víc k tomu není."',
         },
       ],
@@ -183,7 +183,7 @@ export const mission09: Scenario = {
       conditions: [{ kind: 'time', t: 420 }],
       actions: [
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm09-c2', speaker: 'enemy-captain',
           text: 'IDS Toledo: „Hvězdné království Avalon, historické právo Impéria dorazilo na váš práh — a váží šest a půl milionu tun. Caudillo Ferrante Salazar vám nabízí milost: vydejte Křižovatku a vaše světy zůstanou obyvatelné. Toto je jediná a poslední nabídka."',
         },
       ],
@@ -195,7 +195,7 @@ export const mission09: Scenario = {
       conditions: WAVE1.map(id => ({ kind: 'flag' as const, flag: neutralized(id) })),
       actions: [
         {
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm09-c3', speaker: 'xo',
           text: 'První důstojník: „První sled je pryč, pane. I ten jejich dreadnought. Ale podívejte na geometrii — jsme daleko od stanice a všechna naše rychlost míří VEN. Jestli mají druhý sbor, přistane tam, kde nejsme."',
         },
       ],
@@ -208,7 +208,7 @@ export const mission09: Scenario = {
       actions: [
         { kind: 'message', text: 'Druhý sbor vystupuje z hyperu na opačné straně soustavy!' },
         {
-          kind: 'comm', speaker: 'station',
+          kind: 'comm', vo: 'm09-c4', speaker: 'station',
           text: 'Kontrola Křižovatka: „Nové translační stopy — mínus sto devadesát na mínus šedesát! Jsou za vámi, opakuji, druhý sled je MEZI vámi a stanicí! Vladaři, tady jsou tři tisíce lidí!"',
         },
         invader(9201, 'ca-bastion', 'IDS Deneb', -190_000_000, -60_000_000, 2),

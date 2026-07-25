@@ -92,7 +92,7 @@ export const mission08: Scenario = {
       conditions: [{ kind: 'time', t: 15 }],
       actions: [
         {
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm08-c1', speaker: 'comms',
           text: 'KNS Claymore: „Vanguarde, tady kapitán MacAllan. Poletíme s vámi, ale Kaledon se neklaní — a caudillovým vrahům už vůbec ne. Konec."',
         },
       ],
@@ -107,7 +107,7 @@ export const mission08: Scenario = {
         { kind: 'setDoctrine', shipId: WALL[1], doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: WALL[2], doctrine: 'hunter' },
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm08-c2', speaker: 'enemy-captain',
           text: 'IDS Polaris: „Avalonsko-kaledonská hlídko, Impérium vám dává jedinou možnost: vypněte klíny. Nevyužijete-li ji, poneseme my vaše jména do hlášení."',
         },
       ],
@@ -130,7 +130,7 @@ export const mission08: Scenario = {
       conditions: [{ kind: 'flag', flag: 'claymore-breaks' }],
       actions: [
         {
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm08-c3', speaker: 'xo',
           text: 'První důstojník: „Kaledonský kapitán se odtrhl z formace! Ignoruje volání — jde sám na jejich stěnu!"',
         },
         { kind: 'setDoctrine', shipId: CLAYMORE, doctrine: 'hunter' },

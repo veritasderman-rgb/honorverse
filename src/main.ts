@@ -10,6 +10,7 @@ import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
+import { configureVoLines, stopVoLines, voLinesOnEvents } from './ui/voLines'
 import { fmtDec, getLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
 import { shipClassName } from './data/shipsEn'
@@ -56,9 +57,12 @@ const mobileHud = new MobileHud(plotContainer)
 // tutoriál (guided steps): spotlight + bublina; krmí se stejnými snapshoty
 const tutorial = new TutorialView(plotContainer)
 const hud: HudView = {
-  addEvents: e => { panels.addEvents(e); mobileHud.addEvents(e); tutorial.addEvents(e) },
+  addEvents: e => { panels.addEvents(e); mobileHud.addEvents(e); tutorial.addEvents(e); voLinesOnEvents(e) },
   update: (s, ui, f) => { panels.update(s, ui, f); mobileHud.update(s, ui, f); tutorial.update(s, ui, f) },
 }
+// namluvené hlásky posádky/komunikace (voId na eventech) — sdílí mute a
+// hlasitost efektů se zvukem hry
+configureVoLines(() => audio.muted, () => audio.sfxVolume)
 const controller = new UIController(bridge, plot, hud)
 
 // hook pro smoke testy (Playwright) — čtení stavu plotu a ovládání zvenku
@@ -1006,6 +1010,7 @@ function showOutcome(state: SimState): void {
 
 bridge.onReady = scenario => {
   currentMissionId = scenario.id
+  stopVoLines()            // čistý start — žádné hlásky z minulé mise
   controller.stats.reset() // bojová statistika (sdílený tracker) — per mise
   panels.resetStats()      // + HUD logy a rozpracované salvy
   plot.setHyperlimit(scenario.hyperlimit ?? null)
@@ -1032,6 +1037,7 @@ bridge.onSnapshot = (state, compression) => {
   if (!outcomeShown && state.outcome !== 'running') {
     outcomeShown = true
     controller.setCompression(0)
+    stopVoLines() // konec mise — rozehrané hlásky nesmí mluvit přes epilog
     // kariérní deník flotily (C1): jen kampaň, ne volná bitva
     if (currentMissionId !== 'skirmish') recordMissionResult(state)
     showOutcome(state)

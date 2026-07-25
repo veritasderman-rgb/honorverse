@@ -48,11 +48,11 @@ export function surrenderChanceFor(target: ShipState): number {
 }
 
 /** hláška spojaře hráči (AI výzvy neposílá, ale pro jistotu filtrujeme) */
-function commsSay(state: SimState, ship: ShipState, text: string): void {
+function commsSay(state: SimState, ship: ShipState, text: string, voId?: string): void {
   if (ship.doctrine !== 'player') return
   state.events.push({
     t: state.t, kind: 'message', shipId: ship.id, side: ship.side,
-    speaker: 'comms', text,
+    speaker: 'comms', text, voId,
   })
 }
 
@@ -70,12 +70,12 @@ export function demandSurrender(state: SimState, ship: ShipState, targetId: numb
   const hostile = (ship.side === 'player' && target.side === 'enemy')
     || (ship.side === 'enemy' && target.side === 'player')
   if (!hostile) {
-    commsSay(state, ship, 'To není nepřátelské plavidlo — výzva ke kapitulaci nemá smysl.')
+    commsSay(state, ship, 'To není nepřátelské plavidlo — výzva ke kapitulaci nemá smysl.', 'sys-nosurr-neutral')
     return
   }
   const contact = state.contacts[ship.side]?.find(c => c.shipId === targetId)
   if (!contact || contact.idQuality < 1) {
-    commsSay(state, ship, 'Kontakt není klasifikován — nejdřív ho identifikuj (přibliž se / aktivní senzory).')
+    commsSay(state, ship, 'Kontakt není klasifikován — nejdřív ho identifikuj (přibliž se / aktivní senzory).', 'sys-nosurr-unid')
     return
   }
   if (state.t - target.lastSurrenderDemandAt < SURRENDER_COOLDOWN) {
@@ -106,6 +106,7 @@ function acceptSurrender(state: SimState, target: ShipState, speaker: Speaker): 
   target.fireControl.engaged = false
   state.events.push({
     t: state.t, kind: 'comm', speaker, shipId: target.id, side: target.side, slowdown: true,
+    voId: speaker === 'pirate' ? 'sur-accept-pirate' : 'sur-accept-imperial',
     text: `${target.name}: „Dost… dost! Vypínáme klín a skládáme zbraně. Kapitulujeme — nestřílejte.“`,
   })
   state.events.push({
@@ -134,6 +135,7 @@ export function updatePendingComms(state: SimState): void {
       // vzdorovitá odpověď — výzva zamítnuta
       state.events.push({
         t: state.t, kind: 'comm', speaker, shipId: target.id, side: target.side, slowdown: true,
+        voId: speaker === 'pirate' ? 'sur-refuse-pirate' : 'sur-refuse-imperial',
         text: `${target.name}: „Kapitulovat? Zapomeňte. Ještě jsme neskončili.“`,
       })
     }

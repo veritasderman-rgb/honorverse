@@ -98,19 +98,19 @@ export function attackAspect(target: ShipState, fromPos: Vec2): Aspect {
  */
 export function deployDecoy(state: SimState, ship: ShipState): void {
   if (ship.destroyed || ship.surrendered) return
-  const say = (text: string): void => {
+  const say = (text: string, voId?: string): void => {
     if (ship.doctrine !== 'player') return
     state.events.push({
       t: state.t, kind: 'message', shipId: ship.id, side: ship.side,
-      speaker: 'tactical', text,
+      speaker: 'tactical', text, voId,
     })
   }
   if (ship.decoys <= 0) {
-    say('Zásobník návnad prázdný!')
+    say('Zásobník návnad prázdný!', 'sys-decoyout')
     return
   }
   if (ship.decoyActive) {
-    say('Návnada už je za lodí.')
+    say('Návnada už je za lodí.', 'sys-decoyup')
     return
   }
   ship.decoyActive = true

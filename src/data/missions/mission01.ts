@@ -120,7 +120,7 @@ export const mission01: Scenario = {
       conditions: [{ kind: 'time', t: 8 }],
       actions: [
         {
-          kind: 'comm', speaker: 'station',
+          kind: 'comm', vo: 'm01-c1', speaker: 'station',
           text: 'Kontrola Brány volá Cygnus: „Nákladní lodi Cygnus, vypněte klín a připravte se na celní kontrolu. Dauntless je na cestě k vám."',
         },
       ],
@@ -131,7 +131,7 @@ export const mission01: Scenario = {
       conditions: [{ kind: 'time', t: 25 }],
       actions: [
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm01-c2', speaker: 'enemy-captain',
           text: 'Cygnus: „Kontrolo, vezeme zemědělské stroje a máme skluz. Tohle si vyřídíme s vaším guvernérem — nezdržujte nás."',
         },
       ],
@@ -143,7 +143,7 @@ export const mission01: Scenario = {
       conditions: [{ kind: 'time', t: 15 }],
       actions: [
         {
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm01-c3', speaker: 'comms',
           text: 'Kapitáne… zachytávám provoz Cygnusu s Bránou. Obsah sedí, ale to šifrování ne — civilní bárky jedou na komerčním kódu, tohle je vojenská třída D. Buď si koupili pancéřovanou vysílačku… nebo nevezou zemědělské stroje.',
         },
       ],
@@ -160,7 +160,7 @@ export const mission01: Scenario = {
         { kind: 'revealClass', shipId: CYGNUS },
         {
           // callback na předzvěst + automatická výzva ke kapitulaci
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm01-c4', speaker: 'comms',
           text: 'Říkal jsem, že ta vysílačka smrdí! Vysílám výzvu: „Cygnusi, zastavte a vypněte klín, nebo zahájíme palbu." …Neodpovídají, kapitáne.',
         },
       ],
@@ -172,7 +172,7 @@ export const mission01: Scenario = {
       conditions: [{ kind: 'flag', flag: 'runner-fleeing' }, { kind: 'time', t: 70 }],
       actions: [
         {
-          kind: 'comm', speaker: 'tactical',
+          kind: 'comm', vo: 'm01-c5', speaker: 'tactical',
           text: 'ŠKOLA MANÉVRU: impelerový klín nedává rychlost, dává ZRYCHLENÍ — rychlost se '
             + 'STŘÁDÁ. Na plný výkon nabíráme přes tři sta kilometrů za sekundu KAŽDOU MINUTU '
             + 'a on taky; kdo zrychlí dřív a víc, jeho náskok neroste lineárně, ale kvadraticky. '
@@ -191,7 +191,7 @@ export const mission01: Scenario = {
       ],
       actions: [
         {
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm01-c6', speaker: 'xo',
           text: 'První důstojník: „Doháníme ho s velkým převýšením rychlosti — a NEBRZDÍME. '
             + 'Cílem není se s ním potkat, ale PROLÉTNOUT kolem: brzdění by trvalo stejně dlouho '
             + 'jako celý rozjezd a vyrovnat rychlosti znamená bít se za jeho podmínek. Naše salvy '
@@ -207,7 +207,7 @@ export const mission01: Scenario = {
       conditions: [{ kind: 'flag', flag: 'runner-fleeing' }, { kind: 'time', t: 120 }],
       actions: [
         {
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm01-c7', speaker: 'xo',
           text: 'První důstojník: „Táhne přes čtyři sta g — na standardních osmdesáti procentech ho NEdoženeme. Doporučuju plný výkon; a jestli jsme zaváhali, zbývá jedině nouzových sto dvacet. Boční štíty to položí na kolena, ale on stejně skoro nemá čím střílet."',
         },
       ],
@@ -224,7 +224,7 @@ export const mission01: Scenario = {
         {
           // LEKCE RAKETOVÉHO BOJE: zblízka je salva poprava — tady to hráč
           // poprvé uvidí naživo (runner nemá skoro žádnou obranu)
-          kind: 'comm', speaker: 'tactical',
+          kind: 'comm', vo: 'm01-c8', speaker: 'tactical',
           text: 'Jsme na milion kilometrů — a tohle je vzdálenost, na které rakety ZABÍJEJÍ. '
             + 'Krátký let znamená, že obrana cíle skoro nestihne reagovat. Doporučuji plnou '
             + 'salvu; kdyby běžel dál, AUTO palba to dokončí za nás.',
@@ -247,7 +247,7 @@ export const mission01: Scenario = {
       conditions: [{ kind: 'shipSurrendered', shipId: CYGNUS }],
       actions: [
         {
-          kind: 'comm', speaker: 'station',
+          kind: 'comm', vo: 'm01-c9', speaker: 'station',
           text: 'Kontrola Brány: „Cygnus kapituloval a vypnul klín. Výsadková četa je na cestě — výborná práce, Dauntless."',
         },
         { kind: 'objectiveComplete', objectiveId: 'obj-no-escape' },
