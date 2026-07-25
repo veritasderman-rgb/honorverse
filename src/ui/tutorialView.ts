@@ -19,6 +19,9 @@ export class TutorialView implements HudView {
   private layer: HTMLElement
   private hole: HTMLElement
   private bubble: HTMLElement
+  /** sbalený stav: místo bubliny jen malý čip s počítadlem (✕ na bublině) */
+  private chip: HTMLElement
+  private minimized = false
   private steps: TutorialStep[] | null = null
   private missionId = ''
   private idx = 0
@@ -32,15 +35,34 @@ export class TutorialView implements HudView {
     this.hole.className = 'tut-hole'
     this.bubble = document.createElement('div')
     this.bubble.className = 'tut-bubble'
-    this.layer.append(this.hole, this.bubble)
+    this.chip = document.createElement('button')
+    this.chip.className = 'tut-chip'
+    this.chip.style.display = 'none'
+    this.layer.append(this.hole, this.bubble, this.chip)
     root.appendChild(this.layer)
     // tlačítka bubliny (delegace — bublina se přerenderovává)
     this.bubble.addEventListener('pointerup', e => {
       const b = (e.target as Element | null)?.closest('[data-tut]')
       if (!b) return
-      if (b.getAttribute('data-tut') === 'skip') this.stop(true)
+      const act = b.getAttribute('data-tut')
+      if (act === 'skip') this.stop(true)
+      else if (act === 'min') this.setMinimized(true)
       else this.advance()
     })
+    // čip → rozbalit zpět
+    this.chip.addEventListener('pointerup', () => this.setMinimized(false))
+  }
+
+  /** sbalení do čipu / rozbalení zpět; sbalení přežívá i další kroky */
+  private setMinimized(min: boolean): void {
+    this.minimized = min
+    if (!this.steps) return
+    this.bubble.style.display = min ? 'none' : 'block'
+    this.hole.style.display = 'none'
+    this.layer.classList.remove('tut-dim')
+    this.chip.style.display = min ? 'block' : 'none'
+    if (min) this.chip.textContent = `${t('tut.title')} ${this.idx + 1}/${this.steps.length} ▸`
+    else this.renderStep()
   }
 
   /** spustí tutoriál mise (existuje-li a nebyl-li už dokončen/přeskočen) */
@@ -51,6 +73,9 @@ export class TutorialView implements HudView {
     this.steps = steps
     this.missionId = missionId
     this.idx = 0
+    this.minimized = false
+    this.chip.style.display = 'none'
+    this.bubble.style.display = 'block'
     this.layer.style.display = 'block'
     this.renderStep()
   }
@@ -68,7 +93,9 @@ export class TutorialView implements HudView {
     if (!this.steps) return
     this.idx++
     if (this.idx >= this.steps.length) { this.stop(true); return }
-    this.renderStep()
+    // sbalený tutoriál nevyskakuje — jen aktualizuje počítadlo na čipu
+    if (this.minimized) this.setMinimized(true)
+    else this.renderStep()
   }
 
   addEvents(_events: SimEvent[]): void { /* kroky čtou snapshot, ne eventy */ }
@@ -79,6 +106,7 @@ export class TutorialView implements HudView {
     if (state.outcome !== 'running') { this.stop(false); return }
     const step = this.steps[this.idx]
     if (step.done && step.done(state, ui)) { this.advance(); return }
+    if (this.minimized) return
     // spotlight sleduje prvek (přerendery HUD mění pozice) — šetrně ~6 Hz
     const now = performance.now()
     if (now - this.lastPlaceAt > 160) {
@@ -87,13 +115,14 @@ export class TutorialView implements HudView {
     }
   }
 
-  /** bublina kroku: počítadlo, text dle jazyka, POKRAČOVAT (ruční) / PŘESKOČIT */
+  /** bublina kroku: počítadlo + ✕, text dle jazyka, POKRAČOVAT / PŘESKOČIT */
   private renderStep(): void {
     if (!this.steps) return
     const step = this.steps[this.idx]
     const lang = getLang()
     this.bubble.innerHTML =
-      `<div class="tut-head"><span>${t('tut.title')} · ${this.idx + 1}/${this.steps.length}</span></div>`
+      `<div class="tut-head"><span>${t('tut.title')} · ${this.idx + 1}/${this.steps.length}</span>`
+      + `<button data-tut="min" class="tut-x" aria-label="${t('tut.hide')}">✕</button></div>`
       + `<div class="tut-text">${esc(step.text[lang])}</div>`
       + `<div class="tut-btns">`
       + (step.done ? '' : `<button data-tut="next">${t('tut.next')}</button>`)
@@ -103,14 +132,37 @@ export class TutorialView implements HudView {
     this.place(step)
   }
 
-  /** umístí spotlight na kotvu a bublinu k ní (nebo doprostřed bez kotvy) */
+  /** umístí spotlight na kotvu a bublinu k ní. Telefon: bublina je VŽDY
+   *  nahoře pod lištou (dole žije prstenec, FAB i rozkazy — nesmí je krýt);
+   *  spotlight na kotvu funguje dál. Desktop: bublina se přimyká ke kotvě. */
   private place(step: TutorialStep): void {
     const el = step.anchor ? document.querySelector(step.anchor) : null
     const r = el?.getBoundingClientRect()
     const vw = window.innerWidth
     const vh = window.innerHeight
-    const bw = Math.min(360, vw - 24)
+    const phone = document.body.classList.contains('phone')
+    const bw = Math.min(phone ? 330 : 360, vw - 24)
     this.bubble.style.width = `${bw}px`
+    const anchored = !!r && r.width > 0 && r.height > 0
+    if (phone) {
+      // telefon: pevná pozice nahoře uprostřed (pod topbarem), bez ztmavení —
+      // scéna zůstává čitelná a palcové ovládání volné
+      this.layer.classList.remove('tut-dim')
+      this.bubble.style.left = `${Math.round((vw - bw) / 2)}px`
+      this.bubble.style.bottom = ''
+      this.bubble.style.top = '44px'
+      if (anchored) {
+        const pad = 6
+        this.hole.style.display = 'block'
+        this.hole.style.left = `${Math.round(r!.left - pad)}px`
+        this.hole.style.top = `${Math.round(r!.top - pad)}px`
+        this.hole.style.width = `${Math.round(r!.width + pad * 2)}px`
+        this.hole.style.height = `${Math.round(r!.height + pad * 2)}px`
+      } else {
+        this.hole.style.display = 'none'
+      }
+      return
+    }
     if (!r || r.width === 0 || r.height === 0) {
       // bez kotvy: jemné ztmavení celé scény, bublina dole uprostřed
       this.hole.style.display = 'none'

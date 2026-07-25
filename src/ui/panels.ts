@@ -309,9 +309,11 @@ export class Panels implements HudView {
     el.className = `toast ${cls}`
     el.innerHTML = html
     this.toasts.appendChild(el)
-    // max 4 toasty najednou; při úklidu přednostně obětuj běžné zprávy —
-    // intro karty postav se ukazují jen jednou za misi a nesmí zmizet neviděné
-    while (this.toasts.children.length > 4) {
+    // strop toastů (telefon jen 2 — obrazovka je malá a karty velké); při
+    // úklidu přednostně obětuj běžné zprávy — intro karty postav se ukazují
+    // jen jednou za misi a nesmí zmizet neviděné
+    const cap = document.body.classList.contains('phone') ? 2 : 4
+    while (this.toasts.children.length > cap) {
       const kids = [...this.toasts.children]
       const victim = kids.find(k => !k.classList.contains('toast-intro')) ?? kids[0]
       victim.remove()
