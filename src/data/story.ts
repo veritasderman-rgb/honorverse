@@ -3,7 +3,11 @@
  * CAMPAIGN_INTRO: úvod kampaně (svět, proč válka hrozí, kdo je hráč).
  * MISSION_STORY: prology (před-misijní kontext, druhá osoba) a epilogy
  * („Význam" mise) pro mise 1–8; epilogy vážou mise na sebe.
+ *
+ * Dvojjazyčnost: CS je kanonická mutace, *_EN anglická; gettery
+ * campaignIntro()/missionStory()/defeatGeneric() vybírají dle jazyka.
  */
+import { getLang } from '../ui/i18n'
 
 export const CAMPAIGN_INTRO: string =
   'Hvězdné království Avalon: tři obydlené světy, trůn a Parlament — a jedna '
@@ -352,3 +356,403 @@ export const MISSION_STORY: Record<string, MissionStory> = {
 export const DEFEAT_GENERIC: string =
   'Mise selhala. Válka se ale neptá, jestli jsi připraven — Admiralita tě '
   + 'posílá znovu. Tentokrát to musí vyjít.'
+
+// ============================================================================
+// ANGLICKÁ VERZE PŘÍBĚHU (EN). Stejná struktura jako česká — úplnost obou
+// mutací hlídá tests/storyEn.test.ts. Volbu mutace dělají gettery níže
+// (campaignIntro/missionStory/defeatGeneric) podle aktuálního jazyka.
+// ============================================================================
+
+export const CAMPAIGN_INTRO_EN: string =
+  'The Star Kingdom of Avalon: three inhabited worlds, a throne and a '
+  + 'Parliament — and one unearned win in the cosmic lottery: the Avalon '
+  + 'Junction, the only known cluster of stable wormholes in the entire '
+  + 'sector. Whoever hauls cargo between the core and the periphery pays '
+  + 'toll to the Crown; the toll pays for the Royal Navy — small, but the '
+  + 'finest technology for light-years around. On the throne sits Queen '
+  + 'Eleanor III, young, stubborn and beloved; she reigns but does not '
+  + 'rule — Parliament holds the budget. And then there is a second, '
+  + 'quieter income: letters of marque that Parliament never officially '
+  + 'approved and the Admiralty officially does not issue — and yet Doradan '
+  + 'gold convoys keep vanishing in the Marches with remarkable regularity. '
+  + 'Avalon does not want war; war is bad for trade. Which is exactly why, '
+  + 'in the end, it will not avoid one.\n\n'
+  + 'On the other side of the map lies the Doradan Empire: twenty systems, '
+  + 'one man. Caudillo Ferrante Salazar seized power after a succession '
+  + 'crisis "for a single term" — nineteen years ago. The Empire lives off '
+  + 'its gold fleets: convoys of fuel isotopes that crawl to the capital '
+  + 'twice a year and pay for everything — the court, the fleet, the '
+  + 'rations, the silence. But the refineries are aging, the convoys are '
+  + 'thinning, privateers keep plucking at them — and the toll from the '
+  + 'Avalon Junction would refloat the Empire for a generation. Salazar\'s '
+  + 'plan has three phases: destabilize the Marches with pirates by proxy, '
+  + 'provoke an incident that paints Avalon as the aggressor in neutral '
+  + 'eyes, and finally the Grand Army — a strike at the Junction from a '
+  + 'secretly built anchorage in the Cádiz system.\n\n'
+  + 'You are Lieutenant Alex Rowan, Royal Avalon Navy. The campaign follows '
+  + 'your service from customs patrol to command of a strike squadron — and '
+  + 'Avalon\'s road from peace to war. Your missions are not episodes: every '
+  + 'one of them moves the war, often without you knowing it at the time.'
+
+export const MISSION_STORY_EN: Record<string, MissionStory> = {
+  mission01: {
+    prolog:
+      'Routine customs duty at the Avalon Junction — the dullest posting the '
+      + 'Royal Navy has to offer. Your ship, the destroyer ANS Dauntless, '
+      + 'holds picket near the Watchgate wormhole terminal. Gate Control '
+      + 'reports a freighter, Cygnus, with a suspicious manifest. Probably '
+      + 'just another smuggler dodging the toll. Probably.',
+    epilog:
+      'The cargo seized aboard Cygnus is not farm machinery: it is impeller '
+      + 'components for the Imperial program of converting merchantmen into '
+      + 'auxiliary cruisers. The first tangible proof that the Empire is '
+      + 'preparing something big. The Admiralty is starting to listen.',
+    epilogLose:
+      'Cygnus vanished into hyperspace, cargo and all — and with her the '
+      + 'evidence that could have woken the Admiralty half a year earlier. '
+      + 'The Imperial conversion program will run on, undisturbed and '
+      + 'unnamed.',
+  },
+
+  mission02: {
+    prolog:
+      'After the Cygnus find, Avalon reinforces its border stations — and '
+      + 'reinforcements need munitions and spare parts. Your Dauntless '
+      + 'escorts a convoy of four merchantmen through the Marches: a belt of '
+      + 'weak governments and strong pirates between the two powers. '
+      + 'Intelligence reports raiders in the area. So far nobody suspects '
+      + 'the pirates knew the convoy\'s composition before it ever sailed.',
+    epilog:
+      'From the wreck of the pirate sloop, the boarding parties pulled '
+      + 'Imperial munitions from the current production run — not old loot, '
+      + 'fresh stores. The pirates are not just pirates: they are proxies. '
+      + 'Someone is destabilizing the Marches systematically, and that '
+      + 'someone sits in Caudillo Salazar\'s palace.',
+    epilogLose:
+      'The convoy never reached its destination and the border stations '
+      + 'remain unsupplied. The pirates — and whoever pays for their fuel '
+      + 'and munitions — got exactly what they wanted: a Marches no one can '
+      + 'cross without a warship.',
+  },
+
+  mission03: {
+    prolog:
+      'Imperial munitions in pirate magazines — the Admiralty still refuses '
+      + 'to fully believe that trail. Meanwhile, routine: the merchantman '
+      + 'Mercator reports a damaged impeller ring and requests escort to '
+      + 'Sázava Station. Your Dauntless is closest. Intelligence has no '
+      + 'records on Mercator. None at all.',
+    epilog:
+      'Mercator was no merchant: an Imperial auxiliary cruiser under orders '
+      + 'to kill an Avalonian escort and pin the incident on privateers. '
+      + 'The provocation failed — and from Mercator\'s navigation core the '
+      + 'analysts extracted supply-route coordinates into a system where '
+      + 'the Empire has no business at all: Cádiz. Someone will have to go '
+      + 'take a close look.',
+    epilogLose:
+      'Dauntless never came back from her "escort mission" and the '
+      + 'headlines read pirate ambush — exactly as the caudillo ordered. '
+      + 'And no one will ever learn that Mercator\'s navigation core '
+      + 'pointed to Cádiz.',
+  },
+
+  mission04: {
+    prolog:
+      'The Mercator coordinates lead to Cádiz — and the Admiralty must know '
+      + 'what the Empire is hiding there. Your ship, the light cruiser ANS '
+      + 'Aurora, slips through the system ballistic: wedge down, nothing but '
+      + 'drift and passive sensors. Map the picket dispositions and the '
+      + 'anchorage. And above all, stay unseen — a ship that should not be '
+      + 'there must not be seen by a ship that should not be there either.',
+    epilog:
+      'Picket dispositions, the anchorage, a half-built Grand Army base — '
+      + 'it is all in Aurora\'s records. Avalon now knows where the first '
+      + 'blow will come from. One day these records will become a war plan; '
+      + 'for now they go into the Admiralty vault under the highest '
+      + 'classification.',
+    epilogLose:
+      'Aurora never returned from Cádiz — and now the Empire knows that '
+      + 'Avalon knows where to look. The pickets will thicken, the '
+      + 'anchorage will redeploy, and the next scout will fly into a '
+      + 'prepared trap.',
+  },
+
+  mission05: {
+    prolog:
+      'The diplomats exchange notes, but out on the edge of the Marches a '
+      + 'different language is spoken. A "pirate" task group is heading for '
+      + 'Station Zeta — ships with no flag, but with Imperial discipline in '
+      + 'their formation. Your heavy cruiser ANS Bastion is the only '
+      + 'warship in range. Magazines are not bottomless, and nobody will '
+      + 'refill them for you mid-battle.',
+    epilog:
+      'Among the attackers flew a hijacked merchantman full of civilians — '
+      + 'a trap built for headlines: "Avalon Navy fires on civilians". The '
+      + 'provocation failed, the hostages live and the station stands. But '
+      + 'both sides now know diplomacy is over. The next salvo will not '
+      + 'arrive by proxy.',
+    epilogLose:
+      'Station Zeta burns, and the Imperial press can pick its headline: '
+      + 'Avalonian incompetence, or Avalonian fire on civilians. The '
+      + 'provocation worked perfectly — war will come either way, only with '
+      + 'a worse hand dealt.',
+  },
+
+  mission06: {
+    prolog:
+      'The war began without a declaration: an Imperial strike scattered an '
+      + 'Avalonian squadron at Tharsis. Your battered ANS Resolute carries '
+      + 'home the only thing left of the battle — sensor records proving '
+      + 'who fired first. Astern hangs a task group faster than you are. '
+      + 'Home needs those records more than it needs your ship.',
+    epilog:
+      'The records made it. The Imperial line about "Avalonian aggression" '
+      + 'collapsed, the neutrals stayed neutral — and Caledon signed the '
+      + 'pact. The "rescue" squadron halfway home was an Imperial snare set '
+      + 'for those records; because you saw through it, the whole sector '
+      + 'has the proof today — and Parliament voted the war budgets '
+      + 'unanimously. A lost battle, a won argument.',
+    epilogLose:
+      'Resolute never made it and the Tharsis records burned with her. '
+      + 'Word stands against word and the Imperial version is louder — the '
+      + 'neutrals shrug, and Caledon hesitates over signing the pact. '
+      + 'Avalon is at war alone.',
+  },
+
+  mission07: {
+    prolog:
+      'Avalon cannot win a war of attrition — you do not burn down a '
+      + 'four-to-one advantage in a stand-up fight. But you can cut the '
+      + 'purse that pays for it. Aurora\'s reconnaissance showed where the '
+      + 'Imperial gold flows: a fuel-isotope fleet hauls through the Kerav '
+      + 'system toward Cádiz to finish the Grand Army anchorage. Your '
+      + 'battlecruiser ANS Praporec will ambush it there. Strike, sink, '
+      + 'vanish — before the reaction force arrives.',
+    epilog:
+      'The floor of the Kerav system is covered in the Empire\'s gold: '
+      + 'isotopes that were meant to finish the Cádiz anchorage and pay the '
+      + 'caudillo\'s court. Completion slips by months — and the Imperial '
+      + 'court feels for the first time that the war costs something. The '
+      + 'Empire pulls escorts from the front line. Months are exactly the '
+      + 'time Avalon desperately needs.',
+    epilogLose:
+      'The gold fleet got through and the Cádiz anchorage will receive '
+      + 'everything on schedule. The window Aurora\'s reconnaissance opened '
+      + 'is closing — and the Admiralty strikes out one of the few things '
+      + 'that could have shortened the war.',
+  },
+
+  mission08: {
+    prolog:
+      'Salazar is trying to knock Caledon out of the war with a show of '
+      + 'force before the alliance can knit together. A joint patrol: your '
+      + 'ANS Vanguard and the Caledonian KNS Claymore against an Imperial '
+      + 'wall. The Caledonians are brave past the edge of reason and treat '
+      + 'orders as suggestions — and Claymore\'s captain lost a brother to '
+      + 'the Empire. You do not command him. But you answer for him.',
+    epilog:
+      'The wall is broken and Claymore — battered but alive — flies home '
+      + 'at your side. The alliance survived its baptism of fire: '
+      + 'Caledonian courage and Avalonian method need each other, and for '
+      + 'the first time both sides know it. And you learned that commanding '
+      + 'allies is harder than commanding ships. You will need that — next '
+      + 'time everything will be at stake.',
+    epilogLose:
+      'The show of force worked: the wall punched through the patrol and '
+      + 'the Caledonian ports are counting losses. Voices against the pact '
+      + 'grow louder — exactly as Salazar planned. The alliance bleeds '
+      + 'before it was even born.',
+  },
+
+  mission09: {
+    prolog:
+      'The raids are bleeding the gold fleets dry and Salazar knows it — '
+      + 'so he bets everything on one card: the Grand Army sails for the '
+      + 'Avalon Junction before his breath runs out. The battle both sides '
+      + 'spent the whole war preparing for is coming to your home. The '
+      + 'Admiralty has entrusted you with its most precious possession: the '
+      + 'dreadnought Vladař, the first ship of the wall Avalon ever built — '
+      + 'the technological answer to Imperial tonnage. Your squadron — '
+      + 'flagship Vladař, Praporec, Hradba, Vichr and Bouře — is all that '
+      + 'stands between the invasion force and three thousand people on '
+      + 'Junction Station. The attacker must drop at the hyper limit and '
+      + 'spend hours crawling inward. You must turn those hours into a '
+      + 'graveyard.',
+    epilog:
+      'Both echelons of the Grand Army lie broken between the hyper limit '
+      + 'and the Junction. Salazar staked everything the gold fleets could '
+      + 'still carry on a single blow — and lost both: the ships and the '
+      + 'initiative. For the first time since Tharsis it is Avalon that '
+      + 'chooses where the next battle will be fought. And the Admiralty '
+      + 'has already chosen: in the vault wait Aurora\'s four-year-old '
+      + 'records, and on them the system where all of this began. Cádiz.',
+    epilogLose:
+      'The Junction burns, and with it everything that pays for the '
+      + 'Avalonian fleet. What remains of the Navy falls back on the '
+      + 'homeworld for a last line of defense — and the caudillo can pick '
+      + 'what the annexation will pay for over the next ten years. The '
+      + 'battle both sides spent the war preparing for ended badly for the '
+      + 'one that could not afford to lose it.',
+  },
+
+  mission10: {
+    prolog:
+      'The circle closes. Four years ago you slipped through Cádiz '
+      + 'ballistic and your Aurora brought home maps of a half-built '
+      + 'anchorage; last year at Kerav you sank the gold fleet meant to '
+      + 'finish it. Now you lead a strike force — the dreadnought Vladař, '
+      + 'Praporec, Vanguard and that same Aurora — against a base that is '
+      + 'still only half finished because of you. The Admiralty\'s order is '
+      + 'plain: Cádiz must never be completed — singe the caudillo\'s '
+      + 'beard. Between the hyper limit and the base lie a picket line, a '
+      + 'deep system — and everything a defender could prepare along an '
+      + 'attack axis he knows as well as you do.',
+    epilog:
+      'Cádiz is finished and the war is over. The circle that opened over '
+      + 'a seized cargo at the Watchgate closed where the Empire began '
+      + 'building its war.',
+    epilogByFlag: {
+      'ending-clean':
+        'The Cádiz base ceased to exist before diplomacy could sign '
+        + 'anything. The Empire\'s forward fist is gone and with it the '
+        + 'last chance of renewing the offensive: the armistice that comes '
+        + 'a week later is signed on Avalonian terms. The circle closed — '
+        + 'Aurora\'s data, the time bought at Kerav, and one precise salvo. '
+        + 'The Admiralty sends word: "Well done." At the Admiralty, there '
+        + 'is nothing higher.',
+      'ending-spirit':
+        'The base fell one minute before the armistice took effect — the '
+        + 'Empire will never fortify Cádiz again. The Admiralty\'s lawyers '
+        + 'will spend months on whether you broke the order or fulfilled '
+        + 'it; the historians will be briefer: the letter of the order '
+        + 'would only have paused the war, its spirit ended it. The '
+        + 'armistice holds — because the caudillo has nothing left to '
+        + 'launch the next attack from. Your career ends in a courtroom. '
+        + 'Your name in the textbooks does not.',
+      'ending-orders':
+        'Orders are orders: the force withdrew and the armistice took '
+        + 'effect — with the unfinished Cádiz base as collateral on the '
+        + 'Imperial side of the table. The diplomats celebrate, the '
+        + 'Admiralty says nothing. In five years, when the Empire has '
+        + 'restocked its magazines and finished its yards, ships will fly '
+        + 'for the Watchgate again — but that will be another war and '
+        + 'another story. Today you learned the officer\'s last lesson: '
+        + 'some victories taste like defeat and are just as heavy to '
+        + 'carry.',
+    },
+    epilogLose:
+      'Vladař stayed at Cádiz and the strike force sails home without its '
+      + 'flagship. The base will be finished, the armistice signed on '
+      + 'Imperial terms — and the maps Aurora once brought home will age '
+      + 'into paper in a vault. The war does not end in defeat. It is '
+      + 'merely postponed.',
+  },
+
+  mission11: {
+    prolog:
+      'A year after the armistice. In the Queen Eleanor Hall runs the '
+      + 'largest tactical simulator the Admiralty has ever built — and '
+      + 'today its cells hold the question that has kept every veteran '
+      + 'awake: what if BOTH walls met at the Junction in full strength? '
+      + 'Twenty hulls against twenty. No twists, no diplomacy, no rescue '
+      + 'in hyperspace. Doctrine against doctrine: Avalonian quality '
+      + 'against Imperial tonnage. Admiral Rowan settles into the flag '
+      + 'chair — and all twenty hulls wait for your orders. "All right," '
+      + 'he says quietly. "Let\'s show them what we\'ve learned."',
+    epilog:
+      'The simulation ends and the hall is silent for a long time. Then '
+      + 'someone starts to applaud. The umpire protocol is dry: Imperial '
+      + 'wall broken, core destroyed, the Avalonian line held. A new '
+      + 'chapter goes into the tactics textbooks — and beneath it a note '
+      + 'in small print: a wall does not win by tonnage or by elegance. It '
+      + 'wins by discipline: hold formation, husband your magazines, and '
+      + 'know when to slow down and let the sidewalls work.',
+    epilogLose:
+      'The umpire protocol knows no mercy: the Avalonian wall broke. The '
+      + 'lights come up in the Queen Eleanor Hall and Admiral Rowan '
+      + 'studies the replay for a long moment. "Good," he says at last. '
+      + '"That is why we simulate. Again — from the top." Next time it '
+      + 'will work: hold formation, save your missiles for the core, and '
+      + 'remember that thrust above sixty percent is paid for in '
+      + 'sidewalls.',
+  },
+
+  // --- boční operace (volitelné) ---
+  side01: {
+    prolog:
+      'Between campaign missions your sensor operator picks up a distress '
+      + 'signal: the courier Wren, alone and unescorted, fleeing through '
+      + 'the Marches ahead of two pirate raiders. Your ship is closest. '
+      + 'The orders are plain — civilians get help — and you know that if '
+      + 'Wren does not make her jump, she is not making it anywhere.',
+    epilog:
+      'Wren jumped to safety, and before departure her captain managed to '
+      + 'send you a single word: thanks. The cargo the raiders never got '
+      + 'to loot held missile pods from a frontier arsenal — and now your '
+      + 'fleet tows them. A small detour, tangible spoils.',
+    epilogLose:
+      'Wren vanished in a hell of impeller wedges before you got into '
+      + 'range. The distress signal went silent. Sometimes you arrive too '
+      + 'late — and the Marches will not let you forget it.',
+  },
+  side02: {
+    prolog:
+      'Intelligence hands you coordinates nobody was supposed to know: a '
+      + 'hidden pirate haven in an asteroid field, a depot paid for with '
+      + 'Imperial money. Your pair has orders to break it. Take Rampart '
+      + 'in, keep Skua covering your back, and give the pirates no time '
+      + 'to load up and vanish.',
+    epilog:
+      'The depot burns behind you like a second sun. But moored at the '
+      + 'pier lay an untouched corsair light cruiser — her crew abandoned '
+      + 'her before they could cast off. Your boarding party took her '
+      + 'intact; the yards will rename her ANS Kaper, and from this moment '
+      + 'she sails with your fleet. A prize that shoots back.',
+    epilogLose:
+      'The haven was better prepared for you than intelligence promised. '
+      + 'Rampart and Skua withdrew in tatters — and the depot, untouched, '
+      + 'vanished into hyperspace with its stores within the hour. Next '
+      + 'time: more hulls, less confidence.',
+  },
+  side03: {
+    prolog:
+      'Before the final blow, the Admiralty entrusts you with quiet work: '
+      + 'an Imperial picket of two destroyers sits on the jump lane to '
+      + 'Cádiz, watching for reinforcements. Your pair is to take it out — '
+      + 'quickly and quietly — before it can send a single warning to the '
+      + 'fleet.',
+    epilog:
+      'Both picket ships are silent and Cádiz still does not know you are '
+      + 'coming. In the shielded depot they guarded waited missile pods '
+      + 'earmarked for the Grand Army — now they are yours. You sailed '
+      + 'into the enemy\'s blind spot and came out stronger than you went '
+      + 'in.',
+    epilogLose:
+      'One of the pickets got its warning out before it went dark — and '
+      + 'Cádiz now knows you are coming. The price of forward work gone '
+      + 'wrong: an enemy who is waiting for you.',
+  },
+}
+
+/** obecná porážková věta (EN) */
+export const DEFEAT_GENERIC_EN: string =
+  'Mission failed. But the war does not ask whether you are ready — the '
+  + 'Admiralty is sending you back in. This time it has to work.'
+
+// ---------- lokalizované gettery (volba mutace dle aktuálního jazyka) ----------
+
+/** úvod kampaně v aktuálním jazyce */
+export function campaignIntro(): string {
+  return getLang() === 'en' ? CAMPAIGN_INTRO_EN : CAMPAIGN_INTRO
+}
+
+/** příběh mise v aktuálním jazyce (fallback čeština, když EN mutace chybí) */
+export function missionStory(id: string): MissionStory | undefined {
+  if (getLang() === 'en') return MISSION_STORY_EN[id] ?? MISSION_STORY[id]
+  return MISSION_STORY[id]
+}
+
+/** obecná porážková věta v aktuálním jazyce */
+export function defeatGeneric(): string {
+  return getLang() === 'en' ? DEFEAT_GENERIC_EN : DEFEAT_GENERIC
+}
