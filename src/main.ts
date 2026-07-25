@@ -8,6 +8,7 @@ import { startFleetView } from './ui/fleetview'
 import { sceneFor } from './ui/scenes'
 import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
+import { TutorialView } from './ui/tutorialView'
 import { getLang, t, toggleLang } from './ui/i18n'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
@@ -49,9 +50,11 @@ const panels = new Panels(plotContainer, topbar, a => { audio.uiClick(); control
 // mobilní HUD (M1): stavový prstenec vlastní lodi; aktivní jen na body.phone.
 // Composite krmí desktop Panels i mobilní prstenec stejnými snapshoty (HudView).
 const mobileHud = new MobileHud(plotContainer)
+// tutoriál (guided steps): spotlight + bublina; krmí se stejnými snapshoty
+const tutorial = new TutorialView(plotContainer)
 const hud: HudView = {
-  addEvents: e => { panels.addEvents(e); mobileHud.addEvents(e) },
-  update: (s, ui, f) => { panels.update(s, ui, f); mobileHud.update(s, ui, f) },
+  addEvents: e => { panels.addEvents(e); mobileHud.addEvents(e); tutorial.addEvents(e) },
+  update: (s, ui, f) => { panels.update(s, ui, f); mobileHud.update(s, ui, f); tutorial.update(s, ui, f) },
 }
 const controller = new UIController(bridge, plot, hud)
 
@@ -204,6 +207,7 @@ function startCampaignMission(id: string, preset?: LoadoutId): void {
   applyLoadout(clone, preset ?? loadPreset()) // + zvolená výzbroj
   applyBonusRewards(clone, loadCleared())  // + kořist z bočních operací (plošiny + lodě)
   bridge.startScenario(clone)
+  tutorial.start(id)                       // guided steps (má-li je mise a nebyl dokončen)
 }
 
 /** localStorage flag „úvod kampaně už hráč viděl" */

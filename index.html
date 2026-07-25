@@ -159,6 +159,24 @@
     /* voiceover řádek (skrytý, dokud nahrávka neexistuje — viz voPlayer) */
     .vo-row { margin: 6px 0 10px; }
     .vo-row .vo-btn { font-size: 12px; padding: 4px 12px; color: #d8b34f; border-color: #6d5a26; }
+
+    /* tutoriál: spotlight (průzor ve ztmavení přes box-shadow) + bublina.
+       Vrstva nechytá pointer events — hráč MUSÍ klikat na skutečné UI;
+       jen bublina (tlačítka) je interaktivní. */
+    #tutorial-layer { position: absolute; inset: 0; z-index: 15; pointer-events: none; }
+    #tutorial-layer.tut-dim { background: #05080a70; }
+    .tut-hole { position: fixed; display: none; border-radius: 6px;
+      box-shadow: 0 0 0 9999px #05080a99, 0 0 14px #f2d97a88 inset;
+      border: 1px solid #f2d97a; }
+    .tut-bubble { position: fixed; pointer-events: auto; box-sizing: border-box;
+      background: #0a1410f2; border: 1px solid #d8b34f; border-radius: 6px;
+      padding: 10px 12px; box-shadow: 0 4px 18px #05080a;
+      font-size: 13px; line-height: 1.5; color: #cfe8cf; }
+    .tut-head { color: #d8b34f; font-size: 11px; letter-spacing: 1px; margin-bottom: 6px; }
+    .tut-text { white-space: pre-line; }
+    .tut-btns { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
+    .tut-btns .tut-skip { background: none; border-color: #46603f; color: #6fae74; font-size: 11px; }
+    body.phone .tut-bubble { font-size: 12px; }
     .target-img { width: 100%; max-height: 110px; object-fit: cover; border: 1px solid #1c3a1e; margin: 4px 0; display: block; }
     .mission-row { margin-bottom: 10px; }
     .mission-row button { display: block; width: 100%; text-align: left; }
