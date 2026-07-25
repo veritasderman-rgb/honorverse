@@ -95,11 +95,12 @@ function updateEmergencyPower(state: SimState, ship: ShipState, dt: number): voi
   const key: keyof Subsystems = rand(state.rng) < 0.5 ? 'impellerFwd' : 'impellerAft'
   const loss = EMERGENCY_DAMAGE_MIN + rand(state.rng) * (EMERGENCY_DAMAGE_MAX - EMERGENCY_DAMAGE_MIN)
   ship.subsystems[key] = Math.max(0, ship.subsystems[key] - loss)
-  const msg = EMERGENCY_MESSAGES[Math.floor(rand(state.rng) * EMERGENCY_MESSAGES.length)]
+  const msgIdx = Math.floor(rand(state.rng) * EMERGENCY_MESSAGES.length)
+  const msg = EMERGENCY_MESSAGES[msgIdx]
   if (ship.doctrine === 'player') {
     state.events.push({
       t: state.t, kind: 'comm', shipId: ship.id, side: ship.side,
-      speaker: 'engineer', slowdown: true,
+      speaker: 'engineer', slowdown: true, voId: `eng-redline-${msgIdx + 1}`,
       text: `${msg} (${SUBSYSTEM_NAMES[key]} na ${Math.round(ship.subsystems[key] * 100)} %)`,
     })
   }
@@ -115,7 +116,7 @@ function maybeCrewEvent(state: SimState, ship: ShipState, dt: number): void {
     ship.buffs.lockBonus = LOCK_BUFF
     ship.buffs.lockUntil = state.t + LOCK_BUFF_TIME
     state.events.push({
-      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'tactical', slowdown: true,
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'tactical', slowdown: true, voId: 'crew-event-lock',
       text: `Našel jsem mezeru v jejich obranném vzorci — zámek našich raket +${Math.round(LOCK_BUFF * 100)} % `
         + `na ${Math.round(LOCK_BUFF_TIME / 60)} minut.`,
     })
@@ -127,7 +128,7 @@ function maybeCrewEvent(state: SimState, ship: ShipState, dt: number): void {
     ship.buffs.repairBonus = REPAIR_BUFF
     ship.buffs.repairUntil = state.t + REPAIR_BUFF_TIME
     state.events.push({
-      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'engineer', slowdown: true,
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'engineer', slowdown: true, voId: 'crew-event-repair',
       text: `Přepojil jsem záložní okruhy — opravy pojedou ${REPAIR_BUFF}× rychleji, `
         + `vydrží to ${Math.round(REPAIR_BUFF_TIME / 60)} minut.`,
     })
@@ -158,7 +159,7 @@ function maybeCrewEvent(state: SimState, ship: ShipState, dt: number): void {
     })
   } else {
     state.events.push({
-      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'comms', slowdown: true,
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'comms', slowdown: true, voId: 'crew-event-sigint',
       text: 'Zachycená nepřátelská komunikace — šifrovaná. Nahrávám pro rozvědku.',
     })
   }

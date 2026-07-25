@@ -85,7 +85,7 @@ export const mission06: Scenario = {
       conditions: [{ kind: 'time', t: 20 }],
       actions: [
         {
-          kind: 'comm', speaker: 'engineer',
+          kind: 'comm', vo: 'm06-c1', speaker: 'engineer',
           text: 'Inženýr: „Zadní prstenec drží na 35 %, víc z něj nedostanu. Jestli nás dohoní, s tímhle bočním štítem druhé kolo nepřežijeme."',
         },
       ],
@@ -116,7 +116,7 @@ export const mission06: Scenario = {
         },
         {
           // detail v senzorových datech — jediné varování, které dostaneš
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm06-c2', speaker: 'comms',
           text: 'Spojař: „Záchranná eskadra Vytrvalá a Naděje vysílá správné kódy… ale signál je o 40 ms mimo protokol. Možná jen rozladěný vysílač. Možná ne."',
         },
       ],
@@ -142,7 +142,7 @@ export const mission06: Scenario = {
         { kind: 'setDoctrine', shipId: DECOY1, doctrine: 'hunter' },
         { kind: 'setDoctrine', shipId: DECOY2, doctrine: 'hunter' },
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm06-c3', speaker: 'enemy-captain',
           text: 'IDS Pollux (alias „Vytrvalá"): „Výborně, Resolute, přesně podle plánu. Kladivo za vámi, kovadlina před vámi. Vypněte klín."',
         },
       ],

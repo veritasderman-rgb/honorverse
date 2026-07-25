@@ -111,7 +111,7 @@ export const mission05: Scenario = {
       actions: [
         { kind: 'message', text: 'Dva impelerové kontakty za hyperlimitem — první vlna najíždí na stanici!' },
         {
-          kind: 'comm', speaker: 'station',
+          kind: 'comm', vo: 'm05-c1', speaker: 'station',
           text: 'Stanice Zeta: „Bastione, vidíme je taky. Tři tisíce lidí na palubě spoléhá, že je nepustíte blíž."',
         },
         raider(9011, 'dd-vichr', 'Sup', 50_000_000, 3_000_000, 2_000),
@@ -137,7 +137,7 @@ export const mission05: Scenario = {
       actions: [
         { kind: 'message', text: 'Poslední vlna — křižník a dva torpédoborce. Mezi nimi letí čtvrtý kontakt se slabším klínem.' },
         {
-          kind: 'comm', speaker: 'pirate',
+          kind: 'comm', vo: 'm05-c2', speaker: 'pirate',
           text: '„Stanice Zeta, tohle je poslední nabídka: otevřete doky a vydejte sklady, nebo je rozbijeme i s vámi."',
         },
         raider(9031, 'cl-sokol', 'Drak', 52_000_000, -8_000_000, 2_200),
@@ -172,7 +172,7 @@ export const mission05: Scenario = {
       conditions: [{ kind: 'flag', flag: 'civ-known' }],
       actions: [
         {
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm05-c3', speaker: 'comms',
           text: 'Spojař: „Kapitáne, ten čtvrtý kontakt… transpondér nákladní lodi Meridian a nouzové kódy — to je unesený obchodník s civilisty! Nestřílet!"',
         },
         { kind: 'revealClass', shipId: CIVILIAN, text: 'Kontakt identifikován: unesená nákladní loď Meridian — civilisté na palubě!' },
@@ -188,7 +188,7 @@ export const mission05: Scenario = {
         { kind: 'addObjective', objectiveId: 'obj-civ', text: '(Skrytý) Nezabij civilisty na palubě Meridianu' },
         { kind: 'objectiveFail', objectiveId: 'obj-civ' },
         {
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm05-c4', speaker: 'xo',
           text: 'První důstojník: „…Meridian je pryč, pane. Byli tam civilisté. Tohle si poneseme domů."',
         },
       ],

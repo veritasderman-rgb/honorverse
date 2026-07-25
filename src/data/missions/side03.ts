@@ -76,7 +76,7 @@ export const side03: Scenario = {
       id: 'trg-comm-contact', once: true,
       conditions: [{ kind: 'distanceBelow', shipA: VANGUARD, shipB: PICKET1, distance: 20_000_000 }],
       actions: [{
-        kind: 'comm', speaker: 'enemy-captain',
+        kind: 'comm', vo: 's03-c1', speaker: 'enemy-captain',
         text: '„Neznámé impelerové kontakty — dvě lodě, míří na nás. Vyšlete varování k Cádizu!"',
       }],
     },

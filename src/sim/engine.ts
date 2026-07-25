@@ -126,7 +126,7 @@ function applyOrder(state: SimState, order: Order): void {
         state.flags[`said:emergency-power:${ship.id}`] = true
         state.events.push({
           t: state.t, kind: 'comm', shipId: ship.id, side: ship.side,
-          speaker: 'engineer', slowdown: true,
+          speaker: 'engineer', slowdown: true, voId: 'eng-redline-warn',
           text: 'Rozkaz potvrzen — kompenzátor nad sto procent. Jedeme za červenou čarou; '
             + 'každá minuta navíc je ruleta s impelerovými prstenci!',
         })

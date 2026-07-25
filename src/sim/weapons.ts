@@ -141,9 +141,9 @@ export function fireSolution(state: SimState, shooter: ShipState, target: ShipSt
 }
 
 /** hláška posádky hráči (jen lodě ovládané hráčem — AI si nestěžuje) */
-function crewSay(state: SimState, ship: ShipState, text: string, slowdown = false): void {
+function crewSay(state: SimState, ship: ShipState, text: string, slowdown = false, voId?: string): void {
   if (ship.doctrine !== 'player') return
-  state.events.push({ t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'tactical', slowdown, text })
+  state.events.push({ t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'tactical', slowdown, text, voId })
 }
 
 /** Odpal salvy: omezena šachtami, municí a cooldownem; no-op hlásí důvod. */
@@ -165,7 +165,7 @@ export function launchSalvo(
   // odvalená loď nemůže pálit boky — klín kryje, ale i maskuje vlastní zbraně
   // (pody visí mimo trup, těch se roll netýká)
   if (ship.rolledTo !== null && !opts.podLaunch) {
-    crewSay(state, ship, 'Jsme odvalení — boky kryje klín, palba nemožná.')
+    crewSay(state, ship, 'Jsme odvalení — boky kryje klín, palba nemožná.', false, 'sys-rolled')
     return
   }
   if (ship.tubeCooldown > 0 && !opts.ignoreCooldown) {
@@ -179,14 +179,15 @@ export function launchSalvo(
   if (n <= 0) {
     crewSay(state, ship, ship.missiles <= 0
       ? 'Prázdné zásobníky raket!'
-      : 'Všechny raketové šachty vyřazeny!')
+      : 'Všechny raketové šachty vyřazeny!', false,
+    ship.missiles <= 0 ? 'sys-magsdry' : 'sys-tubesout')
     return
   }
   // ECM doprovod: 1 raketa se obětuje jako rušička — jen u salvy ≥ 3 raket
   const jammer = opts.escortJammer === true
   if (jammer && n < JAMMER_MIN_SALVO) {
     crewSay(state, ship,
-      `Eskortní rušička potřebuje salvu aspoň ${JAMMER_MIN_SALVO} raket — odpal zrušen.`)
+      `Eskortní rušička potřebuje salvu aspoň ${JAMMER_MIN_SALVO} raket — odpal zrušen.`, false, 'sys-jammer3')
     return
   }
 

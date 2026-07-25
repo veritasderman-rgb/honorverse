@@ -102,7 +102,7 @@ export const mission04: Scenario = {
         { kind: 'message', text: 'Nouzový signál kurýra Hermes! Loď driftuje bez pohonu hluboko v soustavě.' },
         {
           // zachycené nouzové volání kurýra
-          kind: 'comm', speaker: 'comms',
+          kind: 'comm', vo: 'm04-c1', speaker: 'comms',
           text: 'Zachycené nouzové volání: „…tady kurýr Hermes, pohon vyřazen, driftujeme… kyslík na dva dny… prosím, slyší nás někdo?"',
         },
         {
@@ -148,7 +148,7 @@ export const mission04: Scenario = {
         { kind: 'setDoctrine', shipId: 4, doctrine: 'hunter' },
         {
           // imperiální rozkaz zastavit
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm04-c2', speaker: 'enemy-captain',
           text: 'IDS Rigel na všech frekvencích: „Neznámá lodi, tady Doradské impérium. Jste v prostoru, který vám nepatří. Vypněte pohon a vzdejte se, nebo budete zničeni. Druhá výzva nebude."',
         },
       ],

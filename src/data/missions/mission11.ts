@@ -143,7 +143,7 @@ export const mission11: Scenario = {
       conditions: [{ kind: 'time', t: 10 }],
       actions: [
         {
-          kind: 'comm', speaker: 'xo',
+          kind: 'comm', vo: 'm11-c1', speaker: 'xo',
           text: 'První důstojník: „Simulace admirality běží, kapitáne. Plná stěna proti plné stěně — tohle si u Křižovatky nikdo nezkusil naostro. Doporučuju STĚNU pro jádro a nechat zástěnu pracovat."',
         },
       ],
@@ -154,7 +154,7 @@ export const mission11: Scenario = {
       conditions: [{ kind: 'time', t: 40 }],
       actions: [
         {
-          kind: 'comm', speaker: 'enemy-captain',
+          kind: 'comm', vo: 'm11-c2', speaker: 'enemy-captain',
           text: 'IDS Toledo: „Dvacet trupů, avalonský admirále. Historie učí, že stěna se neláme elegancí — láme se tonáží. Ukažte, co jste se u Cádizu naučili."',
         },
       ],
@@ -165,7 +165,7 @@ export const mission11: Scenario = {
       conditions: [{ kind: 'time', t: 90 }],
       actions: [
         {
-          kind: 'comm', speaker: 'tactical',
+          kind: 'comm', vo: 'm11-c3', speaker: 'tactical',
           text: 'Taktický: „Jejich stěna drží šedesát procent tahu — plné boční štíty. Jestli k nim popluje na sto procent, budeme mít boky z papíru; navrhuju šedesát a nechat je nabíhat na naše salvy."',
         },
       ],

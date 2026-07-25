@@ -94,7 +94,7 @@ export const side01: Scenario = {
       id: 'trg-comm-threat', once: true,
       conditions: [{ kind: 'distanceBelow', shipA: WREN, shipB: PIRATE1, distance: 20_000_000 }],
       actions: [{
-        kind: 'comm', speaker: 'pirate',
+        kind: 'comm', vo: 's01-c1', speaker: 'pirate',
         text: '„Kurýre, vypni stroje. Ta korveta od námořnictva k tobě nedoletí včas."',
       }],
     },
