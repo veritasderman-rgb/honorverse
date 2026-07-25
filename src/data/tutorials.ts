@@ -22,6 +22,10 @@ export interface TutorialStep {
 const own = (state: SimState, ui: UiState): ShipState | undefined =>
   state.ships.find(s => s.id === ui.ownShipId)
 
+/** je loď daného id CÍLEM MISE (objective — ◎ na displeji)? */
+const isObjectiveShip = (state: SimState, id: number | null | undefined): boolean =>
+  id != null && state.ships.find(s => s.id === id)?.objective === true
+
 /** MISE 1 — pohyb, čas a senzory (celní kontrola Cygnusu) */
 const MISSION01_STEPS: TutorialStep[] = [
   {
@@ -47,7 +51,9 @@ const MISSION01_STEPS: TutorialStep[] = [
         + 'marker on the display, or its row in the list. That selects it '
         + 'as your target.',
     },
-    done: (_s, ui) => ui.targetId != null,
+    // musí být vybraný PRÁVĚ Cygnus (◎) — jiný kontakt krok neposune,
+    // jinak by nováček poslušně stíhal třeba sondu a misi prohrál
+    done: (s, ui) => isObjectiveShip(s, ui.targetId),
   },
   {
     anchor: '[data-act="intercept"]',
@@ -57,7 +63,10 @@ const MISSION01_STEPS: TutorialStep[] = [
       en: 'The autopilot computes the pursuit course for you: order '
         + 'INTERCEPT. The ship will turn and fly to meet the target.',
     },
-    done: (s, ui) => own(s, ui)?.nav?.kind === 'intercept',
+    done: (s, ui) => {
+      const nav = own(s, ui)?.nav
+      return nav?.kind === 'intercept' && isObjectiveShip(s, nav.targetId)
+    },
   },
   {
     anchor: '[data-act="throttle:100"]',

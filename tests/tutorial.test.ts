@@ -64,19 +64,25 @@ describe('data tutoriálu mise 1', () => {
 })
 
 describe('podmínky kroků (deterministicky ze snapshotu)', () => {
-  const state = mkState({ ships: [mkOwn()] })
+  /** Cygnus (id 4) = cíl mise; sonda (id 7) = svod, krok posunout nesmí */
+  const cygnus = mkOwn({ id: 4, side: 'neutral', name: 'Cygnus', objective: true } as Partial<ShipState>)
+  const probe = mkOwn({ id: 7, side: 'neutral', name: 'sonda' })
+  const state = mkState({ ships: [mkOwn(), cygnus, probe] })
 
-  it('výběr cíle: splněno až s ui.targetId', () => {
+  it('výběr cíle: splněno jen s vybraným CÍLEM MISE (◎), ne jiným kontaktem', () => {
     const step = steps.find(s => s.anchor === '[data-fold="contacts"]')!
     expect(step.done!(state, mkUi())).toBe(false)
+    expect(step.done!(state, mkUi({ targetId: 7 }))).toBe(false) // sonda nestačí
     expect(step.done!(state, mkUi({ targetId: 4 }))).toBe(true)
   })
 
-  it('intercept: splněno až s nav.kind = intercept', () => {
+  it('intercept: splněno jen interceptem na cíl mise', () => {
     const step = steps.find(s => s.anchor === '[data-act="intercept"]')!
     expect(step.done!(state, mkUi())).toBe(false)
-    const st2 = mkState({ ships: [mkOwn({ nav: { kind: 'intercept', targetId: 4 } })] })
-    expect(step.done!(st2, mkUi())).toBe(true)
+    const wrong = mkState({ ships: [mkOwn({ nav: { kind: 'intercept', targetId: 7 } }), cygnus, probe] })
+    expect(step.done!(wrong, mkUi())).toBe(false)
+    const right = mkState({ ships: [mkOwn({ nav: { kind: 'intercept', targetId: 4 } }), cygnus, probe] })
+    expect(step.done!(right, mkUi())).toBe(true)
   })
 
   it('tah: splněno až při 100 %', () => {
