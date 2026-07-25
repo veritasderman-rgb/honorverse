@@ -448,13 +448,16 @@ Hra vybírá variantu deterministicky — nahraj **všechny varianty** kategorie
 - CS: Zachycená nepřátelská komunikace — šifrovaná. Nahrávám pro rozvědku.
 - EN: Intercepted enemy communications — encrypted. Recording for Intelligence.
 
-### Odpovědi na výzvu ke kapitulaci (`src/sim/surrender.ts`) · enemy-captain / pirate — (VO obecná: titulek doplní jméno lodi)
+### Odpovědi na výzvu ke kapitulaci (`src/sim/surrender.ts`) — (VO obecná: titulek doplní jméno lodi)
 
-**`sur-accept`**
+Mluvčího volí hra podle doktríny cíle (pirát ⟷ imperiální kapitán) — nahraj
+každou repliku **oběma hlasy**, id nese mluvčího.
+
+**`sur-accept-pirate`** · pirate / **`sur-accept-imperial`** · enemy-captain
 - CS: „Dost… dost! Vypínáme klín a skládáme zbraně. Kapitulujeme — nestřílejte."
 - EN: "Enough… enough! We're striking the wedge and laying down arms. We surrender — hold your fire."
 
-**`sur-refuse`**
+**`sur-refuse-pirate`** · pirate / **`sur-refuse-imperial`** · enemy-captain
 - CS: „Kapitulovat? Zapomeňte. Ještě jsme neskončili."
 - EN: "Surrender? Forget it. We're not finished yet."
 
