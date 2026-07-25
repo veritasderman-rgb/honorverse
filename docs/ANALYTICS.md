@@ -66,3 +66,16 @@ v projektu. Nové události přidávej voláním `track('nazev', {...}, missionI
 z `src/ui/analytics.ts` — tabulka je generická, migrace není potřeba.
 Retenci dat řeš případně mazáním starých řádků
 (`delete from wob_events where created_at < now() - interval '180 days'`).
+
+## Dashboard /analytika
+
+Vyhodnocení bez SQL: `https://honorverse.vercel.app/analytika` — statická
+stránka (samostatný Vite entry `analytika.html`, kód v `src/analytika/`),
+která čte VÝHRADNĚ agregační pohledy (`wob_daily`, `wob_funnel`,
+`wob_tutorial`, `wob_segments`) přes PostgREST s publishable klíčem.
+Surová tabulka `wob_events` zůstává pro klienty zamčená (RLS insert-only);
+pohledy neobsahují žádné PII, takže veřejná čitelnost agregátů je záměr.
+Obsah: KPI karty (7denní součty), denní graf hráčů/sezení (Canvas 2D),
+funnel misí v kampaňovém pořadí, udržení tutoriálu po krocích a segmenty
+jazyk × zařízení. Routing řeší rewrite v `vercel.json`
+(`/analytika` → `/analytika.html`).
