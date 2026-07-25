@@ -12,6 +12,7 @@ import type { HudView, UiState } from './panels'
 import { esc } from './panels'
 import { TUTORIALS, type TutorialStep } from '../data/tutorials'
 import { getLang, t } from './i18n'
+import { track } from './analytics'
 
 const storeKey = (missionId: string): string => `wob-tut-${missionId}`
 
@@ -45,8 +46,11 @@ export class TutorialView implements HudView {
       const b = (e.target as Element | null)?.closest('[data-tut]')
       if (!b) return
       const act = b.getAttribute('data-tut')
-      if (act === 'skip') this.stop(true)
-      else if (act === 'min') this.setMinimized(true)
+      if (act === 'skip') {
+        // analytika: KDE hráči výcvik vzdávají (krok 1 = uvítání…)
+        track('tutorial_skip', { step: this.idx + 1 }, this.missionId)
+        this.stop(true)
+      } else if (act === 'min') this.setMinimized(true)
       else this.advance()
     })
     // čip → rozbalit zpět
@@ -92,7 +96,13 @@ export class TutorialView implements HudView {
   private advance(): void {
     if (!this.steps) return
     this.idx++
-    if (this.idx >= this.steps.length) { this.stop(true); return }
+    if (this.idx >= this.steps.length) {
+      track('tutorial_done', {}, this.missionId)
+      this.stop(true)
+      return
+    }
+    // analytika: dosažený krok (funnel výcviku — kde se hráči zasekávají)
+    track('tutorial_step', { step: this.idx + 1 }, this.missionId)
     // sbalený tutoriál nevyskakuje — jen aktualizuje počítadlo na čipu
     if (this.minimized) this.setMinimized(true)
     else this.renderStep()

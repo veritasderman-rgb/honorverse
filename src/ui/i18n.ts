@@ -63,8 +63,33 @@ const DICT: Record<string, { cs: string; en: string }> = {
   // voiceover (namluvené prology/epilogy)
   'vo.play': { cs: '🔊 ▶ komentář', en: '🔊 ▶ voiceover' },
   'vo.pause': { cs: '🔊 ⏸ komentář', en: '🔊 ⏸ voiceover' },
-  // briefing
+  // briefing / příprava mise
   'brief.admiral': { cs: 'ADMIRALITA — BRIEFING', en: 'ADMIRALTY — BRIEFING' },
+  'prep.arms': { cs: 'VÝZBROJ', en: 'ARMAMENT' },
+  'prep.start': { cs: 'START', en: 'START' },
+  'prep.back': { cs: 'ZPĚT', en: 'BACK' },
+  'loadout.strike': { cs: 'Úderný', en: 'Strike' },
+  'loadout.strike.desc': {
+    cs: 'Víc raket a plné plošiny, méně protiraket — sázka na proražení obrany.',
+    en: 'More missiles and full pods, fewer counter-missiles — a bet on breaking through.',
+  },
+  'loadout.balanced': { cs: 'Vyvážený', en: 'Balanced' },
+  'loadout.balanced.desc': {
+    cs: 'Standardní příděl výzbroje třídy — bez kompromisů.',
+    en: 'The class\'s standard armament allotment — no compromises.',
+  },
+  'loadout.defense': { cs: 'Obranný', en: 'Defensive' },
+  'loadout.defense.desc': {
+    cs: 'Víc protiraket a návnad, méně útočných raket, bez plošin — přežití vlny.',
+    en: 'More counter-missiles and decoys, fewer attack missiles, no pods — surviving the wave.',
+  },
+  // obrazovka výsledku
+  'outcome.win': { cs: 'VÍTĚZSTVÍ', en: 'VICTORY' },
+  'outcome.lose': { cs: 'PORÁŽKA', en: 'DEFEAT' },
+  'outcome.endedAt': { cs: 'Mise ukončena v čase', en: 'Mission ended at' },
+  'outcome.again': { cs: 'ZNOVU', en: 'RETRY' },
+  'outcome.missionSelect': { cs: 'VÝBĚR MISE', en: 'MISSION SELECT' },
+  'outcome.score': { cs: 'SKÓRE', en: 'SCORE' },
   // tutoriál (guided steps)
   'tut.title': { cs: 'VÝCVIK', en: 'TRAINING' },
   'tut.next': { cs: 'POKRAČOVAT', en: 'CONTINUE' },

@@ -9,7 +9,9 @@ import { sceneFor } from './ui/scenes'
 import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
-import { getLang, t, toggleLang } from './ui/i18n'
+import { track } from './ui/analytics'
+import { getLang, t, t as tr, toggleLang } from './ui/i18n'
+import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -146,6 +148,9 @@ for (const evt of ['resize', 'orientationchange']) {
   window.addEventListener(evt, () => applyDeviceClasses())
 }
 
+// analytika: start aplikace (po detekci zařízení, ať je device správně)
+track('app_start')
+
 // výsuvné šuplíky HUD sloupců (telefonní breakpoint — záložky ◧/◨)
 for (const [tabId, hudId] of [['tab-tl', 'hud-tl'], ['tab-tr', 'hud-tr']] as const) {
   const tab = document.getElementById(tabId)
@@ -208,6 +213,7 @@ function startCampaignMission(id: string, preset?: LoadoutId): void {
   applyBonusRewards(clone, loadCleared())  // + kořist z bočních operací (plošiny + lodě)
   bridge.startScenario(clone)
   tutorial.start(id)                       // guided steps (má-li je mise a nebyl dokončen)
+  track('mission_start', { loadout: preset ?? loadPreset() }, id)
 }
 
 /** localStorage flag „úvod kampaně už hráč viděl" */
@@ -311,7 +317,7 @@ function starMapSvg(cleared: ReadonlySet<string>): string {
     const open = st !== 'locked'
     const num = n.optional ? null : ++mainNo
     const badge = done ? '✔' : n.optional ? '★' : String(num)
-    const title = SCENARIOS[n.id]?.title ?? n.id
+    const title = missionTitle(n.id, SCENARIOS[n.id]?.title ?? n.id)
     const tap = open ? ` data-mission="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(title)}"` : ''
     const anchor = n.x > 860 ? 'end' : n.x < 140 ? 'start' : 'middle'
     const tx = n.x > 860 ? n.x + 18 : n.x < 140 ? n.x - 18 : n.x
@@ -395,7 +401,11 @@ function showStarMap(): void {
   onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
   onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
   // přepínač jazyka (CS ⟷ EN) — překreslí menu v novém jazyce
-  onTap(el.querySelector('#btn-lang'), () => { toggleLang(); el.remove(); showStarMap() })
+  onTap(el.querySelector('#btn-lang'), () => {
+    track('lang_set', { to: toggleLang() })
+    el.remove()
+    showStarMap()
+  })
   // testovací přepínač: odemkne/zamkne všechny soustavy a překreslí mapu
   onTap(el.querySelector('#btn-unlock-all'), () => {
     setUnlockAll(!unlockAllOn())
@@ -564,6 +574,7 @@ function showSkirmishBuilder(): void {
     el.remove()
     setMenuBg(false)
     bridge.startScenario(buildSkirmish(cfg))
+    track('mission_start', {}, 'skirmish')
   })
   refresh()
 }
@@ -715,6 +726,7 @@ function voPlayer(name: string): HTMLElement {
     wrap.style.display = 'block'
     void audio.play().catch(() => { /* autoplay blokován — zůstane ▶ */ })
     setLabel()
+    track('vo_play', { name })
   }, { once: true })
   for (const ev of ['play', 'pause', 'ended']) audio.addEventListener(ev, setLabel)
   // selhání VŠECH zdrojů hlásí error na posledním <source> — řádek se uklidí
@@ -734,7 +746,7 @@ function showBriefing(sc: Scenario): void {
   const el = overlay(
     `<h2>${esc(sc.title)}</h2>`
     + `<div class="brief">${esc(sc.briefing)}</div>`
-    + `<button id="btn-start">START</button>`,
+    + `<button id="btn-start">${t('prep.start')}</button>`,
   )
   onTap(el.querySelector('#btn-start'), () => {
     el.remove()
@@ -754,16 +766,16 @@ function showMissionPrep(id: string): void {
   const prolog = missionStory(id)?.prolog
   let sel: LoadoutId = loadPreset()
   const btns = LOADOUTS.map(l =>
-    `<button class="ld-btn${l.id === sel ? ' active' : ''}" data-ld="${l.id}">${esc(l.label)}</button>`).join('')
+    `<button class="ld-btn${l.id === sel ? ' active' : ''}" data-ld="${l.id}">${t(`loadout.${l.id}`)}</button>`).join('')
   const el = overlay(
     `<div id="prep-media"></div>`
-    + `<h2>${esc(sc.title)}</h2>`
+    + `<h2>${esc(missionTitle(id, sc.title))}</h2>`
     + (prolog ? `<div class="brief story">${esc(prolog)}</div>` : '')
-    + `<div class="brief">${esc(sc.briefing)}</div>`
-    + `<div class="ld-row"><span>VÝZBROJ:</span> ${btns}</div>`
-    + `<div id="ld-desc" class="dim">${esc(presetById(sel).desc)}</div>`
-    + `<div style="margin-top:12px"><button id="btn-start">START</button> `
-    + `<button id="btn-prep-back">ZPĚT</button></div>`,
+    + `<div class="brief">${esc(missionBriefing(id, sc.briefing))}</div>`
+    + `<div class="ld-row"><span>${t('prep.arms')}:</span> ${btns}</div>`
+    + `<div id="ld-desc" class="dim">${t(`loadout.${sel}.desc`)}</div>`
+    + `<div style="margin-top:12px"><button id="btn-start">${t('prep.start')}</button> `
+    + `<button id="btn-prep-back">${t('prep.back')}</button></div>`,
   )
   // video briefing (nebo statická scéna jako fallback)
   const media = briefingMedia(id)
@@ -776,7 +788,7 @@ function showMissionPrep(id: string): void {
     sel = t.getAttribute('data-ld') as LoadoutId
     el.querySelectorAll('.ld-btn').forEach(b =>
       b.classList.toggle('active', b.getAttribute('data-ld') === sel))
-    el.querySelector('#ld-desc')!.textContent = presetById(sel).desc
+    el.querySelector('#ld-desc')!.textContent = tr(`loadout.${sel}.desc`)
   })
   onTap(el.querySelector('#btn-prep-back'), () => { stopVo(); el.remove(); showStarMap() })
   onTap(el.querySelector('#btn-start'), () => {
@@ -859,7 +871,7 @@ function showOutcome(state: SimState): void {
   if (win && currentMissionId && currentMissionId !== 'skirmish') markCleared(currentMissionId)
   const objs = state.objectives.map(o => {
     const mark = o.state === 'done' ? '■' : o.state === 'failed' ? '✗' : '□'
-    return `<div class="obj ${o.state}">${mark} ${esc(o.text)}</div>`
+    return `<div class="obj ${o.state}">${mark} ${esc(objectiveText(currentMissionId, o.id, o.text))}</div>`
   }).join('')
 
   // skóre mise (jen výhra) — deterministické z průběhu
@@ -873,11 +885,21 @@ function showOutcome(state: SimState): void {
     launched: stats.ourLaunched,
     hits: stats.ourHits,
   })
+  // analytika: výsledek mise (anonymně — viz docs/ANALYTICS.md)
+  track('mission_end', {
+    win,
+    t: Math.round(state.t),
+    score: score.total,
+    launched: stats.ourLaunched,
+    hits: stats.ourHits,
+    own_losses: state.ships.filter(s => s.side === 'player' && s.destroyed).length,
+  }, currentMissionId)
+
   // volná bitva nemá skóre do žebříčku (jen rozbor + skóre pro info)
   const isSkirmish = currentMissionId === 'skirmish'
   const scoreHtml = win
     ? `<div class="score-block">`
-      + `<div class="score-total">SKÓRE: <b>${score.total}</b></div>`
+      + `<div class="score-total">${t('outcome.score')}: <b>${score.total}</b></div>`
       + score.breakdown.map(l =>
         `<div class="row"><span>${esc(l.label)}</span><span class="${l.points >= 0 ? 'ok' : 'bad'}">${l.points >= 0 ? '+' : ''}${l.points}</span></div>`).join('')
       + (isSkirmish ? '' :
@@ -902,15 +924,15 @@ function showOutcome(state: SimState): void {
     }
   }
   const el = overlay(
-    `<h2 class="${win ? 'win' : 'lose'}">${win ? 'VÍTĚZSTVÍ' : 'PORÁŽKA'}</h2>`
-    + `<div class="brief">Mise ukončena v čase ${fmtTime(state.t)}.</div>`
+    `<h2 class="${win ? 'win' : 'lose'}">${win ? t('outcome.win') : t('outcome.lose')}</h2>`
+    + `<div class="brief">${t('outcome.endedAt')} ${fmtTime(state.t)}.</div>`
     + objs
     + afterActionHtml(state, controller.stats.report)
     + scoreHtml
     + (epilog ? `<div class="brief story story-epilog">${esc(epilog)}</div>` : '')
     + `<div style="margin-top:14px">`
-    + `<button id="btn-again">ZNOVU</button> `
-    + `<button id="btn-menu">VÝBĚR MISE</button>`
+    + `<button id="btn-again">${t('outcome.again')}</button> `
+    + `<button id="btn-menu">${t('outcome.missionSelect')}</button>`
     + `</div>`,
   )
   // namluvený epilog (existuje-li nahrávka)
