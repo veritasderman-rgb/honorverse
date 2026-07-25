@@ -21,7 +21,8 @@ import { controllableShips, fleetShips, isControllable, rosterVisible } from './
 import type { Contact, ShipClassDef, ShipState, SimEvent, SimState, Subsystems } from '../sim/types'
 import type { AudioManager } from './audio'
 import { type CombatStats } from './combatStats'
-import { t } from './i18n'
+import { getLang, t } from './i18n'
+import { CHARACTERS } from '../data/characters'
 
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
 export interface UiState {
@@ -315,7 +316,11 @@ export class Panels implements HudView {
     this.salvoTallies.clear()
     this.log = []
     this.commLog = []
+    this.introduced.clear()
   }
+
+  /** mluvčí už v TÉTO misi dostali intro kartu postavy */
+  private introduced = new Set<string>()
 
   /** sleduje osud NAŠICH salv; po dostřílení celé salvy shrne výsledek do logu */
   private salvoTallies = new Map<number, SalvoTally>()
@@ -356,6 +361,17 @@ export class Panels implements HudView {
 
       // komunikace → comm log + výrazný toast
       if (ev.kind === 'comm' && ev.speaker) {
+        // PRVNÍ replika mluvčího v misi → intro karta postavy (jméno, role,
+        // medailonek) — postavy se představují, jak vstupují do příběhu
+        const ch = CHARACTERS[ev.speaker]
+        if (ch && !this.introduced.has(ev.speaker)) {
+          this.introduced.add(ev.speaker)
+          this.showToast(
+            `${avatarHtml(ev.speaker)}<span class="toast-body">`
+            + `<b>${esc(ch.name)}</b><span class="intro-role">${esc(t(ch.roleKey))}</span>`
+            + `<span class="intro-bio">${esc(ch.bio[getLang()])}</span></span>`,
+            'toast-comm toast-intro', 11000)
+        }
         this.commLog.unshift({ t: ev.t, speaker: ev.speaker, text: ev.text })
         if (this.commLog.length > 8) this.commLog.length = 8
         this.showToast(

@@ -611,7 +611,7 @@ function briefingMedia(id: string): HTMLElement | null {
   const makeImg = (): HTMLImageElement | null => {
     if (!scene) return null
     const img = document.createElement('img')
-    img.className = 'brief-img'
+    img.className = 'brief-img kb' // kb = Ken Burns pan/zoom (filmový prolog)
     img.src = `img/${scene}.png`
     img.alt = ''
     img.onerror = () => img.remove()
