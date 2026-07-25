@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Wall of Battle — analytika</title>
+  <style>
+    :root {
+      --bg: #08111c;
+      --panel: #0d1a2a;
+      --line: rgba(120, 160, 200, 0.18);
+      --text: #cfe3f5;
+      --dim: #5b7a99;
+      --amber: #e8b34b;
+      --ok: #57c78a;
+      --bad: #e06c5f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 20px;
+      background: radial-gradient(1200px 600px at 70% -10%, #10233a 0%, var(--bg) 60%);
+      color: var(--text);
+      font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+    header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+    h1 { font-size: 20px; letter-spacing: 0.14em; margin: 0; color: var(--amber); }
+    h2 { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); margin: 28px 0 10px; }
+    h3 { font-size: 13px; margin: 14px 0 6px; }
+    #status { color: var(--dim); font-size: 12px; }
+    #refresh {
+      margin-left: auto; cursor: pointer;
+      background: transparent; color: var(--amber);
+      border: 1px solid var(--amber); border-radius: 4px; padding: 4px 12px;
+      font: inherit; letter-spacing: 0.08em;
+    }
+    #refresh:hover { background: rgba(232, 179, 75, 0.12); }
+    .note { color: var(--dim); font-size: 12px; margin: 0 0 14px; }
+    #kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .kpi {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+      padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .kpi b { font-size: 22px; color: var(--amber); font-variant-numeric: tabular-nums; }
+    .kpi span { color: var(--dim); font-size: 11px; letter-spacing: 0.05em; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+    canvas { display: block; width: 100%; }
+    table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    th { text-align: left; color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--line); }
+    td { padding: 5px 10px 5px 0; border-bottom: 1px solid rgba(120, 160, 200, 0.08); }
+    .dim { color: var(--dim); font-size: 11px; }
+    .ok { color: var(--ok); }
+    .amber { color: var(--amber); }
+    .bad { color: var(--bad); }
+    .bar { display: inline-block; width: 110px; height: 8px; background: rgba(120, 160, 200, 0.12); border-radius: 3px; overflow: hidden; vertical-align: middle; }
+    .bar i { display: block; height: 100%; }
+    .b-starts { background: #5a8cbe; }
+    .b-tut { background: var(--ok); }
+    .empty { color: var(--dim); padding: 10px 0; }
+    .tut-block { margin-bottom: 10px; }
+    footer { color: var(--dim); font-size: 11px; margin-top: 30px; }
+    a { color: var(--amber); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>WALL OF BATTLE — ANALYTIKA</h1>
+      <span id="status">načítám…</span>
+      <button id="refresh">OBNOVIT</button>
+    </header>
+    <p class="note">Anonymní telemetrie (bez PII) z agregačních pohledů Supabase — co hráči hrají,
+      kde vyhrávají, kde odpadají. Sbírá se jen v produkci; detail v docs/ANALYTICS.md.</p>
+
+    <h2>Přehled</h2>
+    <div id="kpis"></div>
+
+    <h2>Denně — hráči (jantar) a sezení (modrá), posledních 30 dní</h2>
+    <div class="panel"><canvas id="chart"></canvas></div>
+
+    <h2>Funnel misí</h2>
+    <div class="panel" id="funnel"></div>
+
+    <h2>Tutoriál — udržení po krocích</h2>
+    <div class="panel" id="tutorial"></div>
+
+    <h2>Segmenty — jazyk × zařízení</h2>
+    <div class="panel" id="segments"></div>
+
+    <footer>Wall of Battle · interní dashboard · <a href="/">zpět do hry</a></footer>
+  </div>
+  <script type="module" src="/src/analytika/main.ts"></script>
+</body>
+</html>
