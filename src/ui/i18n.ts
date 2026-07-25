@@ -1,26 +1,24 @@
 /**
- * Lokalizace (i18n) — čeština / angličtina. Jazyk se určí z prohlížeče
- * (navigator.language) a jde ho ručně přepnout na úvodní obrazovce; volba se
- * pamatuje v localStorage. Překlady jsou ve slovníku po klíčích; `t(key)` vrací
- * text aktuálního jazyka (fallback čeština).
- *
- * FÁZE 1: úvodní obrazovka (hvězdná mapa, kampaňový úvod, příprava mise).
- * Herní HUD a příběh se dopřekládají v dalších vlnách — mechanismus je hotový.
+ * Lokalizace (i18n) — angličtina (PRIMÁRNÍ) / čeština. Jazyk se určí
+ * z prohlížeče (navigator.language) a jde ho ručně přepnout na úvodní
+ * obrazovce; volba se pamatuje v localStorage. Překlady jsou ve slovníku po
+ * klíčích; `t(key)` vrací text aktuálního jazyka (zdrojová mutace slovníku
+ * je česká, výchozí jazyk hry je ale angličtina).
  */
 export type Lang = 'cs' | 'en'
 
 const LANG_KEY = 'wob-lang'
 
-/** detekce jazyka: uložená volba > prohlížeč (en* → en) > čeština */
+/** detekce jazyka: uložená volba > prohlížeč (cs/sk → čeština) > ANGLIČTINA */
 function detectLang(): Lang {
   try {
     const saved = localStorage.getItem(LANG_KEY)
     if (saved === 'cs' || saved === 'en') return saved
   } catch { /* noop */ }
   try {
-    const nav = (navigator.language || (navigator.languages && navigator.languages[0]) || 'cs').toLowerCase()
-    return nav.startsWith('en') ? 'en' : 'cs'
-  } catch { return 'cs' }
+    const nav = (navigator.language || (navigator.languages && navigator.languages[0]) || 'en').toLowerCase()
+    return nav.startsWith('cs') || nav.startsWith('sk') ? 'cs' : 'en'
+  } catch { return 'en' }
 }
 
 let current: Lang = detectLang()
