@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { fmtDec, fmtNum, I18N_DICT, setLang, t, tf } from '../src/ui/i18n'
 import { scoreMission } from '../src/sim/score'
 import { helpBoxHtml } from '../src/ui/help'
+import { SHIP_SURFACE_EN, shipClassLore, shipClassName } from '../src/data/shipsEn'
+import { SHIP_CLASSES } from '../src/data/defs'
 
 afterEach(() => setLang('cs'))
 
@@ -72,6 +74,33 @@ describe('nápověda (H)', () => {
     expect(en).toContain('HELP')
     expect(en).toContain('Powered envelope')
     expect(en).toContain('CLOSE (Esc)')
+  })
+})
+
+describe('anglický povrch lodních tříd (shipsEn)', () => {
+  it('každá třída z defs má EN jméno; lore zrcadlí českou (má-li ji)', () => {
+    for (const [id, def] of Object.entries(SHIP_CLASSES)) {
+      const en = SHIP_SURFACE_EN[id]
+      expect(en, `chybí EN povrch třídy ${id}`).toBeDefined()
+      // vlastní jména tříd (Vladař, Korzár…) si diakritiku nechávají —
+      // kontrolujeme jen, že jméno není celé české („třída …")
+      expect(en.name.length).toBeGreaterThan(2)
+      expect(en.name).not.toMatch(/^třída /)
+      if (def.lore) {
+        expect(en.lore, `${id}: chybí EN lore`).toBeDefined()
+        expect(en.lore!.length, `${id}: krátká EN lore`).toBeGreaterThan(60)
+      }
+    }
+  })
+
+  it('gettery přepínají dle jazyka s českým fallbackem', () => {
+    const def = SHIP_CLASSES['cl-sokol']
+    setLang('en')
+    expect(shipClassName(def)).toBe('Sokol class')
+    expect(shipClassLore(def)).toContain('falcon')
+    setLang('cs')
+    expect(shipClassName(def)).toBe('třída Sokol')
+    expect(shipClassLore(def)).toContain('sokolovi')
   })
 })
 

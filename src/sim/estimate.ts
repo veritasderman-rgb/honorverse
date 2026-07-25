@@ -25,11 +25,26 @@ const clamp01 = (x: number): number => Math.min(1, Math.max(0, x))
 const fmtN = (x: number): string =>
   x > 0 && x < 0.95 ? `~${x.toFixed(1).replace('.', ',')}` : `~${Math.round(x)}`
 
+export interface PenetrationParts {
+  /** očekávané sestřely protiraketami */
+  cm: number
+  /** očekávané sestřely bodovou obranou */
+  pdlc: number
+  /** očekávané ztráty na ECM / hlavici mimo */
+  ecm: number
+  /** velikost salvy */
+  count: number
+  /** salva vůbec nedoletí (mimo dosah) */
+  outOfRange: boolean
+}
+
 export interface PenetrationEstimate {
   /** očekávaný počet raket, které detonují se zásahem */
   through: number
   /** český rozpad vrstev obrany, např. „CM ~9 · PDLC ~3 · ECM ~2 → projde ~2/16" */
   breakdown: string
+  /** strukturovaný rozpad — UI si z něj skládá lokalizovaný text */
+  parts: PenetrationParts
 }
 
 /**
@@ -40,7 +55,10 @@ export function estimatePenetration(
   state: SimState, shooter: ShipState, target: ShipState, count: number, mode: DriveMode,
 ): PenetrationEstimate {
   if (count <= 0 || target.destroyed) {
-    return { through: 0, breakdown: `projde ~0/${Math.max(0, count)}` }
+    return {
+      through: 0, breakdown: `projde ~0/${Math.max(0, count)}`,
+      parts: { cm: 0, pdlc: 0, ecm: 0, count: Math.max(0, count), outOfRange: false },
+    }
   }
   const mDef = MISSILES['std-shipkiller']
   const tDef = SHIP_CLASSES[target.classId]
@@ -51,7 +69,10 @@ export function estimatePenetration(
   const closing = dot(sub(shooter.vel, target.vel), dir)
   const tFlight = missileFlightTime(d, closing, mode)
   if (!Number.isFinite(tFlight)) {
-    return { through: 0, breakdown: `mimo dosah — balisticky nedoletí (projde ~0/${count})` }
+    return {
+      through: 0, breakdown: `mimo dosah — balisticky nedoletí (projde ~0/${count})`,
+      parts: { cm: 0, pdlc: 0, ecm: 0, count, outOfRange: true },
+    }
   }
 
   /** doba letu POSLEDNÍHO úseku dlouhého `range` km před cílem */
@@ -112,5 +133,8 @@ export function estimatePenetration(
 
   const breakdown = `CM ${fmtN(cmKills)} · PDLC ${fmtN(pdlcKills)} · ECM ${fmtN(ecmDud)}`
     + ` → projde ${fmtN(through)}/${count}`
-  return { through, breakdown }
+  return {
+    through, breakdown,
+    parts: { cm: cmKills, pdlc: pdlcKills, ecm: ecmDud, count, outOfRange: false },
+  }
 }

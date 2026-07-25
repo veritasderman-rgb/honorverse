@@ -436,6 +436,14 @@ const DICT: Record<string, { cs: string; en: string }> = {
       + 'a full volley in the current drive mode. Not a promise — reality depends on chance, '
       + 'maneuvers, saturation and the target\'s in-flight defense.',
   },
+  'pen.line': {
+    cs: 'CM {cm} · PDLC {pdlc} · ECM {ecm} → projde {th}/{n}',
+    en: 'CM {cm} · PDLC {pdlc} · ECM {ecm} → {th}/{n} leak through',
+  },
+  'pen.outOfRange': {
+    cs: 'mimo dosah — balisticky nedoletí (projde ~0/{n})',
+    en: 'out of reach — cannot coast there (~0/{n} leak through)',
+  },
   'tg.armUnknown': {
     cs: 'výzbroj neznámá (ident. vyžaduje aktivní senzory zblízka)',
     en: 'armament unknown (ident needs active sensors up close)',

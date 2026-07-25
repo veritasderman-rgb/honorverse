@@ -9,6 +9,7 @@
  * detail třídy lodi (lore + parametry) se rozklikává v paměti UI.
  */
 import { MISSILES, SHIP_CLASSES } from '../data/defs'
+import { shipClassLore, shipClassName } from '../data/shipsEn'
 import {
   CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
   ENERGY_MAX_RANGE, G, REPAIR_CAP_LIGHT, ROLL_TIME, SURRENDER_COOLDOWN, TUBE_COOLDOWN,
@@ -537,16 +538,17 @@ export class Panels implements HudView {
   /** rozklikávací detail třídy lodi: „▸ třída …" → lore (+ parametry) */
   private classDetail(def: ShipClassDef, key: string, showParams: boolean): string {
     const open = this.classDetailOpen.has(key)
-    // názvy tříd už často začínají „třída …" — nezdvojovat prefix; anglicky
-    // z „třída Sokol" uděláme „Sokol class"
-    const label = getLang() === 'en'
-      ? (def.name.startsWith('třída ')
-        ? `${def.name.slice('třída '.length)} class` : `${t('cls.class')} ${def.name}`)
-      : (def.name.startsWith('třída') ? def.name : `${t('cls.class')} ${def.name}`)
+    // jméno + lore jdou přes EN mutaci povrchu tříd (shipsEn); pojmenované
+    // třídy už prefix nesou („třída Sokol" / „Sokol class"), generické
+    // („nákladní loď" / „freighter") dostanou „třída: / class:"
+    const name = shipClassName(def)
+    const named = getLang() === 'en' ? name.endsWith(' class') : name.startsWith('třída')
+    const label = named ? name : `${t('cls.class')} ${name}`
     let out = `<div class="cls-row" data-clsdetail="${key}">${open ? '▾' : '▸'}`
       + ` ${esc(label)} (${esc(def.hullCode)})</div>`
     if (!open) return out
-    if (def.lore) out += `<div class="cls-lore">${esc(def.lore)}</div>`
+    const lore = shipClassLore(def)
+    if (lore) out += `<div class="cls-lore">${esc(lore)}</div>`
     if (showParams) {
       const kv: [string, string][] = [
         [t('cls.tonnage'), `${fmtNum(def.tonnage / 1000)} kt`],
@@ -857,11 +859,21 @@ export class Panels implements HudView {
           const est = estimatePenetration(state, own, tgtShip, n,
             autoDriveMode(own.pos, own.vel, tgtShip.pos, tgtShip.vel))
           const tip = t('tg.penTip')
+          // „~2" / „~0,4" — malé hodnoty s desetinou dle jazyka, jinak celé
+          const tilde = (x: number): string =>
+            x > 0 && x < 0.95 ? `~${fmtDec(x, 1)}` : `~${Math.round(x)}`
+          const p = est.parts
+          const line = p.outOfRange
+            ? tf('pen.outOfRange', { n: p.count })
+            : tf('pen.line', {
+              cm: tilde(p.cm), pdlc: tilde(p.pdlc), ecm: tilde(p.ecm),
+              th: tilde(est.through), n: p.count,
+            })
           body += `<div class="row" title="${esc(tip)}"><span>${tf('tg.penEst', { n })}</span>`
             + `<b class="${est.through >= 1 ? 'ok' : 'amber'}">${tf('tg.penVal', {
               x: est.through < 0.95 ? fmtDec(est.through, 1) : Math.round(est.through),
             })}</b></div>`
-            + `<div class="row dim" title="${esc(tip)}"><span>${esc(est.breakdown)}</span></div>`
+            + `<div class="row dim" title="${esc(tip)}"><span>${esc(line)}</span></div>`
         }
       }
     } else if (c.idQuality < 2) {

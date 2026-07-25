@@ -12,6 +12,7 @@ import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
 import { fmtDec, getLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
+import { shipClassName } from './data/shipsEn'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -503,7 +504,8 @@ function showSkirmishBuilder(): void {
   }
   const clsRow = (side: 'player' | 'enemy', cls: string): string => {
     const hull = SHIP_CLASSES[cls]?.hullCode ?? '?'
-    const nm = SHIP_CLASSES[cls]?.name ?? cls
+    const def = SHIP_CLASSES[cls]
+    const nm = def ? shipClassName(def) : cls
     return `<div class="sk-row">`
       + `<span class="sk-name" title="${esc(nm)}">${esc(hull)}</span>`
       + `<button class="sk-step" data-sk="dec" data-side="${side}" data-cls="${cls}">−</button>`
