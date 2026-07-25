@@ -570,19 +570,19 @@ function showSkirmishBuilder(): void {
 
 /** úvodní scéna mise (public/img/<hodnota>.png) */
 const MISSION_SCENES: Record<string, string> = {
-  mission01: 'scene-station',
+  mission01: 'scene-dd-patrol',      // královský DD na celní hlídce
   mission02: 'scene-convoy',
-  mission03: 'scene-battle',
-  mission04: 'scene-hyperwave',
-  mission05: 'scene-station',
-  mission06: 'scene-hyperwave',
-  mission07: 'scene-convoy',
-  mission08: 'scene-battle',
-  mission09: 'scene-battle',
-  mission10: 'scene-hyperwave',
-  mission11: 'scene-battle',
+  mission03: 'scene-qship',          // obchodník odhaluje skrytý arzenál (Mercator!)
+  mission04: 'scene-imperial-ca',    // imperiální křižník zblízka (co Aurora fotí)
+  mission05: 'scene-missile-storm',  // královský křižník v raketové bouři (saturace)
+  mission06: 'scene-royal-ca',       // Resolute běží domů
+  mission07: 'scene-bc-pods',        // bitevní křižník vypouští plošiny (nájezd)
+  mission08: 'scene-crossfire',      // křižná palba do otevřeného hrdla (stěna)
+  mission09: 'scene-dn-alpha',       // superdreadnought vypouští roje modulů
+  mission10: 'scene-shipyard',       // orbitální loděnice — základna Cádiz
+  mission11: 'scene-dn-majesty',     // monumentální superdreadnought nad planetou
   // boční operace
-  side01: 'scene-convoy',
+  side01: 'scene-junction',          // mezihvězdná křižovatka (kurýr v Pomezí)
   side02: 'scene-battle',
   side03: 'scene-station',
 }
@@ -603,8 +603,9 @@ const MISSION_VIDEOS: Record<string, string> = {
 
 /**
  * Media briefingu: přehraje video mise (pokud existuje), jinak statická
- * scéna. Chyba načtení videa → graceful fallback na obrázek. Vrací element
- * k vložení, nebo null (mise bez scény i videa).
+ * scéna s Ken Burns pohybem + MLUVÍCÍ ADMIRÁL v okně (vid/admiral.mp4 —
+ * smyčka BEZ zvuku; hlas dodává voiceover z audio/vo). Chyba načtení →
+ * graceful fallback na obrázek/nic. Vrací element k vložení, nebo null.
  */
 function briefingMedia(id: string): HTMLElement | null {
   const scene = MISSION_SCENES[id]
@@ -617,6 +618,26 @@ function briefingMedia(id: string): HTMLElement | null {
     img.onerror = () => img.remove()
     return img
   }
+  // okno s admirálem: smyčka bez zvuku (originální stopu nahrazuje VO);
+  // když soubor chybí, okno se tiše uklidí
+  const makeAdmiral = (): HTMLElement => {
+    const box = document.createElement('div')
+    box.className = 'brief-admiral'
+    const v = document.createElement('video')
+    v.src = 'vid/admiral.mp4'
+    v.autoplay = true
+    v.muted = true
+    v.loop = true
+    v.setAttribute('playsinline', '')
+    v.controls = false
+    v.addEventListener('error', () => box.remove())
+    const tag = document.createElement('div')
+    tag.className = 'brief-admiral-tag'
+    tag.textContent = t('brief.admiral')
+    box.append(v, tag)
+    void v.play?.().catch(() => { /* autoplay blokován */ })
+    return box
+  }
   const vid = MISSION_VIDEOS[id]
   if (vid) {
     const v = document.createElement('video')
@@ -624,19 +645,29 @@ function briefingMedia(id: string): HTMLElement | null {
     v.src = `vid/${vid}.mp4`
     v.autoplay = true
     v.muted = true
+    v.loop = true
     v.setAttribute('playsinline', '')
     v.controls = false
     if (scene) v.poster = `img/${scene}.png`
-    // video chybí/nejde přehrát → statická scéna (nebo nic)
+    // video chybí/nejde přehrát → statická scéna s admirálem (nebo nic)
     v.addEventListener('error', () => {
+      const wrap = document.createElement('div')
+      wrap.className = 'brief-scene'
       const img = makeImg()
-      if (img && v.parentElement) v.replaceWith(img)
+      if (img) wrap.appendChild(img)
+      wrap.appendChild(makeAdmiral())
+      if (v.parentElement) v.replaceWith(wrap)
       else v.remove()
     })
     void v.play?.().catch(() => { /* autoplay blokován — poster zůstává */ })
     return v
   }
-  return makeImg()
+  const img = makeImg()
+  if (!img) return null
+  const wrap = document.createElement('div')
+  wrap.className = 'brief-scene'
+  wrap.append(img, makeAdmiral())
+  return wrap
 }
 
 // ---------- voiceover (namluvené prology/epilogy misí) ----------
