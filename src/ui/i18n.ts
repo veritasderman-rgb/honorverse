@@ -65,6 +65,10 @@ const DICT: Record<string, { cs: string; en: string }> = {
   // voiceover (namluvené prology/epilogy)
   'vo.play': { cs: '🔊 ▶ komentář', en: '🔊 ▶ voiceover' },
   'vo.pause': { cs: '🔊 ⏸ komentář', en: '🔊 ⏸ voiceover' },
+  // tutoriál (guided steps)
+  'tut.title': { cs: 'VÝCVIK', en: 'TRAINING' },
+  'tut.next': { cs: 'POKRAČOVAT', en: 'CONTINUE' },
+  'tut.skip': { cs: 'přeskočit výcvik', en: 'skip training' },
   // hall of fame
   'hall.loading': { cs: 'načítám…', en: 'loading…' },
   'hall.empty': { cs: 'Žebříček je zatím prázdný — buď první!', en: 'Leaderboard is empty — be the first!' },
