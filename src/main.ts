@@ -10,7 +10,7 @@ import { Panels, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
-import { configureVoLines, stopVoLines, voLinesOnEvents } from './ui/voLines'
+import { clearVoLinesQueue, configureVoLines, stopVoLines, voLinesOnEvents } from './ui/voLines'
 import { fmtDec, getLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
 import { shipClassName } from './data/shipsEn'
@@ -1037,7 +1037,10 @@ bridge.onSnapshot = (state, compression) => {
   if (!outcomeShown && state.outcome !== 'running') {
     outcomeShown = true
     controller.setCompression(0)
-    stopVoLines() // konec mise — rozehrané hlásky nesmí mluvit přes epilog
+    // konec mise: čekající hlášky zahodit, ale ROZEHRANOU nechat doznít —
+    // závěrečná komunikace (m01-c9 apod.) přichází ve stejném snapshotu
+    // jako výhra a stopVoLines() by ji umlčel dřív, než zazní
+    clearVoLinesQueue()
     // kariérní deník flotily (C1): jen kampaň, ne volná bitva
     if (currentMissionId !== 'skirmish') recordMissionResult(state)
     showOutcome(state)
