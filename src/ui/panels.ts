@@ -317,7 +317,10 @@ export class Panels implements HudView {
     x.className = 'toast-x'
     x.textContent = '×'
     x.setAttribute('aria-label', t('toast.close'))
-    x.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); el.remove() })
+    // zavírá se na click (pokryje i klávesnici — Enter/Space na buttonu);
+    // pointerdown jen stopne propagaci, ať klik nepropadne do HUD delegace
+    x.addEventListener('pointerdown', e => e.stopPropagation())
+    x.addEventListener('click', e => { e.stopPropagation(); el.remove() })
     el.appendChild(x)
     this.toasts.appendChild(el)
     // strop toastů (telefon jen 2 — obrazovka je malá a karty velké); při
