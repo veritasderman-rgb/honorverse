@@ -599,6 +599,7 @@ const DICT: Record<string, { cs: string; en: string }> = {
   'tb.helpTip': { cs: 'nápověda (H)', en: 'help (H)' },
   // toasty / log
   'toast.hit': { cs: 'ZÁSAH', en: 'HIT' },
+  'toast.close': { cs: 'zavřít zprávu', en: 'dismiss message' },
   'log.salvoDone': { cs: 'salva dostřílena — {h}/{l} zásahů', en: 'salvo complete — {h}/{l} hits' },
   // lišta rozkazů — tooltipy
   'tip.intercept': {
