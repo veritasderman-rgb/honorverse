@@ -324,7 +324,6 @@ function showCinematicIntro(onDone: () => void): void {
 
   // VO se vytváří až po volbě jazyka (ENTER/VSTUPTE) — do té doby ticho
   let vo: HTMLAudioElement | null = null
-  let voReady = false
 
   const timers: number[] = []
   let finished = false
@@ -354,7 +353,6 @@ function showCinematicIntro(onDone: () => void): void {
     const v = new Audio(`audio/vo/cinematic-${lang}.mp3`)
     vo = v
     v.preload = 'auto'
-    v.addEventListener('canplaythrough', () => { voReady = true }, { once: true })
     el.querySelector('#cine-title')?.remove()
     // restart od začátku se zvukem — výbuchy z videa jsou součást zážitku;
     // globální mute a hlasitost efektů ale platí i tady (Codex review)
@@ -363,9 +361,9 @@ function showCinematicIntro(onDone: () => void): void {
     v.volume = audio.sfxVolume
     vid.currentTime = 0
     void vid.play().catch(() => { /* blokováno — titulky pojedou i tak */ })
-    const tryVo = (): void => { if (!audio.muted) void v.play().catch(() => { /* bez VO */ }) }
-    if (voReady) tryVo()
-    else v.addEventListener('canplaythrough', tryVo, { once: true })
+    // play() přímo z kliku — prohlížeče vyžadují user activation; promise
+    // si buffering počká sama (Codex review)
+    if (!audio.muted) void v.play().catch(() => { /* bez VO */ })
     track('cine_start')
     const lines = cinematicLines()
     lines.forEach((text, i) => {

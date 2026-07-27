@@ -37,7 +37,9 @@ export const mission00: Scenario = {
     {
       // cvičný kýl — vyřazený trup bez pohonu; terč ostré střelby
       classId: 'merch-freighter', side: 'enemy', name: 'Cvičný kýl Beta',
-      pos: { x: 14_000_000, y: -4_000_000 }, vel: { x: 0, y: 0 },
+      // v dosahu aktivních senzorů (5 M km) od bóje Alfa — tutoriál vede
+      // hráče jen „zapni senzory", žádný další přelet (Codex review)
+      pos: { x: 9_000_000, y: 500_000 }, vel: { x: 0, y: 0 },
       doctrine: 'freighter', wedgeOn: false, throttle: 0,
       // mrtvý pohon (vyřazený trup) — zbytek trupu drží, ať je co rozstřílet
       subsystems: {

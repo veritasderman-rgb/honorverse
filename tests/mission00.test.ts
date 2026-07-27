@@ -29,22 +29,17 @@ describe('mise 0 — akademie', () => {
     }
     expect(state.objectives.find(o => o.id === 'obj-buoy')?.state).toBe('done')
 
-    // (2) aktivní senzory → klasifikace kýlu, pak salva 4
+    // (2) přesně dle tutoriálu: JEN zapnout aktivní senzory — kýl musí být
+    // v dosahu (5 M km) od bóje, žádný další přelet (Codex review)
     sim.applyOrder(state, { kind: 'setActiveSensors', shipId: 1, on: true })
-    sim.applyOrder(state, { kind: 'setCourse', shipId: 1, dest: { x: 12_000_000, y: -3_000_000 }, arriveAtRest: true })
     let fired = false
     for (; t < 4 * 3600 && state.outcome === 'running'; t += SIM_DT) {
       sim.tick(state, SIM_DT)
       state.events.length = 0
       const classified = state.contacts.player.some(c => c.shipId === 3 && c.idQuality >= 1)
       if (!fired && classified) {
-        const d = Math.hypot(
-          state.ships[0].pos.x - state.ships[2].pos.x,
-          state.ships[0].pos.y - state.ships[2].pos.y)
-        if (d < 5_000_000) {
-          fired = true
-          sim.applyOrder(state, { kind: 'launchSalvo', shipId: 1, targetId: 3, count: 4, mode: 'auto' })
-        }
+        fired = true
+        sim.applyOrder(state, { kind: 'launchSalvo', shipId: 1, targetId: 3, count: 4, mode: 'auto' })
       }
       // dosalvování, kdyby první vlna nedorazila celá
       if (fired && state.missiles.every(m => m.phase === 'dead') && state.outcome === 'running') fired = false
