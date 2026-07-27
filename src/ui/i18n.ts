@@ -20,6 +20,9 @@ function detectLang(): Lang {
 }
 
 let current: Lang = detectLang()
+// DOM v souladu s detekcí (uložená čeština musí přepsat statické lang="en"
+// v index.html — čtou to čtečky obrazovky i analytika)
+try { document.documentElement.lang = current } catch { /* worker/testy bez DOM */ }
 
 export function getLang(): Lang { return current }
 
