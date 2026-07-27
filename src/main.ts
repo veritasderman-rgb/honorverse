@@ -308,11 +308,14 @@ function showCinematicIntro(onDone: () => void): void {
   const LINE_MS = 5200 // jedna věta: nájezd, čtení, odchod (viz CSS animace)
   onTap(el.querySelector('#cine-enter'), () => {
     el.querySelector('#cine-title')?.remove()
-    // restart od začátku se zvukem — výbuchy z videa jsou součást zážitku
-    vid.muted = false
+    // restart od začátku se zvukem — výbuchy z videa jsou součást zážitku;
+    // globální mute a hlasitost efektů ale platí i tady (Codex review)
+    vid.muted = audio.muted
+    vid.volume = audio.sfxVolume
+    vo.volume = audio.sfxVolume
     vid.currentTime = 0
     void vid.play().catch(() => { /* blokováno — titulky pojedou i tak */ })
-    if (voReady) void vo.play().catch(() => { /* bez VO */ })
+    if (voReady && !audio.muted) void vo.play().catch(() => { /* bez VO */ })
     track('cine_start')
     const lines = cinematicLines()
     lines.forEach((text, i) => {
@@ -456,21 +459,23 @@ function showStarMap(): void {
   el.classList.add('menu', 'menu-map')
   setMenuBg(true)
 
-  onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
-  onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
+  // odchod z mapy: rozehrané vyprávění příběhu nesmí hrát přes další obrazovku
+  const leave = (): void => { stopVo(); el.remove() }
+  onTap(el.querySelector('#btn-skirmish'), () => { leave(); showSkirmishBuilder() })
+  onTap(el.querySelector('#btn-fleet'), () => { leave(); showFleetHall() })
   // přehrát filmové intro znovu (mapa zůstává pod ním)
   onTap(el.querySelector('#btn-cine'), () => showCinematicIntro(() => { /* zpět na mapu */ }))
   // přepínač jazyka (CS ⟷ EN) — překreslí menu v novém jazyce
   onTap(el.querySelector('#btn-lang'), () => {
     track('lang_set', { to: toggleLang() })
     applyStaticI18n()
-    el.remove()
+    leave()
     showStarMap()
   })
   // testovací přepínač: odemkne/zamkne všechny soustavy a překreslí mapu
   onTap(el.querySelector('#btn-unlock-all'), () => {
     setUnlockAll(!unlockAllOn())
-    el.remove()
+    leave()
     showStarMap()
   })
 
@@ -511,7 +516,7 @@ function showStarMap(): void {
   // klepnutí / Enter / mezerník na odemčené soustavě → příprava mise. SVG <g>
   // (role=button) nemá nativní aktivaci klávesnicí, proto Enter/Space ručně.
   el.querySelectorAll<SVGGElement>('g[data-mission]').forEach(g => {
-    const go = (): void => { el.remove(); showMissionPrep(g.dataset.mission!) }
+    const go = (): void => { leave(); showMissionPrep(g.dataset.mission!) }
     onTap(g, go)
     g.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
