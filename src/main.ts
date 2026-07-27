@@ -2,6 +2,7 @@
  * Bootstrap UI vrstvy: bridge → plot → panely → controller,
  * briefing overlay na start (pauza), win/lose overlay dle outcome.
  */
+import { inject } from '@vercel/analytics'
 import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { startFleetView } from './ui/fleetview'
@@ -41,6 +42,9 @@ import {
 } from './ui/leaderboard'
 import type { Scenario, SimEvent, SimState } from './sim/types'
 import { localizeEventText } from './data/localizeEvent'
+
+// Initialize Vercel Web Analytics
+inject()
 
 const canvas = document.getElementById('plot') as HTMLCanvasElement
 const plotContainer = document.getElementById('plot-container') as HTMLElement
@@ -172,7 +176,7 @@ for (const evt of ['resize', 'orientationchange']) {
 // analytika: start aplikace (po detekci zařízení, ať je device správně)
 track('app_start')
 
-// výsuvné šuplíky HUD sloupců (telefonní breakpoint — záložky ◧/◨)
+// výsuvné šuplíky HUD sloupců (telefonní breakpoint — z��ložky ◧/◨)
 for (const [tabId, hudId] of [['tab-tl', 'hud-tl'], ['tab-tr', 'hud-tr']] as const) {
   const tab = document.getElementById(tabId)
   const hud = document.getElementById(hudId)
@@ -520,7 +524,7 @@ function showStarMap(): void {
     leave()
     showStarMap()
   })
-  // testovací přepínač: odemkne/zamkne všechny soustavy a překreslí mapu
+  // testovací přepínač: odemkne/zamkne všechny soustavy a p��ekreslí mapu
   onTap(el.querySelector('#btn-unlock-all'), () => {
     setUnlockAll(!unlockAllOn())
     leave()
@@ -1222,7 +1226,7 @@ function showOutcome(state: SimState): void {
     + `<button id="btn-menu">${t('outcome.missionSelect')}</button>`
     + `</div>`,
   )
-  // namluvený epilog (existuje-li nahrávka)
+  // namluvený epilog (existuje-li nahr��vka)
   if (epilog) el.querySelector('.story-epilog')?.before(voPlayer(epilogVo))
 
   // odeslání do žebříčku + top 10 + „chybí ti X bodů"
