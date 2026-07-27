@@ -1074,6 +1074,8 @@ function showOutcome(state: SimState): void {
 
 bridge.onReady = scenario => {
   currentMissionId = scenario.id
+  // hudební sada mise (amb/battle-<id>.mp3); skirmish jede na výchozích stopách
+  audio.setMissionMusic(scenario.id === 'skirmish' ? null : scenario.id)
   stopVoLines()            // čistý start — žádné hlásky z minulé mise
   controller.stats.reset() // bojová statistika (sdílený tracker) — per mise
   panels.resetStats()      // + HUD logy a rozpracované salvy

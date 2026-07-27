@@ -113,7 +113,12 @@ export class AudioManager {
   private sfxGain!: GainNode
   private noiseBuf!: AudioBuffer
 
-  private tracks = new Map<MusicState, MusicTrack>()
+  /** stopy klíčované souborem (výchozí sada + per-mission varianty) */
+  private tracks = new Map<string, MusicTrack>()
+  /** id mise s vlastní hudbou (audio/music/amb|battle-<id>.mp3), null = výchozí */
+  private missionMusic: string | null = null
+  /** per-mission soubory, které na serveru nejsou (404) — příště rovnou výchozí */
+  private missingMusic = new Set<string>()
   /** logický stav hudby (drží se i před unlock — spustí se pak) */
   private current: MusicState = 'menu'
   /** od kdy je požadovaný stav NIŽŠÍ než hrající (hystereze), null = klid neběží */
@@ -180,6 +185,27 @@ export class AudioManager {
     else if (this.lastState) this.setDesired(musicStateFor(this.lastState))
   }
 
+  /** hudební sada mise (amb/battle-<id>.mp3); null = výchozí stopy */
+  setMissionMusic(id: string | null): void {
+    if (this.missionMusic === id) return
+    this.missionMusic = id
+    // hraje-li už něco, crossfade na soubor nové sady stejného stavu
+    if (this.ctx && !this.finalDone) this.applyMusic(this.current)
+  }
+
+  /** soubor stopy stavu: mise má vlastní podkres (cruise/tension) a bitvu
+   *  (combat/critical); menu/victory/defeat a chybějící soubory → výchozí */
+  private musicFile(state: MusicState): string {
+    const m = this.missionMusic
+    if (m) {
+      const file = state === 'cruise' || state === 'tension' ? `audio/music/amb-${m}.mp3`
+        : state === 'combat' || state === 'critical' ? `audio/music/battle-${m}.mp3`
+        : null
+      if (file && !this.missingMusic.has(file)) return file
+    }
+    return `audio/music-${state}.mp3`
+  }
+
   /** volat z snapshot callbacku — řídí hudbu i SFX z událostí */
   onSnapshot(state: SimState): void {
     this.lastState = state
@@ -242,21 +268,22 @@ export class AudioManager {
     const ctx = this.ctx
     if (!ctx) return // spustí se při unlock()
     const t = ctx.currentTime
+    const file = this.musicFile(target)
 
     // fade-out všech ostatních běžících stop
     for (const [name, tr] of this.tracks) {
-      if (name === target) continue
+      if (name === file) continue
       tr.gain.gain.cancelScheduledValues(t)
       tr.gain.gain.setValueAtTime(tr.gain.gain.value, t)
       tr.gain.gain.linearRampToValueAtTime(0, t + FADE_S)
       if (!tr.el.paused) {
         const el = tr.el
-        window.setTimeout(() => { if (this.current !== name) el.pause() }, FADE_S * 1000 + 200)
+        window.setTimeout(() => { if (this.musicFile(this.current) !== name) el.pause() }, FADE_S * 1000 + 200)
       }
     }
 
     // fade-in cílové stopy
-    const tr = this.track(target)
+    const tr = this.track(file)
     if (tr.failed) return // soubor chybí → ticho (stav ale platí)
     tr.el.loop = !oneShot
     tr.gain.gain.cancelScheduledValues(t)
@@ -265,21 +292,28 @@ export class AudioManager {
     tr.el.play().catch(() => { /* 404 / autoplay — tiše bez hudby */ })
   }
 
-  /** lazy vytvoření stopy: audio/music-<stav>.mp3, error → failed (ticho) */
-  private track(name: MusicState): MusicTrack {
-    let tr = this.tracks.get(name)
+  /** lazy vytvoření stopy ze souboru; chybějící per-mission soubor (404)
+   *  přepne zpět na výchozí stopu stavu, chybějící výchozí → ticho */
+  private track(file: string): MusicTrack {
+    let tr = this.tracks.get(file)
     if (tr) return tr
     const ctx = this.ctx!
-    const el = new Audio(`audio/music-${name}.mp3`)
+    const el = new Audio(file)
     el.preload = 'auto'
     el.loop = true
     const gain = ctx.createGain()
     gain.gain.value = 0
     gain.connect(this.musicGain)
     const created: MusicTrack = { el, gain, failed: false }
-    el.addEventListener('error', () => { created.failed = true })
+    el.addEventListener('error', () => {
+      created.failed = true
+      if (!file.startsWith('audio/music/')) return
+      const wasCurrent = this.musicFile(this.current) === file
+      this.missingMusic.add(file)
+      if (wasCurrent) this.applyMusic(this.current)
+    })
     ctx.createMediaElementSource(el).connect(gain)
-    this.tracks.set(name, created)
+    this.tracks.set(file, created)
     return created
   }
 
