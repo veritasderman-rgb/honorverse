@@ -6,14 +6,14 @@ import { SimBridge } from './worker/bridge'
 import { TacticalPlot } from './ui/plot'
 import { startFleetView } from './ui/fleetview'
 import { sceneFor } from './ui/scenes'
-import { Panels, esc, fmtTime, type HudView } from './ui/panels'
+import { Panels, SHIP_IMAGES, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
 import { clearVoLinesQueue, configureVoLines, stopVoLines, voLinesOnEvents } from './ui/voLines'
-import { fmtDec, getLang, t, t as tr, tf, toggleLang } from './ui/i18n'
+import { fmtDec, fmtNum, getLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
-import { shipClassName } from './data/shipsEn'
+import { shipClassLore, shipClassName } from './data/shipsEn'
 import type { CombatStats } from './ui/combatStats'
 import { UIController } from './ui/input'
 import { AudioManager } from './ui/audio'
@@ -38,7 +38,8 @@ import { scoreMission } from './sim/score'
 import {
   fetchOverall, fetchRank, fetchTop, rankSummary, submitScore,
 } from './ui/leaderboard'
-import type { Scenario, SimState } from './sim/types'
+import type { Scenario, SimEvent, SimState } from './sim/types'
+import { localizeEventText } from './data/localizeEvent'
 
 const canvas = document.getElementById('plot') as HTMLCanvasElement
 const plotContainer = document.getElementById('plot-container') as HTMLElement
@@ -57,9 +58,22 @@ const mobileHud = new MobileHud(plotContainer)
 // tutoriál (guided steps): spotlight + bublina; krmí se stejnými snapshoty
 const tutorial = new TutorialView(plotContainer)
 const hud: HudView = {
-  addEvents: e => { panels.addEvents(e); mobileHud.addEvents(e); tutorial.addEvents(e); voLinesOnEvents(e) },
+  addEvents: e => {
+    const evs = localizeEvents(e)
+    panels.addEvents(evs); mobileHud.addEvents(evs); tutorial.addEvents(evs); voLinesOnEvents(evs)
+  },
   update: (s, ui, f) => { panels.update(s, ui, f); mobileHud.update(s, ui, f); tutorial.update(s, ui, f) },
 }
+/** EN mutace textů eventů (viz data/localizeEvent) — aplikuje se centrálně
+ *  před rozdáním do HUD, toastů, logů i tutorialu */
+function localizeEvents(events: SimEvent[]): SimEvent[] {
+  if (getLang() !== 'en') return events
+  return events.map(ev => {
+    const en = localizeEventText(ev)
+    return en !== ev.text ? { ...ev, text: en } : ev
+  })
+}
+
 // namluvené hlásky posádky/komunikace (voId na eventech) — sdílí mute a
 // hlasitost efektů se zvukem hry
 configureVoLines(() => audio.muted, () => audio.sfxVolume)
@@ -269,12 +283,16 @@ function missionAvailable(id: string, cleared: readonly string[]): boolean {
  * všude); zvuk, vyprávění a titulky startuje až tlačítko — uživatelské gesto,
  * po kterém prohlížeče přehrávání se zvukem dovolí. Křížek kdykoli přeskočí.
  */
+/** klipy filmového intra — po dojetí se střídají, ať krátká smyčka nebije
+ *  do očí; další soubor stačí nahrát do public/vid/ a přidat sem */
+const CINE_CLIPS = ['vid/intro-battle.mp4', 'vid/brief-mission02.mp4', 'vid/brief-mission06.mp4']
+
 function showCinematicIntro(onDone: () => void): void {
   stopVo()
   const el = document.createElement('div')
   el.id = 'cine'
   el.innerHTML =
-    `<video src="vid/intro-battle.mp4" muted autoplay loop playsinline preload="auto"></video>`
+    `<video src="${CINE_CLIPS[0]}" muted autoplay playsinline preload="auto"></video>`
     + `<div id="cine-caption"></div>`
     + `<div id="cine-title"><h1>WALL OF BATTLE</h1>`
     + `<button id="cine-enter">${t('cine.enter')}</button></div>`
@@ -283,6 +301,13 @@ function showCinematicIntro(onDone: () => void): void {
   const vid = el.querySelector('video')!
   const caption = el.querySelector<HTMLElement>('#cine-caption')!
   audio.duck(true)
+  // rotace klipů místo loopu jednoho videa (mute/hlasitost se na elementu drží)
+  let clip = 0
+  vid.addEventListener('ended', () => {
+    clip = (clip + 1) % CINE_CLIPS.length
+    vid.src = CINE_CLIPS[clip]
+    void vid.play().catch(() => { /* pauza — nevadí, titulky jedou */ })
+  })
 
   // VO: připravit dopředu; hraje se jen když se nahrávka stihla načíst
   const vo = new Audio(`audio/vo/cinematic-${getLang()}.mp3`)
@@ -441,6 +466,7 @@ function showStarMap(): void {
     + `<button id="btn-story-toggle">${t('menu.story')}</button>`
     + `<button id="btn-hall-toggle">${t('menu.hall')}</button>`
     + `<button id="btn-skirmish">${t('menu.skirmish')}</button>`
+    + `<button id="btn-arcade" title="${esc(t('arcade.tip'))}">${t('menu.arcade')} (${arcadeLeft()})</button>`
     + `<button id="btn-fleet">${t('menu.fleet')}</button>`
     + `<button id="btn-cine">${t('menu.intro')}</button>`
     + `<button id="btn-lang" class="dim">${t('menu.lang')}</button>`
@@ -462,6 +488,21 @@ function showStarMap(): void {
   // odchod z mapy: rozehrané vyprávění příběhu nesmí hrát přes další obrazovku
   const leave = (): void => { stopVo(); el.remove() }
   onTap(el.querySelector('#btn-skirmish'), () => { leave(); showSkirmishBuilder() })
+  // arkáda: limit her — bez zbývajících her jen vysvětlení, mapa zůstává
+  onTap(el.querySelector('#btn-arcade'), () => {
+    if (!consumeArcadePlay()) {
+      const info = overlay(
+        `<h2>${t('arcade.noneTitle')}</h2>`
+        + `<div class="brief">${esc(t('arcade.none'))}</div>`
+        + `<button id="arc-ok">${t('common.ok').toUpperCase()}</button>`,
+      )
+      info.classList.add('clscard')
+      onTap(info.querySelector('#arc-ok'), () => info.remove())
+      return
+    }
+    leave()
+    startArcade()
+  })
   onTap(el.querySelector('#btn-fleet'), () => { leave(); showFleetHall() })
   // přehrát filmové intro znovu (mapa zůstává pod ním)
   onTap(el.querySelector('#btn-cine'), () => showCinematicIntro(() => { /* zpět na mapu */ }))
@@ -563,6 +604,93 @@ function showFleetHall(): void {
 }
 
 /** Stavba volné bitvy (E1): steppery flotil, vzdálenost, seed → BOJ. */
+// ---------- arkáda: okamžitá bitva zblízka s limitem her ----------
+
+/** volných her za session (sessionStorage); bonusy za vyhrané mise navíc */
+const ARCADE_FREE_PER_SESSION = 5
+const ARCADE_USED_KEY = 'wob-arcade-used'   // sessionStorage — spotřeba v session
+const ARCADE_BONUS_KEY = 'wob-arcade-bonus' // localStorage — +1 za vyhranou misi kampaně
+
+const arcadeUsed = (): number => {
+  try { return Number(sessionStorage.getItem(ARCADE_USED_KEY)) || 0 } catch { return 0 }
+}
+const arcadeBonus = (): number => {
+  try { return Number(localStorage.getItem(ARCADE_BONUS_KEY)) || 0 } catch { return 0 }
+}
+/** kolik arkádových her ještě zbývá (základ session + trvalé bonusy) */
+const arcadeLeft = (): number =>
+  Math.max(0, ARCADE_FREE_PER_SESSION - arcadeUsed()) + arcadeBonus()
+
+/** odměna za vyhranou kampaňovou misi: +1 arkádová hra (trvalá) */
+function grantArcadeBonus(): void {
+  try { localStorage.setItem(ARCADE_BONUS_KEY, String(arcadeBonus() + 1)) } catch { /* noop */ }
+}
+
+/** odečte jednu hru (nejdřív session základ, pak bonusy); false = vyčerpáno */
+function consumeArcadePlay(): boolean {
+  if (arcadeUsed() < ARCADE_FREE_PER_SESSION) {
+    try { sessionStorage.setItem(ARCADE_USED_KEY, String(arcadeUsed() + 1)) } catch { /* noop */ }
+    return true
+  }
+  if (arcadeBonus() > 0) {
+    try { localStorage.setItem(ARCADE_BONUS_KEY, String(arcadeBonus() - 1)) } catch { /* noop */ }
+    return true
+  }
+  return false
+}
+
+/** náhodné sestavy arkády — malé flotily, ať je bitva čitelná a rychlá */
+const ARCADE_PRESETS: Array<{ player: Record<string, number>; enemy: Record<string, number> }> = [
+  { player: { 'dd-vichr': 2 }, enemy: { 'dd-vichr': 2 } },
+  { player: { 'cl-sokol': 1, 'dd-vichr': 1 }, enemy: { 'cl-sokol': 1, 'dd-vichr': 1 } },
+  { player: { 'ca-bastion': 1 }, enemy: { 'cl-sokol': 2 } },
+  { player: { 'bc-praporec': 1 }, enemy: { 'ca-bastion': 1, 'dd-vichr': 2 } },
+]
+
+/** start arkády: náhodná sestava zblízka (1,5 M km), bez briefingu — rovnou boj */
+function startArcade(): void {
+  const preset = ARCADE_PRESETS[Math.floor(Math.random() * ARCADE_PRESETS.length)]
+  track('arcade_start', { left: arcadeLeft() })
+  setMenuBg(false)
+  skipBriefing = true
+  bridge.startScenario(buildSkirmish({
+    player: { ...preset.player }, enemy: { ...preset.enemy },
+    rangeKm: 1_500_000, seed: Math.floor(Math.random() * 1e9),
+  }))
+}
+
+/**
+ * Karta třídy lodi: ilustrace, plný typ (Lehký křižník…), jméno třídy,
+ * parametry a lore. Otevírá se ze stavby bitvy klepnutím na název typu;
+ * vrství se NAD aktuální overlay (ten zůstává).
+ */
+function showClassCard(classId: string): void {
+  const def = SHIP_CLASSES[classId]
+  if (!def) return
+  const img = SHIP_IMAGES[classId] ?? SHIP_IMAGES[def.hullCode]
+  const lore = shipClassLore(def)
+  const kv: [string, string][] = [
+    [t('cls.tonnage'), `${fmtNum(def.tonnage / 1000)} kt`],
+    [t('cls.maxAccel'), `${def.maxAccelG} g`],
+    [t('cls.tubes'), String(def.tubesPerBroadside)],
+    [t('cls.cmL'), String(def.cmLaunchers)],
+    [t('cls.pdlc'), String(def.pdlcClusters)],
+    [t('cls.sidewalls'), String(def.sidewallStrength)],
+  ]
+  const el = overlay(
+    (img ? `<img class="clscard-img" src="img/${esc(img)}.png" alt="" onerror="this.remove()">` : '')
+    + `<h2>${esc(t(`hull.${def.hullCode}`))}</h2>`
+    + `<div class="dim">${esc(shipClassName(def))} · ${esc(def.hullCode)}</div>`
+    + `<div class="cls-table clscard-table">`
+    + kv.map(([k, v]) => `<span class="dim">${esc(k)}</span><span>${esc(v)}</span>`).join('')
+    + `</div>`
+    + (lore ? `<div class="cls-lore">${esc(lore)}</div>` : '')
+    + `<div style="margin-top:12px"><button id="clscard-close">${t('clscard.close')}</button></div>`,
+  )
+  el.classList.add('clscard')
+  onTap(el.querySelector('#clscard-close'), () => el.remove())
+}
+
 function showSkirmishBuilder(): void {
   const cfg: SkirmishConfig = {
     player: { 'ca-bastion': 1, 'dd-vichr': 2 },
@@ -574,8 +702,9 @@ function showSkirmishBuilder(): void {
     const hull = SHIP_CLASSES[cls]?.hullCode ?? '?'
     const def = SHIP_CLASSES[cls]
     const nm = def ? shipClassName(def) : cls
+    // plný název typu (Lehký křižník…) místo kódu; klepnutí otevře kartu třídy
     return `<div class="sk-row">`
-      + `<span class="sk-name" title="${esc(nm)}">${esc(hull)}</span>`
+      + `<button class="sk-name" data-clscard="${esc(cls)}" title="${esc(nm)} — ${esc(t('sk.detailTip'))}">${esc(t(`hull.${hull}`))}</button>`
       + `<button class="sk-step" data-sk="dec" data-side="${side}" data-cls="${cls}">−</button>`
       + `<span class="sk-n" id="sk-${side}-${cls}">${cfg[side][cls] ?? 0}</span>`
       + `<button class="sk-step" data-sk="inc" data-side="${side}" data-cls="${cls}">+</button>`
@@ -617,8 +746,10 @@ function showSkirmishBuilder(): void {
 
   // delegace kliknutí (steppery, vzdálenost) — jeden posluchač na overlay
   el.addEventListener('click', e => {
-    const t = (e.target as Element).closest<HTMLElement>('[data-sk],[data-km]')
+    const t = (e.target as Element).closest<HTMLElement>('[data-sk],[data-km],[data-clscard]')
     if (!t) return
+    const card = t.getAttribute('data-clscard')
+    if (card) { showClassCard(card); return }
     const km = t.getAttribute('data-km')
     if (km) {
       cfg.rangeKm = Number(km)
@@ -1072,10 +1203,19 @@ function showOutcome(state: SimState): void {
   })
 }
 
+/** pořadí trupů pro volbu HUD (DD a menší → kadetský, od CL plný) */
+const HULL_RANK: Record<string, number> = { DD: 1, CL: 2, CA: 3, BC: 4, DN: 5, STN: 5 }
+
 bridge.onReady = scenario => {
   currentMissionId = scenario.id
   // hudební sada mise (amb/battle-<id>.mp3); skirmish jede na výchozích stopách
   audio.setMissionMusic(scenario.id === 'skirmish' ? null : scenario.id)
+  // kadetský HUD: řídí ho NEJVĚTŠÍ hráčův trup — torpédoborce jedou
+  // nalehko, od lehkého křižníku výš plná taktická výbava
+  const maxRank = Math.max(0, ...scenario.ships
+    .filter(s => s.side === 'player')
+    .map(s => HULL_RANK[SHIP_CLASSES[s.classId]?.hullCode ?? ''] ?? 0))
+  panels.setSimpleHud(maxRank <= 1)
   stopVoLines()            // čistý start — žádné hlásky z minulé mise
   controller.stats.reset() // bojová statistika (sdílený tracker) — per mise
   panels.resetStats()      // + HUD logy a rozpracované salvy
@@ -1109,6 +1249,8 @@ bridge.onSnapshot = (state, compression) => {
     clearVoLinesQueue()
     // kariérní deník flotily (C1): jen kampaň, ne volná bitva
     if (currentMissionId !== 'skirmish') recordMissionResult(state)
+    // vyhraná kampaňová mise = +1 arkádová hra (trvalý bonus nad session limit)
+    if (currentMissionId !== 'skirmish' && state.outcome === 'win') grantArcadeBonus()
     showOutcome(state)
   }
 }

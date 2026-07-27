@@ -14,6 +14,7 @@ import {
   boxSelectShips, normalizeSelection, resolveOwnShipId, rosterPick, toggleShipSelection,
 } from './roster'
 import { spreadPodTargets } from '../sim/firecontrol'
+import { localizeEventText } from '../data/localizeEvent'
 
 const COMP_LADDER = [0, 1, 10, 100, 1000, 10000]
 
@@ -80,7 +81,7 @@ export class UIController {
     // při vypnutém přepínači (⚠ VYP) jen indikátor/blik; grace po ruční změně
     for (const ev of state.events) {
       if (!this.eventSlows(ev)) continue
-      this.slowdownText = ev.text
+      this.slowdownText = localizeEventText(ev)
       this.slowdownUntil = performance.now() + 8000
       if (this.autoSlow && this.compression > 1
         && performance.now() - this.manualCompAt > AUTOSLOW_GRACE_MS) {

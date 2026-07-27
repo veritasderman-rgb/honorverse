@@ -8,9 +8,13 @@ import { AI_ACTIVE_SENSORS_RANGE, CM_INTERCEPT_RANGE, SENSOR_UPDATE_INTERVAL } f
 import { add, angleDiff, angleOf, dist, norm, scale, sub, vec } from './vec'
 import { SHIP_CLASSES } from '../data/defs'
 import { voiceEnemyFleeing } from './voice'
+import { poweredEnvelope } from './weapons'
 
 /** aproximace dostřelu poháněné obálky v režimu LO (mode 0), km */
 const SALVO_RANGE_LO = 6_000_000
+/** strop palby z obálky — AI drží salvovou disciplínu (a balanc misí):
+ *  střílí, jakmile cíl vleze do obálky, ale ne přes tenhle strop */
+const AI_ENVELOPE_CAP = 8_000_000
 /** dosah pro salvy eskorty, km */
 const ESCORT_SALVO_RANGE = 5_000_000
 /** dosah energetické palby AI, km */
@@ -41,10 +45,21 @@ function nearest(ship: ShipState, contacts: Contact[]): Near | null {
 const looksLikeMerch = (c: Contact): boolean =>
   SHIP_CLASSES[c.classGuess]?.hullCode === 'MERCH'
 
-/** společná palebná logika bojových doktrín */
-function fireOrders(ship: ShipState, near: Near, salvoRange: number, mode: DriveModeOrder, orders: Order[]): void {
+/** společná palebná logika bojových doktrín.
+ *  `useEnvelope`: vojenské doktríny (hunter, eskorta) střílejí stejnou
+ *  fyzikou jako hráčova AUTO palba — poháněná obálka LO včetně příspěvku
+ *  relativního vektoru. Bez ní AI mlčela, dokud hráč pálil z dálky s
+ *  převýšením rychlosti (skirmish: „nepřítel střílí, až když je zničený"). */
+function fireOrders(
+  ship: ShipState, near: Near, salvoRange: number, mode: DriveModeOrder,
+  orders: Order[], useEnvelope = false,
+): void {
   const def = SHIP_CLASSES[ship.classId]
   if (!def) return
+  if (useEnvelope) {
+    const env = poweredEnvelope(ship.pos, ship.vel, estPos(near.c), near.c.vel, 0)
+    salvoRange = Math.max(salvoRange, Math.min(env, AI_ENVELOPE_CAP))
+  }
   // senzorový duel: zahájení palby zblízka → zapnout aktivní senzory
   // (plné palebné řešení; hráč vidí, že protivník „rozsvítil")
   if (near.d < AI_ACTIVE_SENSORS_RANGE && !ship.activeSensors) {
@@ -184,7 +199,7 @@ function hunterOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     if (!(ship.nav?.kind === 'intercept' && ship.nav.targetId === near.c.shipId)) {
       orders.push({ kind: 'intercept', shipId: ship.id, targetId: near.c.shipId })
     }
-    fireOrders(ship, near, SALVO_RANGE_LO, 'auto', orders)
+    fireOrders(ship, near, SALVO_RANGE_LO, 'auto', orders, true)
   }
   defenseOrders(state, ship, orders)
 }
@@ -198,7 +213,7 @@ function escortOrders(state: SimState, ship: ShipState, hostiles: Contact[], ord
     if (!(ship.nav?.kind === 'intercept' && ship.nav.targetId === near.c.shipId)) {
       orders.push({ kind: 'intercept', shipId: ship.id, targetId: near.c.shipId })
     }
-    fireOrders(ship, near, ESCORT_SALVO_RANGE, 'auto', orders)
+    fireOrders(ship, near, ESCORT_SALVO_RANGE, 'auto', orders, true)
   }
   defenseOrders(state, ship, orders)
 }
