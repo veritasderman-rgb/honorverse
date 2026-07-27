@@ -20,7 +20,8 @@ import { AudioManager } from './ui/audio'
 import { SCENARIOS } from './data/missions'
 import { SHIP_CLASSES } from './data/defs'
 import {
-  buildSkirmish, fleetTotal, RANGE_PRESETS, SKIRMISH_CLASSES, type SkirmishConfig,
+  buildSkirmish, fleetTotal, IMPERIAL_SURFACE, RANGE_PRESETS, SKIRMISH_CLASSES,
+  type SkirmishConfig,
 } from './data/skirmish'
 import {
   applyVeterancy, loadFleet, recordMissionResult, resetFleet, tierOf,
@@ -286,7 +287,11 @@ function missionAvailable(id: string, cleared: readonly string[]): boolean {
  */
 /** klipy filmového intra — po dojetí se střídají, ať krátká smyčka nebije
  *  do očí; další soubor stačí nahrát do public/vid/ a přidat sem */
-const CINE_CLIPS = ['vid/intro-battle.mp4', 'vid/intro-battle-2.mp4', 'vid/brief-mission02.mp4', 'vid/brief-mission06.mp4']
+const CINE_CLIPS = [
+  'vid/intro-battle.mp4', 'vid/intro-battle-2.mp4', 'vid/intro-battle-3.mp4',
+  'vid/intro-battle-4.mp4', 'vid/intro-battle-5.mp4',
+  'vid/brief-mission02.mp4', 'vid/brief-mission06.mp4',
+]
 
 function showCinematicIntro(onDone: () => void): void {
   stopVo()
@@ -715,11 +720,13 @@ function startArcade(): void {
  * parametry a lore. Otevírá se ze stavby bitvy klepnutím na název typu;
  * vrství se NAD aktuální overlay (ten zůstává).
  */
-function showClassCard(classId: string): void {
+function showClassCard(classId: string, side: 'player' | 'enemy' = 'player'): void {
   const def = SHIP_CLASSES[classId]
   if (!def) return
-  const img = SHIP_IMAGES[classId] ?? SHIP_IMAGES[def.hullCode]
-  const lore = shipClassLore(def)
+  // nepřátelská strana: stejný trup, ale imperiální jméno třídy a ilustrace
+  const imp = side === 'enemy' ? IMPERIAL_SURFACE[classId] : undefined
+  const img = imp?.img ?? SHIP_IMAGES[classId] ?? SHIP_IMAGES[def.hullCode]
+  const lore = imp ? t('sk.impLore') : shipClassLore(def)
   const kv: [string, string][] = [
     [t('cls.tonnage'), `${fmtNum(def.tonnage / 1000)} kt`],
     [t('cls.maxAccel'), `${def.maxAccelG} g`],
@@ -731,7 +738,7 @@ function showClassCard(classId: string): void {
   const el = overlay(
     (img ? `<img class="clscard-img" src="img/${esc(img)}.png" alt="" onerror="this.remove()">` : '')
     + `<h2>${esc(t(`hull.${def.hullCode}`))}</h2>`
-    + `<div class="dim">${esc(shipClassName(def))} · ${esc(def.hullCode)}</div>`
+    + `<div class="dim">${esc(imp ? (getLang() === 'en' ? imp.nameEn : imp.name) : shipClassName(def))} · ${esc(def.hullCode)}</div>`
     + `<div class="cls-table clscard-table">`
     + kv.map(([k, v]) => `<span class="dim">${esc(k)}</span><span>${esc(v)}</span>`).join('')
     + `</div>`
@@ -754,8 +761,11 @@ function showSkirmishBuilder(): void {
     const def = SHIP_CLASSES[cls]
     const nm = def ? shipClassName(def) : cls
     // plný název typu (Lehký křižník…) místo kódu; klepnutí otevře kartu třídy
+    // nepřátelský sloupec ukazuje imperiální jméno třídy (viz IMPERIAL_SURFACE)
+    const impNm = side === 'enemy' ? IMPERIAL_SURFACE[cls] : undefined
+    const tipNm = impNm ? (getLang() === 'en' ? impNm.nameEn : impNm.name) : nm
     return `<div class="sk-row">`
-      + `<button class="sk-name" data-clscard="${esc(cls)}" title="${esc(nm)} — ${esc(t('sk.detailTip'))}">${esc(t(`hull.${hull}`))}</button>`
+      + `<button class="sk-name" data-clscard="${esc(cls)}" data-cardside="${side}" title="${esc(tipNm)} — ${esc(t('sk.detailTip'))}">${esc(t(`hull.${hull}`))}</button>`
       + `<button class="sk-step" data-sk="dec" data-side="${side}" data-cls="${cls}">−</button>`
       + `<span class="sk-n" id="sk-${side}-${cls}">${cfg[side][cls] ?? 0}</span>`
       + `<button class="sk-step" data-sk="inc" data-side="${side}" data-cls="${cls}">+</button>`
@@ -800,7 +810,10 @@ function showSkirmishBuilder(): void {
     const t = (e.target as Element).closest<HTMLElement>('[data-sk],[data-km],[data-clscard]')
     if (!t) return
     const card = t.getAttribute('data-clscard')
-    if (card) { showClassCard(card); return }
+    if (card) {
+      showClassCard(card, t.getAttribute('data-cardside') === 'enemy' ? 'enemy' : 'player')
+      return
+    }
     const km = t.getAttribute('data-km')
     if (km) {
       cfg.rangeKm = Number(km)
