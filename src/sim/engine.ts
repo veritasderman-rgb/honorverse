@@ -32,13 +32,18 @@ const copyScenario = (scenario: Scenario): Scenario => ({
   triggers: scenario.triggers.map(t => ({ ...t, fired: false })),
 })
 
-/** scénář pro triggery: kopie z create, fallback registr (DEMO mimo registr ⇒ null) */
+/** scénář pro triggery: kopie z create, fallback registr (DEMO mimo registr ⇒ null).
+ *  Fallback nastává i po RESTORE uložené mise — vystřelené once-triggery se
+ *  obnoví ze state.firedTriggers, jinak by po obnově vystřelily podruhé
+ *  (duplicitní vlny lodí, rozbité id). */
 function scenarioFor(state: SimState): Scenario | null {
   const cached = scenarioCopies.get(state)
   if (cached) return cached
   const src = SCENARIOS[state.scenarioId]
   if (!src) return null
   const copy = copyScenario(src)
+  const fired = new Set(state.firedTriggers ?? [])
+  for (const t of copy.triggers) if (fired.has(t.id)) t.fired = true
   scenarioCopies.set(state, copy)
   return copy
 }
@@ -247,6 +252,7 @@ export const sim: SimApi = {
       flags: {},
       objectives: scenario.objectives.map(o => ({ ...o })),
       outcome: 'running',
+      firedTriggers: [],
       scenarioId: scenario.id,
     }
     // lodě v pořadí pole — id od 1 (triggery na to spoléhají)

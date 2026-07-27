@@ -29,6 +29,17 @@ export interface SkirmishConfig {
   seed: number
 }
 
+/** jmenné zásobníky stran — kódová jména (DD-1) měly obě flotily stejná
+ *  a na plotu splývaly; vlastní jména strany odliší na první pohled */
+const ROYAL_NAMES = [
+  'Dauntless', 'Vigilant', 'Resolute', 'Krahujec', 'Ostříž', 'Bouře',
+  'Břitva', 'Hradba', 'Koruna', 'Polednice', 'Vichřice', 'Meč',
+]
+const IMPERIAL_NAMES = [
+  'Toledo', 'Sevilla', 'Córdoba', 'Granada', 'Aragon', 'Castilla',
+  'Navarra', 'León', 'Murcia', 'Salamanca', 'Zaragoza', 'Burgos',
+]
+
 /** postaví jednu flotilu do stěny podél osy y na daném boku */
 function fleet(side: Side, counts: Record<string, number>, xSign: number, rangeKm: number): Scenario['ships'] {
   const ships: Scenario['ships'] = []
@@ -38,14 +49,17 @@ function fleet(side: Side, counts: Record<string, number>, xSign: number, rangeK
   const spacing = 240_000
   const y0 = -((total - 1) * spacing) / 2
   const prefix = side === 'player' ? 'ANS' : 'IDS'
+  const pool = side === 'player' ? ROYAL_NAMES : IMPERIAL_NAMES
   const heading = xSign > 0 ? Math.PI : 0 // pravá strana míří vlevo a naopak
   let slot = 0
   let idx = 0
   for (const [classId, n] of entries) {
-    const hull = SHIP_CLASSES[classId]?.hullCode ?? '?'
     for (let i = 0; i < n; i++) {
+      const base = pool[idx % pool.length]
+      const cycle = Math.floor(idx / pool.length)
+      idx++
       ships.push({
-        classId, side, name: `${prefix} ${hull}-${++idx}`,
+        classId, side, name: `${prefix} ${base}${cycle > 0 ? ` ${cycle + 1}` : ''}`,
         pos: { x, y: y0 + slot * spacing }, vel: { x: 0, y: 0 },
         heading, doctrine: side === 'player' ? 'player' : 'hunter',
         activeSensors: true, wedgeOn: true, throttle: 0.6,

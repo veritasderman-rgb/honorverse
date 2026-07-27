@@ -79,6 +79,7 @@ self.onmessage = (e: MessageEvent<WorkerInMsg>) => {
       if (msg.lang) setSimLang(msg.lang)
       const scenario = loadScenario(msg.state.scenarioId)
       state = msg.state
+      state.firedTriggers ??= [] // starší save bez pole — bezpečný default
       compression = 0
       stepAcc = 0
       post({ kind: 'ready', scenario })
