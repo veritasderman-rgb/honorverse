@@ -20,7 +20,7 @@ import { AudioManager } from './ui/audio'
 import { SCENARIOS } from './data/missions'
 import { SHIP_CLASSES } from './data/defs'
 import {
-  buildSkirmish, fleetTotal, IMPERIAL_SURFACE, RANGE_PRESETS, SKIRMISH_CLASSES,
+  buildSkirmish, fleetTotal, RANGE_PRESETS, SKIRMISH_CLASSES, SKIRMISH_CLASSES_ENEMY,
   type SkirmishConfig,
 } from './data/skirmish'
 import {
@@ -697,10 +697,10 @@ function consumeArcadePlay(): boolean {
 
 /** náhodné sestavy arkády — malé flotily, ať je bitva čitelná a rychlá */
 const ARCADE_PRESETS: Array<{ player: Record<string, number>; enemy: Record<string, number> }> = [
-  { player: { 'dd-vichr': 2 }, enemy: { 'dd-vichr': 2 } },
-  { player: { 'cl-sokol': 1, 'dd-vichr': 1 }, enemy: { 'cl-sokol': 1, 'dd-vichr': 1 } },
-  { player: { 'ca-bastion': 1 }, enemy: { 'cl-sokol': 2 } },
-  { player: { 'bc-praporec': 1 }, enemy: { 'ca-bastion': 1, 'dd-vichr': 2 } },
+  { player: { 'dd-vichr': 2 }, enemy: { 'dd-cadiz': 2 } },
+  { player: { 'cl-sokol': 1, 'dd-vichr': 1 }, enemy: { 'cl-sevilla': 1, 'dd-cadiz': 1 } },
+  { player: { 'ca-bastion': 1 }, enemy: { 'cl-sevilla': 2 } },
+  { player: { 'bc-praporec': 1 }, enemy: { 'ca-burgos': 1, 'dd-cadiz': 2 } },
 ]
 
 /** start arkády: náhodná sestava zblízka (1,5 M km), bez briefingu — rovnou boj */
@@ -720,13 +720,11 @@ function startArcade(): void {
  * parametry a lore. Otevírá se ze stavby bitvy klepnutím na název typu;
  * vrství se NAD aktuální overlay (ten zůstává).
  */
-function showClassCard(classId: string, side: 'player' | 'enemy' = 'player'): void {
+function showClassCard(classId: string): void {
   const def = SHIP_CLASSES[classId]
   if (!def) return
-  // nepřátelská strana: stejný trup, ale imperiální jméno třídy a ilustrace
-  const imp = side === 'enemy' ? IMPERIAL_SURFACE[classId] : undefined
-  const img = imp?.img ?? SHIP_IMAGES[classId] ?? SHIP_IMAGES[def.hullCode]
-  const lore = imp ? t('sk.impLore') : shipClassLore(def)
+  const img = SHIP_IMAGES[classId] ?? SHIP_IMAGES[def.hullCode]
+  const lore = shipClassLore(def)
   const kv: [string, string][] = [
     [t('cls.tonnage'), `${fmtNum(def.tonnage / 1000)} kt`],
     [t('cls.maxAccel'), `${def.maxAccelG} g`],
@@ -738,7 +736,7 @@ function showClassCard(classId: string, side: 'player' | 'enemy' = 'player'): vo
   const el = overlay(
     (img ? `<img class="clscard-img" src="img/${esc(img)}.png" alt="" onerror="this.remove()">` : '')
     + `<h2>${esc(t(`hull.${def.hullCode}`))}</h2>`
-    + `<div class="dim">${esc(imp ? (getLang() === 'en' ? imp.nameEn : imp.name) : shipClassName(def))} · ${esc(def.hullCode)}</div>`
+    + `<div class="dim">${esc(shipClassName(def))} · ${esc(def.hullCode)}</div>`
     + `<div class="cls-table clscard-table">`
     + kv.map(([k, v]) => `<span class="dim">${esc(k)}</span><span>${esc(v)}</span>`).join('')
     + `</div>`
@@ -752,7 +750,7 @@ function showClassCard(classId: string, side: 'player' | 'enemy' = 'player'): vo
 function showSkirmishBuilder(): void {
   const cfg: SkirmishConfig = {
     player: { 'ca-bastion': 1, 'dd-vichr': 2 },
-    enemy: { 'ca-bastion': 1, 'dd-vichr': 2 },
+    enemy: { 'ca-burgos': 1, 'dd-cadiz': 2 },
     rangeKm: 6_000_000,
     seed: Math.floor(Math.random() * 1e9),
   }
@@ -761,13 +759,10 @@ function showSkirmishBuilder(): void {
     const def = SHIP_CLASSES[cls]
     const nm = def ? shipClassName(def) : cls
     // plný název typu (Lehký křižník…) místo kódu; klepnutí otevře kartu třídy
-    // nepřátelský sloupec ukazuje imperiální jméno třídy (viz IMPERIAL_SURFACE);
     // jméno třídy viditelně v řádku — tooltip na dotyku neexistuje
-    const impNm = side === 'enemy' ? IMPERIAL_SURFACE[cls] : undefined
-    const rowNm = impNm ? (getLang() === 'en' ? impNm.nameEn : impNm.name) : nm
     return `<div class="sk-row">`
-      + `<button class="sk-name" data-clscard="${esc(cls)}" data-cardside="${side}" title="${esc(rowNm)} — ${esc(t('sk.detailTip'))}">`
-      + `${esc(t(`hull.${hull}`))}<span class="sk-cls">${esc(rowNm)}</span></button>`
+      + `<button class="sk-name" data-clscard="${esc(cls)}" title="${esc(nm)} — ${esc(t('sk.detailTip'))}">`
+      + `${esc(t(`hull.${hull}`))}<span class="sk-cls">${esc(nm)}</span></button>`
       + `<button class="sk-step" data-sk="dec" data-side="${side}" data-cls="${cls}">−</button>`
       + `<span class="sk-n" id="sk-${side}-${cls}">${cfg[side][cls] ?? 0}</span>`
       + `<button class="sk-step" data-sk="inc" data-side="${side}" data-cls="${cls}">+</button>`
@@ -775,7 +770,7 @@ function showSkirmishBuilder(): void {
   }
   const col = (side: 'player' | 'enemy', title: string): string =>
     `<div class="sk-col"><div class="sk-col-h">${title}</div>`
-    + SKIRMISH_CLASSES.map(c => clsRow(side, c)).join('')
+    + (side === 'enemy' ? SKIRMISH_CLASSES_ENEMY : SKIRMISH_CLASSES).map(c => clsRow(side, c)).join('')
     + `<div class="sk-total">${t('sk.total')} <b id="sk-total-${side}">${fleetTotal(cfg[side])}</b></div></div>`
   const ranges = RANGE_PRESETS.map((r, i) =>
     `<button class="sk-range${r.km === cfg.rangeKm ? ' active' : ''}" data-km="${r.km}">${esc(t(`sk.range${i}`))}</button>`).join('')
@@ -794,7 +789,7 @@ function showSkirmishBuilder(): void {
 
   const refresh = (): void => {
     for (const side of ['player', 'enemy'] as const) {
-      for (const c of SKIRMISH_CLASSES) {
+      for (const c of (side === 'enemy' ? SKIRMISH_CLASSES_ENEMY : SKIRMISH_CLASSES)) {
         const n = el.querySelector(`#sk-${side}-${c}`)
         if (n) n.textContent = String(cfg[side][c] ?? 0)
       }
@@ -812,10 +807,7 @@ function showSkirmishBuilder(): void {
     const t = (e.target as Element).closest<HTMLElement>('[data-sk],[data-km],[data-clscard]')
     if (!t) return
     const card = t.getAttribute('data-clscard')
-    if (card) {
-      showClassCard(card, t.getAttribute('data-cardside') === 'enemy' ? 'enemy' : 'player')
-      return
-    }
+    if (card) { showClassCard(card); return }
     const km = t.getAttribute('data-km')
     if (km) {
       cfg.rangeKm = Number(km)

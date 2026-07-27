@@ -22,11 +22,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 180, magazineCMs: 260,
     wedgeDetectionRange: 100_000_000, activeSensorRange: 5_000_000, ecm: 0.35, decoyCount: 4,
     missileQuality: 1.08, podCapacity: 1,
-    lore: 'Páteřní torpédoborec Královského námořnictva, pojmenovaný po náhlých '
-      + 'horských vichrech avalonské domoviny. Konstrukce upřednostňuje protiraketové '
-      + 'zásobníky a kadenci obrany před vlastní údernou silou — Vichr je stavěný jako '
-      + 'eskortní deštník konvojů. Slabina: pouhé tři šachty na bok a tenké boční štíty; '
-      + 'v přímém přestřelu s křižníkem nemá co pohledávat.',
+    lore: 'Páteřní torpédoborec Královského námořnictva. Proti imperiálnímu Cádizu '
+      + 'je Vichr štít, ne meč: čtyři protiraketové odpalovače a šest PDLC věží proti '
+      + 'třem a pěti Cádizu, k tomu elektronika o generaci lepší — jeho zámky drží, '
+      + 'kde imperiální sklouznou. Daň: jen tři šachty na bok proti čtyřem. Vichr '
+      + 'přežije salvu Cádizu spíš, než Cádiz přežije jeho přesnost — ale ukřičet '
+      + 'ho počtem raket neumí. O 10 g rychlejší: iniciativa je jeho.',
   },
   'cl-sokol': {
     id: 'cl-sokol', name: 'třída Sokol', hullCode: 'CL', tonnage: 130_000,
@@ -36,11 +37,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 300, magazineCMs: 340,
     wedgeDetectionRange: 120_000_000, activeSensorRange: 6_000_000, ecm: 0.4, decoyCount: 6,
     missileQuality: 1.08, podCapacity: 2,
-    lore: 'Lehký křižník pro samostatné operace daleko od domovských přístavů — '
-      + 'jméno nese po loveckém sokolovi avalonských králů. Vyvážený poměr senzorů, '
-      + 'ECM a výzbroje z něj dělá ideální průzkumník a lovce nájezdníků. Pět šachet '
-      + 'na bok mu dává úderné slovo, ale pancéřování zůstává křižníkově tenké — '
-      + 'Sokol vítězí manévrem a informacemi, ne výdrží.',
+    lore: 'Lehký křižník pro samostatné operace — průzkumník a lovec nájezdníků. '
+      + 'Proti imperiální Seville sází Sokol na informace: lepší senzory, silnější ECM '
+      + 'a raketová elektronika 1.08 znamenají, že na dálku vítězí jeho řešení palby. '
+      + 'Sevilla nese šest šachet proti jeho pěti a hlubší zásobníky — čím blíž ji '
+      + 'pustíš, tím víc její širší salvy bolí. Sokol vyhrává, dokud určuje '
+      + 'vzdálenost; prohrává, když se nechá zatáhnout do přestřelky na krátko.',
   },
   'ca-bastion': {
     id: 'ca-bastion', name: 'třída Bastion', hullCode: 'CA', tonnage: 300_000,
@@ -50,10 +52,13 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 560, magazineCMs: 420,
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.45, decoyCount: 8,
     missileQuality: 1.08, podCapacity: 4,
-    lore: 'Těžký křižník stavěný jako pohyblivá pevnost — odtud jméno. Osm šachet '
-      + 'na bok, silné boční štíty a vrstvená bodová obrana z Bastionu dělají loď, která '
-      + 'dokáže držet linii i proti přesile. Daní je tonáž: pomalejší akcelerace '
-      + 'a velký senzorový obraz, který se špatně skrývá.',
+    lore: 'Těžký křižník stavěný jako pohyblivá pevnost — odtud jméno. Proti '
+      + 'imperiálnímu Burgosu je Bastion obrana proti salvě: deset protiraket '
+      + 'a dvanáct PDLC proti osmi a deseti, boční štíty 22 proti 20. Burgos sype '
+      + 'deset šachet proti osmi a táhne o pětinu víc raket — jeho hra je saturace. '
+      + 'Bastion ji má přestát a nechat vlastní přesnější salvy proniknout řidší '
+      + 'imperiální obranou. Souboj CA proti CA je vytrvalostní závod: kvalita '
+      + 'obrany proti šířce salvy.',
   },
   'merch-freighter': {
     // hullPoints 120 (dřív 160): civilní trup bez pancíře a vnitřních
@@ -108,11 +113,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 800, magazineCMs: 500,
     wedgeDetectionRange: 160_000_000, activeSensorRange: 8_000_000, ecm: 0.5, decoyCount: 10,
     missileQuality: 1.08, podCapacity: 6,
-    lore: 'Bitevní křižník — pod praporcem (odtud jméno) se v avalonské doktríně '
-      + 'vede útok: deset šachet na bok, špičkové ECM a rychlost, jaká větším lodím '
-      + 'chybí. Praporec je stavěný na nájezdy hluboko do nepřátelského prostoru: '
-      + 'udeřit, rozbít, zmizet. Neumí jediné — stát v linii proti skutečným '
-      + 'bitevním lodím; jeho pancíř je na to o třídu tenčí.',
+    lore: 'Bitevní křižník — pod praporcem se v avalonské doktríně vede útok. '
+      + 'Proti imperiálnímu Aragonu má Praporec rychlost (475 g proti 465) '
+      + 'a nejlepší ECM pod dreadnoughtem: volí vzdálenost, klame senzory, '
+      + 'udeří a zmizí. Aragon nese dvanáct šachet proti deseti a o dvě stě raket '
+      + 'hlubší zásobníky — v dlouhé přestřelce v linii vyhrává on. Praporec '
+      + 'nesmí stát: jeho vítězství je nájezd, ne bitevní stěna.',
   },
   /** dreadnought Avalonu — vlajková loď stěny, finále kampaně (mise 9–10) */
   'dn-vladar': {
@@ -123,13 +129,78 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     magazineMissiles: 1400, magazineCMs: 900,
     wedgeDetectionRange: 170_000_000, activeSensorRange: 10_000_000, ecm: 0.55, decoyCount: 14,
     missileQuality: 1.08, podCapacity: 8,
-    lore: 'Dreadnought — stěna bitvy vtělená do šesti milionů tun. Vladař je '
-      + 'odpověď Avalonu na tonáž Impéria: místo počtu trupů avalonská kvalita '
-      + '— nejlepší senzory, ECM a raketová elektronika, jaké loděnice '
-      + 'Království umí postavit. Čtrnáct šachet na bok, boční štíty, které zblízka '
-      + 'nepropustí ani graser, a vrstvená obrana hlubší než u kterékoli menší '
-      + 'třídy. Daň je stará známá: 435 g a manévr spíš symbolický. Vladař '
-      + 'neuhýbá — Vladař stojí a drží linii.',
+    lore: 'Dreadnought — stěna bitvy vtělená do šesti milionů tun. Proti Toledu '
+      + 'je Vladař čistá avalonská odpověď: dvaadvacet protiraket a PDLC věží proti '
+      + 'osmnácti, boční štíty 34 proti 30, elektronika, která drží zámky i skrz '
+      + 'imperiální rušení — a zásobníky na 1 400 raket proti 800. Toledo odpovídá '
+      + 'šestnácti šachtami proti čtrnácti: širší salva, hrubší úder. Vladař '
+      + 'vyhrává trpělivostí — míří líp, vydrží déle a munice mu dojde poslední.',
+  },
+  /**
+   * Imperiální bojová řada (mise proti Impériu, skirmish): doktrína Toleda
+   * v malém — víc šachet a hlubší zásobníky než královský protějšek, za cenu
+   * pomalejší akcelerace, řidší protiraketové obrany, slabších bočních štítů
+   * a elektroniky 1.0. Avalon míří líp; Dorada sype víc.
+   */
+  'dd-cadiz': {
+    id: 'dd-cadiz', name: 'třída Cádiz', hullCode: 'DD', tonnage: 82_000,
+    maxAccelG: 510, sidewallStrength: 11, hullPoints: 130,
+    tubesPerBroadside: 4, cmLaunchers: 3, pdlcClusters: 5,
+    energyMountsPerBroadside: 2, energyDamage: 30,
+    magazineMissiles: 220, magazineCMs: 200,
+    wedgeDetectionRange: 95_000_000, activeSensorRange: 4_500_000, ecm: 0.3, decoyCount: 3,
+    missileQuality: 1.0, podCapacity: 1,
+    lore: 'Imperiální torpédoborec — meč, ne štít. Cádiz nese čtyři šachty na bok '
+      + 'proti třem avalonského Vichru a o čtvrtinu hlubší zásobníky: jeho práce je '
+      + 'zasypat cíl. Platí za to vším ostatním — tři protiraketové odpalovače '
+      + 'a pět PDLC věží proti čtyřem a šesti, tenčí boční štíty, elektronika '
+      + 'o generaci pozadu. Proti Vichru vyhrává, jen když se salvy počítají '
+      + 'rychleji, než Vichrova obrana stíhá střílet.',
+  },
+  'cl-sevilla': {
+    id: 'cl-sevilla', name: 'třída Sevilla', hullCode: 'CL', tonnage: 145_000,
+    maxAccelG: 495, sidewallStrength: 15, hullPoints: 195,
+    tubesPerBroadside: 6, cmLaunchers: 5, pdlcClusters: 7,
+    energyMountsPerBroadside: 3, energyDamage: 38,
+    magazineMissiles: 360, magazineCMs: 280,
+    wedgeDetectionRange: 105_000_000, activeSensorRange: 5_000_000, ecm: 0.35, decoyCount: 5,
+    missileQuality: 1.0, podCapacity: 2,
+    lore: 'Imperiální lehký křižník — dělník doradských eskader. Šest šachet na bok '
+      + 'proti pěti avalonského Sokola a zásobníky o pětinu hlubší: Sevilla chce '
+      + 'krátkou, hustou přestřelku, kde šířka salvy přebije přesnost. Sokol jí '
+      + 'na dálku uteče i s palebným řešením — horší senzory a slabší ECM jsou '
+      + 'daň za tonáž výzbroje. Kapitáni Sevilly to vědí: zavřít vzdálenost, '
+      + 'nebo prohrát na body.',
+  },
+  'ca-burgos': {
+    id: 'ca-burgos', name: 'třída Burgos', hullCode: 'CA', tonnage: 330_000,
+    maxAccelG: 480, sidewallStrength: 20, hullPoints: 320,
+    tubesPerBroadside: 10, cmLaunchers: 8, pdlcClusters: 10,
+    energyMountsPerBroadside: 4, energyDamage: 55,
+    magazineMissiles: 660, magazineCMs: 360,
+    wedgeDetectionRange: 135_000_000, activeSensorRange: 7_000_000, ecm: 0.4, decoyCount: 7,
+    missileQuality: 1.0, podCapacity: 4,
+    lore: 'Imperiální těžký křižník — saturace jako řemeslo. Deset šachet na bok '
+      + 'proti osmi avalonského Bastionu a 660 raket v zásobnících: Burgos vyhrává '
+      + 'tím, že obranu cíle prostě přetíží. Vlastní deštník má ale řidší — osm '
+      + 'protiraket a deset PDLC proti deseti a dvanácti, štíty 20 proti 22. '
+      + 'Souboj s Bastionem je sázka: dojdou dřív rakety Burgosu, nebo obrana '
+      + 'Bastionu?',
+  },
+  'bc-aragon': {
+    id: 'bc-aragon', name: 'třída Aragon', hullCode: 'BC', tonnage: 1_000_000,
+    maxAccelG: 465, sidewallStrength: 24, hullPoints: 470,
+    tubesPerBroadside: 12, cmLaunchers: 12, pdlcClusters: 12,
+    energyMountsPerBroadside: 5, energyDamage: 65,
+    magazineMissiles: 950, magazineCMs: 440,
+    wedgeDetectionRange: 145_000_000, activeSensorRange: 7_000_000, ecm: 0.42, decoyCount: 8,
+    missileQuality: 1.0, podCapacity: 6,
+    lore: 'Imperiální bitevní křižník — milion tun doktríny „víc je víc". Dvanáct '
+      + 'šachet na bok proti deseti avalonského Praporce a o dvě stě raket hlubší '
+      + 'sklady: Aragon je stavěný na dlouhou přestřelku v linii, kterou si '
+      + 'Praporec nemůže dovolit. Neuteče mu ale — 465 g proti 475 — a jeho ECM '
+      + 'je proti avalonskému poloviční řemeslo. Když Praporec tančí, Aragon '
+      + 'stojí a mlátí.',
   },
   /** dreadnought Impéria — kvantita a tonáž proti avalonské kvalitě */
   'dn-ural': {
@@ -141,12 +212,12 @@ export const SHIP_CLASSES: Record<string, ShipClassDef> = {
     wedgeDetectionRange: 150_000_000, activeSensorRange: 8_000_000, ecm: 0.35, decoyCount: 8,
     missileQuality: 1.0, podCapacity: 8,
     lore: 'Imperiální dreadnought — hora oceli pojmenovaná po staré císařské '
-      + 'metropoli. Doktrína Toleda je doktrínou celého caudillova námořnictva: '
-      + 'tonáž nadevše a šestnáct šachet na bok vynahradí, co elektronika neumí. '
-      + 'Jeho salvy jsou širší než avalonské; senzory a ECM '
-      + 'ale zůstávají o generaci pozadu. Toledo nevyhrává elegancí — vyhrává '
-      + 'tím, že stojí, sype boční salvy a čeká, až protivníkovi dojdou rakety '
-      + 'dřív než jemu trup.',
+      + 'metropoli a vzor celé doradské řady. Šestnáct šachet na bok proti '
+      + 'čtrnácti avalonského Vladaře: nejširší salva, jakou obloha Pomezí zná. '
+      + 'Zbytek je daň — osmnáct protiraket a PDLC proti dvaadvaceti, štíty 30 '
+      + 'proti 34, zásobníky poloviční a elektronika o generaci pozadu. Toledo '
+      + 'nevyhrává elegancí: vyhrává, když protivníkova obrana spadne dřív, '
+      + 'než mu dojde munice.',
   },
   /** orbitální stanice — nehybný opěrný bod se štítovými generátory, mise 5 */
   'station-zeta': {
