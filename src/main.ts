@@ -640,8 +640,12 @@ let lastAutosaveAt = 0
 function autosaveMission(state: SimState): void {
   if (currentMissionId === 'skirmish' || currentMissionId === '' || state.outcome !== 'running') return
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(
-      { missionId: currentMissionId, t: state.t, savedAt: Date.now(), state, stats: controller.stats.report }))
+    // events vyprázdnit: snapshotová dávka už je započtená ve statistice
+    // i zobrazená — po obnově by se počítala (a ukazovala) podruhé
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      missionId: currentMissionId, t: state.t, savedAt: Date.now(),
+      state: { ...state, events: [] }, stats: controller.stats.report,
+    }))
   } catch { /* plné úložiště — zkusíme příště */ }
 }
 
