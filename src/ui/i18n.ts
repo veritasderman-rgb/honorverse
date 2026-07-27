@@ -94,12 +94,6 @@ const DICT: Record<string, { cs: string; en: string }> = {
   // briefing / příprava mise
   'brief.admiral': { cs: 'ADMIRALITA — BRIEFING', en: 'ADMIRALTY — BRIEFING' },
   'prep.arms': { cs: 'VÝZBROJ', en: 'ARMAMENT' },
-  'sk.impLore': {
-    cs: 'Imperiální ekvivalent — parametry trupu shodné s královským protějškem, '
-      + 'jen doktrína a nátěr jsou dorádské.',
-    en: 'Imperial equivalent — hull parameters match the royal counterpart; '
-      + 'only the doctrine and the paint are Doradan.',
-  },
   'prep.start': { cs: 'START', en: 'START' },
   'prep.resume': { cs: '⏵ POKRAČOVAT', en: '⏵ RESUME' },
   'prep.back': { cs: 'ZPĚT', en: 'BACK' },

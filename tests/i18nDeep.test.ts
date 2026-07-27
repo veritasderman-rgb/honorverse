@@ -97,10 +97,10 @@ describe('anglický povrch lodních tříd (shipsEn)', () => {
     const def = SHIP_CLASSES['cl-sokol']
     setLang('en')
     expect(shipClassName(def)).toBe('Sokol class')
-    expect(shipClassLore(def)).toContain('falcon')
+    expect(shipClassLore(def)).toContain('Sevilla') // konfrontační lore vs. protějšek
     setLang('cs')
     expect(shipClassName(def)).toBe('třída Sokol')
-    expect(shipClassLore(def)).toContain('sokolovi')
+    expect(shipClassLore(def)).toContain('Seville')
   })
 })
 

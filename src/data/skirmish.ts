@@ -7,9 +7,13 @@ import type { Scenario, Side } from '../sim/types'
 import { SHIP_CLASSES } from './defs'
 import { getLang } from '../ui/i18n'
 
-/** třídy nabízené ve stavbě bitvy (obě strany) */
+/** třídy nabízené ve stavbě bitvy — každá strana svou řadu (viz defs:
+ *  Avalon = obrana a elektronika, Impérium = šířka salvy a zásobníky) */
 export const SKIRMISH_CLASSES = [
   'dd-vichr', 'cl-sokol', 'ca-bastion', 'bc-praporec', 'dn-vladar',
+] as const
+export const SKIRMISH_CLASSES_ENEMY = [
+  'dd-cadiz', 'cl-sevilla', 'ca-burgos', 'bc-aragon', 'dn-ural',
 ] as const
 
 /** předvolby počáteční vzdálenosti flotil */
@@ -27,19 +31,6 @@ export interface SkirmishConfig {
   rangeKm: number
   /** seed simulace (determinismus) */
   seed: number
-}
-
-/**
- * Imperiální „tvář" nepřátelské strany: stejné trupy (parametry se nemění),
- * ale karta třídy v builderu ukazuje imperiální jméno třídy a ilustraci —
- * jinak měly obě strany stejný popisek i obrázek.
- */
-export const IMPERIAL_SURFACE: Record<string, { name: string; nameEn: string; img: string }> = {
-  'dd-vichr': { name: 'třída Cádiz', nameEn: 'Cádiz class', img: 'ship-imperial-dd' },
-  'cl-sokol': { name: 'třída Sevilla', nameEn: 'Sevilla class', img: 'ship-imperial-cl' },
-  'ca-bastion': { name: 'třída Burgos', nameEn: 'Burgos class', img: 'ship-imperial-ca' },
-  'bc-praporec': { name: 'třída Aragon', nameEn: 'Aragon class', img: 'ship-imperial-bc' },
-  'dn-vladar': { name: 'třída Toledo', nameEn: 'Toledo class', img: 'ship-dn-imperial' },
 }
 
 /** jmenné zásobníky stran — kódová jména (DD-1) měly obě flotily stejná

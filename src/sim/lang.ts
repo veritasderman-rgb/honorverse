@@ -33,6 +33,8 @@ export function subsysL(csNames: Record<string, string>, key: string): string {
 /** anglické názvy tříd pro hlášky simu (jen kde sim jmenuje třídu) */
 const CLASS_EN: Record<string, string> = {
   'dd-vichr': 'Vichr class', 'cl-sokol': 'Sokol class', 'ca-bastion': 'Bastion class',
+  'dd-cadiz': 'Cádiz class', 'cl-sevilla': 'Sevilla class', 'ca-burgos': 'Burgos class',
+  'bc-aragon': 'Aragon class',
   'bc-praporec': 'Praporec class', 'dn-vladar': 'Vladař class', 'dn-ural': 'Toledo class',
   'merch-freighter': 'freighter', 'merch-qship': 'armed auxiliary (Q-ship)',
   'merch-runner': 'freighter (?)', 'disp-courier': 'dispatch courier',

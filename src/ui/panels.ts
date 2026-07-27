@@ -98,6 +98,8 @@ export const SHIP_IMAGES: Record<string, string> = {
   'merch-freighter': 'ship-merch', 'merch-runner': 'ship-merch',
   'merch-qship': 'ship-qship', 'disp-courier': 'ship-courier',
   'bc-praporec': 'ship-bc',
+  'dd-cadiz': 'ship-imperial-dd', 'cl-sevilla': 'ship-imperial-cl',
+  'ca-burgos': 'ship-imperial-ca', 'bc-aragon': 'ship-imperial-bc',
   'dn-vladar': 'ship-dn', 'dn-ural': 'ship-dn-imperial',
   'station-zeta': 'ship-station',
   'cl-korzar': 'ship-pirate-cl', 'dd-korzar': 'ship-pirate-dd',
