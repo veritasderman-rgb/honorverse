@@ -67,7 +67,7 @@ function device(): string {
 
 /** jazyk bez importu i18n (cyklické závislosti) — čte uloženou volbu/DOM */
 function lang(): string {
-  try { return document.documentElement.lang === 'en' ? 'en' : (localStorage.getItem('wob-lang') ?? 'cs') } catch { return 'cs' }
+  try { return document.documentElement.lang === 'cs' ? 'cs' : 'en' } catch { return 'en' }
 }
 
 /** čistý stavitel záznamu (testovatelný bez DOM) */
