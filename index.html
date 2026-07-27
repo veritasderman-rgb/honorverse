@@ -101,7 +101,10 @@
     /* název typu = tlačítko karty třídy (tečkované podtržení značí klik) */
     .sk-name { width: 130px; text-align: left; color: #9fd8a0; background: none; border: none; padding: 2px 0; font: inherit; cursor: pointer; text-decoration: underline dotted #4a6a4e; text-underline-offset: 3px; }
     .sk-name:hover { color: #d3f0d3; }
+    /* jméno třídy pod typem — viditelné i na dotyku (tooltip tam není) */
+    .sk-cls { display: block; font-size: 10px; color: #6fae74; text-decoration: none; }
     body.phone .sk-name { width: 104px; font-size: 11px; }
+    body.phone .sk-cls { font-size: 9px; }
     /* karta třídy lodi (vrství se nad stavbu bitvy) */
     .overlay.clscard { z-index: 35; }
     .clscard-img { width: 100%; max-width: 420px; border: 1px solid #2a5a2e; margin-bottom: 8px; }
