@@ -15,6 +15,7 @@ import {
 } from './roster'
 import { spreadPodTargets } from '../sim/firecontrol'
 import { localizeEventText } from '../data/localizeEvent'
+import { dist } from '../sim/vec'
 
 const COMP_LADDER = [0, 1, 10, 100, 1000, 10000]
 
@@ -22,6 +23,12 @@ const COMP_LADDER = [0, 1, 10, 100, 1000, 10000]
 const AUTOSLOW_KEY = 'wob-autoslow'
 /** grace po ruční změně komprese — žádné auto-zpomalení (ms reálného času) */
 const AUTOSLOW_GRACE_MS = 5000
+/** auto-zrychlení: potřebná délka klidu na jeden stupeň komprese */
+const AUTOCRUISE_AFTER_MS = 20_000
+/** auto-zrychlení: grace po ruční změně komprese */
+const AUTOCRUISE_GRACE_MS = 30_000
+/** nepřítel blíž než tohle = akce, nezrychlovat (km) */
+const AUTOCRUISE_NEAR_KM = 2_000_000
 
 export class UIController {
   private state: SimState | null = null
@@ -37,6 +44,8 @@ export class UIController {
   private lastRunning = 1
   private slowdownText: string | null = null
   private slowdownUntil = 0
+  /** auto-zrychlení: od kdy trvá klid (null = právě se něco děje) */
+  private quietSince: number | null = null
   /** vybraná vlastní salva (klik na raketu v plotu) */
   private selectedSalvoId: number | null = null
   /** další odpaly jako autonomní salvy (fire-and-forget) */
@@ -79,8 +88,10 @@ export class UIController {
 
     // auto-slowdown: jen důležité události (filtr eventSlows) → komprese na 1×;
     // při vypnutém přepínači (⚠ VYP) jen indikátor/blik; grace po ruční změně
+    let sawPriority = false
     for (const ev of state.events) {
       if (!this.eventSlows(ev)) continue
+      sawPriority = true
       this.slowdownText = localizeEventText(ev)
       this.slowdownUntil = performance.now() + 8000
       if (this.autoSlow && this.compression > 1
@@ -89,6 +100,7 @@ export class UIController {
       }
     }
     if (this.slowdownText && performance.now() > this.slowdownUntil) this.slowdownText = null
+    this.updateAutoCruise(state, sawPriority)
 
     // vybraná salva už neexistuje (dorazila/sestřelena) → zrušit výběr
     if (this.selectedSalvoId != null && !state.missiles.some(m =>
@@ -134,6 +146,39 @@ export class UIController {
   }
 
   // ---------- komprese ----------
+
+  /**
+   * AUTO-ZRYCHLENÍ hluchých pasáží (protipól auto-zpomalení, sdílí přepínač
+   * ⚠ AUTO): žádné rakety ve vzduchu, žádná prioritní událost a nepřítel dál
+   * než na dosah energií → po AUTOCRUISE_AFTER_MS klidu komprese sama stoupne
+   * o stupeň (1→10→100; bez nepřátelských kontaktů až 1000). Prioritní
+   * událost ji vrací na 1× (auto-slowdown výš); po ruční změně platí grace.
+   */
+  private updateAutoCruise(state: SimState, sawPriority: boolean): void {
+    const now = performance.now()
+    const missilesLive = state.missiles.some(m => m.phase !== 'dead')
+    const own = this.ownShipId != null ? state.ships.find(s => s.id === this.ownShipId) : null
+    let hostiles = 0
+    let nearHostile = false
+    for (const c of state.contacts.player) {
+      const tgt = state.ships.find(s => s.id === c.shipId)
+      if (tgt?.side !== 'enemy' || tgt.destroyed || tgt.surrendered) continue
+      hostiles++
+      if (own && dist(own.pos, contactEstPos(c)) < AUTOCRUISE_NEAR_KM) nearHostile = true
+    }
+    const busy = sawPriority || missilesLive || nearHostile
+    if (busy) { this.quietSince = null; return }
+    if (this.quietSince == null) { this.quietSince = now; return }
+    if (!this.autoSlow || state.outcome !== 'running') return
+    if (this.compression < 1) return // pauza je pauza
+    if (now - this.quietSince < AUTOCRUISE_AFTER_MS) return
+    if (now - this.manualCompAt < AUTOCRUISE_GRACE_MS) return
+    const cap = hostiles > 0 ? 100 : 1000
+    if (this.compression >= cap) return
+    const next = this.compression < 10 ? 10 : this.compression < 100 ? 100 : 1000
+    this.setCompression(Math.min(next, cap))
+    this.quietSince = now // další stupeň až po dalším tichém intervalu
+  }
 
   setCompression(f: number, manual = false): void {
     if (manual) this.manualCompAt = performance.now()

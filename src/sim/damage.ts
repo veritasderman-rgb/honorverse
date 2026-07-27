@@ -2,6 +2,7 @@
  * Poškození: boční štíty, trup, subsystémy (viz GAME_DESIGN.md kap. 5).
  * Lodě umírají po částech — žádný prostý HP bar.
  */
+import { L, subsysL } from './lang'
 import type { ShipState, SimState, Subsystems } from './types'
 import { REPAIR_CAP, REPAIR_RATE, SIDEWALL_POWER_CURVE, SIDEWALL_WEAR } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
@@ -120,7 +121,7 @@ export function applyBeamDamage(
         shipId: target.id,
         side: target.side,
         pos: { ...target.pos },
-        text: `${target.name}: zásah — ${SUBSYSTEM_NAMES[key]} (${Math.round(target.subsystems[key] * 100)} %)`,
+        text: `${target.name}: ${L('zásah', 'hit')} — ${subsysL(SUBSYSTEM_NAMES, key)} (${Math.round(target.subsystems[key] * 100)} %)`,
       })
       // hlášení inženýra hráči při prvním poškození subsystému (s odhadem opravy)
       if (target.side === 'player' && prev >= 1 && target.subsystems[key] < 1) {
@@ -146,7 +147,7 @@ export function applyBeamDamage(
       side: target.side,
       slowdown: true,
       pos: { ...target.pos },
-      text: `${target.name} zničena`,
+      text: L(`${target.name} zničena`, `${target.name} destroyed`),
     })
   }
 }

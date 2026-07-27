@@ -5,6 +5,7 @@
  *   - taktické efekty: dotazy pro defense.ts (stěna, rozptyl) a weapons.ts (šíp).
  * Station-keeping samotný řeší physics.ts (formationHeading).
  */
+import { L } from './lang'
 import type { FormationKind, ShipState, SimState, Vec2 } from './types'
 import {
   FORMATION_DISPERSED_SPACING, FORMATION_SPACING, FORMATION_VEE_SPACING,
@@ -113,7 +114,7 @@ export function updateFormations(state: SimState): void {
       if (ship.doctrine === 'player') {
         state.events.push({
           t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'xo',
-          text: `${ship.name}: formace rozpuštěna — vlajková loď je pryč, přecházíme na samostatné manévrování.`,
+          text: L(`${ship.name}: formace rozpuštěna — vlajková loď je pryč, přecházíme na samostatné manévrování.`, `${ship.name}: formation dissolved — the flagship is gone, going independent.`),
         })
       }
     }

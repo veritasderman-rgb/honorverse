@@ -3,6 +3,7 @@
  * Tick smyčka: cooldowny → fyzika → rakety → obrana → senzory → AI
  *   → řízení palby (AUTO/vrstvené salvy) → posádka (opravy/události) → triggery.
  */
+import { L } from './lang'
 import type { Order, Scenario, ShipState, SimApi, SimState } from './types'
 import { updateShipPhysics } from './physics'
 import { autoDriveMode, fireEnergy, launchDouble, launchPods, launchSalvo, missileFlightTime, retargetSalvo, updateMissiles } from './weapons'
@@ -93,8 +94,10 @@ function applyAlphaStrike(state: SimState, order: { shipIds: number[]; targetId:
   if (player) {
     state.events.push({
       t: state.t, kind: 'message', shipId: player.id, side: player.side, speaker: 'tactical', slowdown: true,
-      text: `Srovnat tuby — ${plan.length} ${plan.length === 1 ? 'loď' : plan.length < 5 ? 'lodě' : 'lodí'} `
+      text: L(`Srovnat tuby — ${plan.length} ${plan.length === 1 ? 'loď' : plan.length < 5 ? 'lodě' : 'lodí'} `
         + `na společný dopad za ${Math.round(maxFlight)} s. Zahltíme jim obranu jednou vlnou.`,
+      `Line up the tubes — ${plan.length} ${plan.length === 1 ? 'ship' : 'ships'} `
+        + `on simultaneous impact in ${Math.round(maxFlight)} s. One wave to swamp their defense.`),
     })
   }
 }

@@ -4,6 +4,7 @@
  * Nově: poháněná obálka (poweredEnvelope), odhad doletu (missileFlightTime)
  * a česká zpětná vazba rozkazů hráče (event 'message', speaker 'tactical').
  */
+import { L } from './lang'
 import type { DriveMode, DriveModeOrder, MissileState, ShipState, Side, SimState, Vec2 } from './types'
 import {
   AUTONOMOUS_LOCK_FACTOR, CONTROL_RANGE, ENERGY_COOLDOWN, ENERGY_DECISIVE_RANGE,
@@ -169,7 +170,7 @@ export function launchSalvo(
     return
   }
   if (ship.tubeCooldown > 0 && !opts.ignoreCooldown) {
-    crewSay(state, ship, `Šachty přebíjejí — další salva za ${Math.ceil(ship.tubeCooldown)} s.`)
+    crewSay(state, ship, L(`Šachty přebíjejí — další salva za ${Math.ceil(ship.tubeCooldown)} s.`, `Tubes reloading — next salvo in ${Math.ceil(ship.tubeCooldown)} s.`))
     return
   }
   // pody: vlastní odpalovače mimo šachty — kapacita ani munice lodi neomezují;
@@ -198,24 +199,31 @@ export function launchSalvo(
     const env = poweredEnvelope(ship.pos, ship.vel, target.pos, target.vel, mode)
     if (d > env) {
       crewSay(state, ship,
-        `Cíl mimo poháněnou obálku (${fmtMkm(d)} mil. km, dosah ${fmtMkm(env)}) — rakety dojedou balisticky.`)
+        L(`Cíl mimo poháněnou obálku (${fmtMkm(d)} mil. km, dosah ${fmtMkm(env)}) — rakety dojedou balisticky.`, `Target outside the powered envelope (${fmtMkm(d)} M km, reach ${fmtMkm(env)}) — the missiles will coast in ballistic.`))
     }
     // ŠKOLA VZDÁLENOSTI (tutoriálový kouč, jednou za misi): dálkový odpal
     // je plýtvání, odpal zblízka poprava — obrana slábne s krátícím se letem
     if (d > 5_000_000 && state.flags['coach-longshot'] !== true) {
       state.flags['coach-longshot'] = true
       crewSay(state, ship,
-        `ŠKOLA PALBY: na ${fmtMkm(d)} mil. km poletí salva několik minut a obrana cíle `
+        L(`ŠKOLA PALBY: na ${fmtMkm(d)} mil. km poletí salva několik minut a obrana cíle `
         + `dostane plný reakční čas — protirakety dva pokusy na KAŽDOU raketu, bodová obrana `
         + `připravené řešení. Počítejte s mizernou úspěšností. Pod ~5 mil. km šance rostou, `
-        + `pod 1,5 mil. km je salva vražedná — obrana ji prostě nestihne.`, true)
+        + `pod 1,5 mil. km je salva vražedná — obrana ji prostě nestihne.`,
+      `GUNNERY SCHOOL: at ${fmtMkm(d)} M km the salvo flies for minutes and the target's defense `
+        + `gets full reaction time — counter-missiles two tries per missile, point defense a prepared `
+        + `solution. Expect miserable odds. Under ~5 M km the chances grow; under 1.5 M km a salvo `
+        + `is murderous — the defense simply cannot keep up.`), true)
     }
     if (d < 1_500_000 && state.flags['coach-close'] !== true) {
       state.flags['coach-close'] = true
       crewSay(state, ship,
-        'ŠKOLA PALBY: odpal zblízka! Krátký let znamená, že protirakety stihnou '
+        L('ŠKOLA PALBY: odpal zblízka! Krátký let znamená, že protirakety stihnou '
         + 'nanejvýš jeden pokus a bodová obrana střílí s nepřipraveným řešením. '
-        + 'Přesně takhle se rakety používají — přiblížit se a udeřit naplno.', true)
+        + 'Přesně takhle se rakety používají — přiblížit se a udeřit naplno.',
+      'GUNNERY SCHOOL: close-range launch! A short flight means counter-missiles get one try '
+        + 'at most and point defense fires on an unprepared solution. This is exactly how '
+        + 'missiles are used — close in and strike with everything.'), true)
     }
   }
 
@@ -295,27 +303,27 @@ export function launchDouble(state: SimState, ship: ShipState, targetId: number)
   const target = state.ships.find(s => s.id === targetId && !s.destroyed)
   if (!def || !target) return
   if (target.surrendered) {
-    crewSay(state, ship, 'Cíl kapituloval — nestřílíme na něj.')
+    crewSay(state, ship, L('Cíl kapituloval — nestřílíme na něj.', 'Target has surrendered — we do not fire on her.'))
     return
   }
   const contact = state.contacts[ship.side]?.find(c => c.shipId === targetId)
   if (!contact || contact.idQuality < 1) {
-    crewSay(state, ship, 'Dvojitá salva zamítnuta — cíl není klasifikovaný kontakt.')
+    crewSay(state, ship, L('Dvojitá salva zamítnuta — cíl není klasifikovaný kontakt.', 'Double salvo denied — target is not a classified contact.'))
     return
   }
   const nPort = sideTubes(ship, 'port')
   const nStbd = sideTubes(ship, 'stbd')
   if (nPort < 1 || nStbd < 1) {
-    crewSay(state, ship, 'Dvojitá salva vyžaduje aspoň jednu funkční šachtu na KAŽDÉM boku.')
+    crewSay(state, ship, L('Dvojitá salva vyžaduje aspoň jednu funkční šachtu na KAŽDÉM boku.', 'A double salvo needs at least one working tube on EACH broadside.'))
     return
   }
   if (ship.missiles < nPort + nStbd) {
     crewSay(state, ship,
-      `Málo raket pro obě salvy — potřeba ${nPort + nStbd}, v zásobnících ${ship.missiles}.`)
+      L(`Málo raket pro obě salvy — potřeba ${nPort + nStbd}, v zásobnících ${ship.missiles}.`, `Not enough missiles for both salvos — need ${nPort + nStbd}, magazines hold ${ship.missiles}.`))
     return
   }
   if (ship.pendingWave) {
-    crewSay(state, ship, 'Druhá vlna už čeká — dvojitou salvu teď nelze zahájit.')
+    crewSay(state, ship, L('Druhá vlna už čeká — dvojitou salvu teď nelze zahájit.', 'Second wave already pending — cannot start a double salvo now.'))
     return
   }
 
@@ -336,11 +344,13 @@ export function launchDouble(state: SimState, ship: ShipState, targetId: number)
   const idealDelay = Number.isFinite(tLo) && Number.isFinite(tHi) ? tLo - tHi : 0
   const delay = Math.max(ROLL_TIME, idealDelay)
   if (idealDelay < ROLL_TIME) {
-    crewSay(state, ship, `Společný dopad nevyjde — druhá vlna (pravobok) dorazí `
-      + `o ~${Math.max(1, Math.round(ROLL_TIME - idealDelay))} s později.`)
+    crewSay(state, ship, L(`Společný dopad nevyjde — druhá vlna (pravobok) dorazí `
+      + `o ~${Math.max(1, Math.round(ROLL_TIME - idealDelay))} s později.`,
+      `Simultaneous impact will not work out — the second wave (starboard) arrives `
+      + `~${Math.max(1, Math.round(ROLL_TIME - idealDelay))} s late.`))
   } else {
     crewSay(state, ship,
-      `Boční otočka — druhá salva z pravoboku za ${Math.round(delay)} s (společný dopad).`)
+      L(`Boční otočka — druhá salva z pravoboku za ${Math.round(delay)} s (společný dopad).`, `Rolling ship — starboard salvo in ${Math.round(delay)} s (simultaneous impact).`))
   }
   ship.pendingWave = {
     targetId, count: nStbd, mode: 1, launchAt: state.t + delay,
@@ -359,19 +369,19 @@ export function launchDouble(state: SimState, ship: ShipState, targetId: number)
 export function launchPods(state: SimState, ship: ShipState, targetId: number): void {
   if (ship.destroyed) return
   if (ship.pods <= 0) {
-    crewSay(state, ship, 'Žádné raketové plošiny netáhneme.')
+    crewSay(state, ship, L('Žádné raketové plošiny netáhneme.', 'We are not towing any missile pods.'))
     return
   }
   const target = state.ships.find(s => s.id === targetId && !s.destroyed)
   if (!target || target.surrendered) {
     crewSay(state, ship, target?.surrendered
-      ? 'Cíl kapituloval — plošiny na něj nepálíme.'
-      : 'Odpal plošin zamítnut — cíl neexistuje.')
+      ? L('Cíl kapituloval — plošiny na něj nepálíme.', 'Target has surrendered — we do not fire pods on her.')
+      : L('Odpal plošin zamítnut — cíl neexistuje.', 'Pod launch denied — no such target.'))
     return
   }
   const contact = state.contacts[ship.side]?.find(c => c.shipId === targetId && c.memory !== true)
   if (!contact) {
-    crewSay(state, ship, 'Odpal plošin zamítnut — na cíl nedržíme živý senzorový kontakt.')
+    crewSay(state, ship, L('Odpal plošin zamítnut — na cíl nedržíme živý senzorový kontakt.', 'Pod launch denied — no live sensor contact on the target.'))
     return
   }
   const n = ship.pods * PODS_PER_POD
@@ -381,8 +391,10 @@ export function launchPods(state: SimState, ship: ShipState, targetId: number): 
   if (state.flags['coach-pods'] !== true && ship.doctrine === 'player') {
     state.flags['coach-pods'] = true
     crewSay(state, ship,
-      `Plošiny odhozeny — ${n} raket v JEDNÉ vlně. Tohle žádná bodová obrana nechytá: `
-      + 'saturace je král. Plošiny jsou jednorázové — další dostaneme až v doku.', true)
+      L(`Plošiny odhozeny — ${n} raket v JEDNÉ vlně. Tohle žádná bodová obrana nechytá: `
+      + 'saturace je král. Plošiny jsou jednorázové — další dostaneme až v doku.',
+      `Pods away — ${n} missiles in ONE wave. No point defense catches this: `
+      + 'saturation is king. Pods are one-shot — we get more only in dock.'), true)
   }
 }
 
@@ -399,26 +411,26 @@ export function retargetSalvo(
   const target = state.ships.find(s => s.id === newTargetId && !s.destroyed)
   if (!target || target.surrendered) {
     crewSay(state, ship, target?.surrendered
-      ? 'Přesměrování zamítnuto — cíl kapituloval, nestřílíme na něj.'
-      : 'Přesměrování zamítnuto — cíl neexistuje.')
+      ? L('Přesměrování zamítnuto — cíl kapituloval, nestřílíme na něj.', 'Retarget denied — target has surrendered, we do not fire on her.')
+      : L('Přesměrování zamítnuto — cíl neexistuje.', 'Retarget denied — no such target.'))
     return
   }
   const contact = state.contacts[ship.side]?.find(c => c.shipId === newTargetId)
   if (!contact || contact.idQuality < 1) {
-    crewSay(state, ship, 'Přesměrování zamítnuto — nový cíl není klasifikovaný kontakt.')
+    crewSay(state, ship, L('Přesměrování zamítnuto — nový cíl není klasifikovaný kontakt.', 'Retarget denied — new target is not a classified contact.'))
     return
   }
   const missiles = state.missiles.filter(m => m.side === ship.side && m.salvoId === salvoId
     && (m.phase === 'boost' || m.phase === 'ballistic'))
   if (missiles.length === 0) {
-    crewSay(state, ship, 'Přesměrování nelze provést — salva už neletí.')
+    crewSay(state, ship, L('Přesměrování nelze provést — salva už neletí.', 'Retarget impossible — the salvo is no longer in flight.'))
     return
   }
   let minD = Infinity
   for (const m of missiles) minD = Math.min(minD, dist(m.pos, ship.pos))
   if (minD >= CONTROL_RANGE) {
     crewSay(state, ship,
-      `Salva mimo dosah řízení (${fmtMkm(minD)} mil. km, dosah ${fmtMkm(CONTROL_RANGE)}).`)
+      L(`Salva mimo dosah řízení (${fmtMkm(minD)} mil. km, dosah ${fmtMkm(CONTROL_RANGE)}).`, `Salvo outside control range (${fmtMkm(minD)} M km, reach ${fmtMkm(CONTROL_RANGE)}).`))
     return
   }
   for (const m of missiles) {
@@ -426,7 +438,7 @@ export function retargetSalvo(
     m.lock *= RETARGET_LOCK_PENALTY
   }
   crewSay(state, ship,
-    `Salva přesměrována na ${target.name} — ${missiles.length} raket, zámek ×0,75.`)
+    L(`Salva přesměrována na ${target.name} — ${missiles.length} raket, zámek ×0,75.`, `Salvo retargeted to ${target.name} — ${missiles.length} missiles, lock ×0.75.`))
 }
 
 const hostileTo = (a: Side, b: Side): boolean =>

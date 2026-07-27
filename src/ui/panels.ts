@@ -411,7 +411,7 @@ export class Panels implements HudView {
           this.introduced.add(ev.speaker)
           this.showToast(
             `${avatarHtml(ev.speaker)}<span class="toast-body">`
-            + `<b>${esc(ch.name)}</b><span class="intro-role">${esc(t(ch.roleKey))}</span>`
+            + `<b>${esc(getLang() === 'en' ? ch.nameEn ?? ch.name : ch.name)}</b><span class="intro-role">${esc(t(ch.roleKey))}</span>`
             + `<span class="intro-bio">${esc(ch.bio[getLang()])}</span>`
             + `<span>${esc(ev.text)}</span></span>`,
             'toast-comm toast-intro', 12000)
@@ -424,7 +424,7 @@ export class Panels implements HudView {
       }
       // vlastní zásah → červený toast „ZÁSAH — …"
       if (ev.kind === 'subsystemHit' && ev.side === 'player') {
-        const detail = ev.text.replace(/^.*?zásah — /, '')
+        const detail = ev.text.replace(/^.*?(?:zásah|hit) — /, '')
         this.showToast(`<b>${t('toast.hit')}</b> — ${esc(detail)}`, 'toast-hit', 5000)
       }
     }

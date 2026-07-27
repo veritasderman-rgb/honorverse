@@ -8,6 +8,8 @@
 export interface CharacterDef {
   /** vlastní jméno postavy (nepřekládá se) */
   name: string
+  /** EN varianta u generických „jmen" (řízení provozu…); vlastní jména ji nemají */
+  nameEn?: string
   /** role — i18n klíč (speaker.*) */
   roleKey: string
   /** medailonek na intro kartě */
@@ -68,6 +70,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
   },
   'enemy-captain': {
     name: 'imperiální velitel',
+    nameEn: 'Imperial commander',
     roleKey: 'speaker.enemy',
     bio: {
       cs: 'Důstojník doradské Velké armády. Profesionál ve službách '
@@ -78,6 +81,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
   },
   pirate: {
     name: 'korzár Pomezí',
+    nameEn: 'corsair of the Marches',
     roleKey: 'speaker.pirate',
     bio: {
       cs: 'Nájezdník z pásma slabých vlád. Někdo si jen přišel pro náklad; '
@@ -89,6 +93,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
   },
   station: {
     name: 'řízení provozu',
+    nameEn: 'traffic control',
     roleKey: 'speaker.station',
     bio: {
       cs: 'Dispečeři stanic a terminálů. Vidí každý manifest a každý klín '
@@ -99,6 +104,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
   },
   governor: {
     name: 'guvernér Pomezí',
+    nameEn: 'governor of the Marches',
     roleKey: 'speaker.governor',
     bio: {
       cs: 'Civilní správa na hraně mapy. Málo lodí, hodně starostí — '

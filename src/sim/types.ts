@@ -552,7 +552,9 @@ export interface SimApi {
 
 export type WorkerInMsg =
   /** scenario přítomen = custom bitva (skirmish); jinak lookup dle scenarioId */
-  | { kind: 'init'; scenarioId: string; scenario?: Scenario }
+  | { kind: 'init'; scenarioId: string; scenario?: Scenario; lang?: 'cs' | 'en' }
+  /** obnova uložené mise — stav je kompletní (viz rng.ts: save/load férové) */
+  | { kind: 'restore'; state: SimState; lang?: 'cs' | 'en' }
   | { kind: 'order'; order: Order }
   | { kind: 'setCompression'; factor: number }  // 0 = pauza
   | { kind: 'snapshotRequest' }

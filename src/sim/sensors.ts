@@ -8,6 +8,7 @@
  * známou polohou — statické objekty (stanice, planety) trvale a přesně,
  * lodě s rostoucí nejistotou (plot kreslí kružnici age·|vel|).
  */
+import { L, classNameL } from './lang'
 import type { Contact, SimState } from './types'
 import { C, SENSOR_UPDATE_INTERVAL } from './constants'
 import { dist } from './vec'
@@ -115,11 +116,13 @@ export function updateSensors(state: SimState, dt: number): void {
       // nová stopa → událost (UI zpomalí čas); objekty z map nejsou „nový
       // kontakt" — jsou tam odjakživa, žádné hlášky ani zpomalení
       if (!charted && !prev.some(c => c.shipId === target.id)) {
-        const known = classGuess !== 'neznámá' ? SHIP_CLASSES[classGuess]?.name ?? classGuess : 'neznámá loď'
+        const known = classGuess !== 'neznámá'
+          ? classNameL(classGuess, SHIP_CLASSES[classGuess]?.name ?? classGuess)
+          : L('neznámá loď', 'unknown ship')
         state.events.push({
           t: state.t,
           kind: 'contactNew',
-          text: `Nový kontakt: ${known}${wedgeDetected ? ' (impelerový klín)' : ''}`,
+          text: `${L('Nový kontakt', 'New contact')}: ${known}${wedgeDetected ? L(' (impelerový klín)', ' (impeller wedge)') : ''}`,
           shipId: target.id,
           side,
           slowdown: true,

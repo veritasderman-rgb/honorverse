@@ -5,6 +5,7 @@
  */
 import { sim } from '../sim/engine'
 import { SIM_DT } from '../sim/constants'
+import { setSimLang } from '../sim/lang'
 import { SCENARIOS } from '../data/missions'
 import type { Scenario, SimState, WorkerInMsg, WorkerOutMsg } from '../sim/types'
 
@@ -63,8 +64,21 @@ self.onmessage = (e: MessageEvent<WorkerInMsg>) => {
   switch (msg.kind) {
     case 'init': {
       // custom bitva (skirmish) posílá scénář přímo; jinak lookup dle id
+      if (msg.lang) setSimLang(msg.lang)
       const scenario = msg.scenario ?? loadScenario(msg.scenarioId)
       state = sim.create(scenario)
+      compression = 0
+      stepAcc = 0
+      post({ kind: 'ready', scenario })
+      sendSnapshot()
+      break
+    }
+    case 'restore': {
+      // obnova uložené mise: stav je kompletní (vč. rng a triggerů);
+      // scénář dohledáme jen kvůli 'ready' pro UI (hudba, HUD, plot)
+      if (msg.lang) setSimLang(msg.lang)
+      const scenario = loadScenario(msg.state.scenarioId)
+      state = msg.state
       compression = 0
       stepAcc = 0
       post({ kind: 'ready', scenario })

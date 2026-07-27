@@ -5,6 +5,7 @@
  */
 import type { Scenario, Side } from '../sim/types'
 import { SHIP_CLASSES } from './defs'
+import { getLang } from '../ui/i18n'
 
 /** třídy nabízené ve stavbě bitvy (obě strany) */
 export const SKIRMISH_CLASSES = [
@@ -65,28 +66,33 @@ export function buildSkirmish(cfg: SkirmishConfig): Scenario {
   const enemyShips = fleet('enemy', cfg.enemy, 1, cfg.rangeKm)
   const enemyTotal = enemyShips.length
   const playerTotal = playerShips.length
+  const en = getLang() === 'en'
   return {
     id: 'skirmish',
-    title: 'Volná bitva',
-    briefing: `Cvičný střet: ${playerTotal} vs ${enemyTotal} ${enemyTotal === 1 ? 'loď' : 'lodí'}.\n\n`
-      + 'Slož flotilu, zvol vzdálenost a znič protivníka. Ovládáš vlastní lodě '
-      + '(doktríny eskadry funguje jako v kampani); nepřítel útočí sám.',
+    title: en ? 'Skirmish' : 'Volná bitva',
+    briefing: en
+      ? `Training engagement: ${playerTotal} vs ${enemyTotal} ${enemyTotal === 1 ? 'ship' : 'ships'}.\n\n`
+        + 'Build a fleet, pick the range and destroy the opponent. You command your own '
+        + 'ships (squadron doctrines work as in the campaign); the enemy attacks on his own.'
+      : `Cvičný střet: ${playerTotal} vs ${enemyTotal} ${enemyTotal === 1 ? 'loď' : 'lodí'}.\n\n`
+        + 'Slož flotilu, zvol vzdálenost a znič protivníka. Ovládáš vlastní lodě '
+        + '(doktríny eskadry funguje jako v kampani); nepřítel útočí sám.',
     seed: cfg.seed >>> 0,
     ships: [...playerShips, ...enemyShips],
-    objectives: [{ id: 'win', text: 'Znič nepřátelskou flotilu', state: 'open' }],
+    objectives: [{ id: 'win', text: en ? 'Destroy the enemy fleet' : 'Znič nepřátelskou flotilu', state: 'open' }],
     triggers: [
       {
         id: 'win', once: true,
         conditions: [{ kind: 'shipsDestroyedCount', side: 'enemy', count: enemyTotal }],
         actions: [
           { kind: 'objectiveComplete', objectiveId: 'win' },
-          { kind: 'winMission', text: 'Nepřátelská flotila zničena. Volná bitva vyhrána.' },
+          { kind: 'winMission', text: en ? 'Enemy fleet destroyed. Skirmish won.' : 'Nepřátelská flotila zničena. Volná bitva vyhrána.' },
         ],
       },
       {
         id: 'lose', once: true,
         conditions: [{ kind: 'shipsDestroyedCount', side: 'player', count: playerTotal }],
-        actions: [{ kind: 'loseMission', text: 'Vaše flotila zničena. Volná bitva prohrána.' }],
+        actions: [{ kind: 'loseMission', text: en ? 'Your fleet is destroyed. Skirmish lost.' : 'Vaše flotila zničena. Volná bitva prohrána.' }],
       },
     ],
     ambient: '#12243a',
