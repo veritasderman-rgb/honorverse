@@ -103,9 +103,12 @@ export class TutorialView implements HudView {
     }
     // analytika: dosažený krok (funnel výcviku — kde se hráči zasekávají)
     track('tutorial_step', { step: this.idx + 1 }, this.missionId)
-    // sbalený tutoriál nevyskakuje — jen aktualizuje počítadlo na čipu
-    if (this.minimized) this.setMinimized(true)
-    else this.renderStep()
+    // splněný krok tutoriál VŽDY rozbalí — sbalení (✕) platí jen pro krok,
+    // u kterého bublina překážela; další instrukce nesmí zůstat schovaná
+    this.minimized = false
+    this.chip.style.display = 'none'
+    this.bubble.style.display = 'block'
+    this.renderStep()
   }
 
   addEvents(_events: SimEvent[]): void { /* kroky čtou snapshot, ne eventy */ }
@@ -132,6 +135,9 @@ export class TutorialView implements HudView {
     const lang = getLang()
     this.bubble.innerHTML =
       `<div class="tut-head"><span>${t('tut.title')} · ${this.idx + 1}/${this.steps.length}</span>`
+      // šipka vpřed: KAŽDÝ krok jde ručně přeskočit — hráč nesmí uvíznout,
+      // ani nemusí bublinu zavírat křížkem, když chce prostě dál
+      + `<button data-tut="next" class="tut-fwd" title="${t('tut.fwdTip')}" aria-label="${t('tut.fwdTip')}">▸</button>`
       + `<button data-tut="min" class="tut-x" aria-label="${t('tut.hide')}">✕</button></div>`
       + `<div class="tut-text">${esc(step.text[lang])}</div>`
       + `<div class="tut-btns">`
@@ -189,7 +195,22 @@ export class TutorialView implements HudView {
     this.hole.style.top = `${Math.round(r.top - pad)}px`
     this.hole.style.width = `${Math.round(r.width + pad * 2)}px`
     this.hole.style.height = `${Math.round(r.height + pad * 2)}px`
-    // bublina nad/pod kotvou podle poloviny obrazovky, vodorovně přimknutá
+    // kotva v bočním HUD sloupci: bublina se klade VEDLE ní (přes plot),
+    // ne pod ni — pod hlavičkou panelu bývá obsah, na který má hráč klikat
+    const cx = r.left + r.width / 2
+    if (cx > vw * 2 / 3 && r.left - bw - 20 > 0) {
+      this.bubble.style.left = `${Math.round(r.left - bw - 14)}px`
+      this.bubble.style.bottom = ''
+      this.bubble.style.top = `${Math.round(Math.min(Math.max(12, r.top), vh - 260))}px`
+      return
+    }
+    if (cx < vw / 3 && r.right + bw + 20 < vw) {
+      this.bubble.style.left = `${Math.round(r.right + 14)}px`
+      this.bubble.style.bottom = ''
+      this.bubble.style.top = `${Math.round(Math.min(Math.max(12, r.top), vh - 260))}px`
+      return
+    }
+    // jinak nad/pod kotvou podle poloviny obrazovky, vodorovně přimknutá
     const left = Math.max(12, Math.min(vw - bw - 12, Math.round(r.left + r.width / 2 - bw / 2)))
     this.bubble.style.left = `${left}px`
     if (r.top > vh / 2) {
