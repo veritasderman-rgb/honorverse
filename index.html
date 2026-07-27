@@ -285,8 +285,11 @@
     .comm-name { color: #d8b34f; font-size: 11px; }
     .comm-text { color: #9fd8a0; font-size: 11px; line-height: 1.4; }
     #toasts { position: absolute; left: 12px; bottom: 96px; z-index: 10; display: flex; flex-direction: column; gap: 6px; max-width: 420px; pointer-events: none; }
-    .toast { display: flex; gap: 8px; align-items: flex-start; border: 1px solid #2a5a2e; background: #081008ee; padding: 6px 10px; font-size: 12px; box-shadow: 0 0 18px #0f5a1430; transition: opacity .5s; }
+    .toast { position: relative; display: flex; gap: 8px; align-items: flex-start; border: 1px solid #2a5a2e; background: #081008ee; padding: 6px 28px 6px 10px; font-size: 12px; box-shadow: 0 0 18px #0f5a1430; transition: opacity .5s; }
     .toast.fade { opacity: 0; }
+    /* zavírací křížek — jediný klikací prvek toastu (#toasts má pointer-events: none) */
+    .toast-x { pointer-events: auto; position: absolute; top: 0; right: 0; width: 26px; height: 26px; padding: 0; line-height: 1; background: none; border: none; color: #9fd8a0; font-size: 16px; cursor: pointer; opacity: .7; }
+    .toast-x:hover { opacity: 1; color: #fff; }
     .toast-comm { border-color: #8a6a1f; }
     .toast-comm .toast-body { display: flex; flex-direction: column; gap: 2px; }
     /* intro karta postavy (první replika mluvčího v misi) */
@@ -297,7 +300,8 @@
     .toast-intro .intro-bio { color: #9fd8a0; font-size: 11px; line-height: 1.45; max-width: 320px; }
     /* telefon: toasty kompaktní — medailonek postavy se nevejde, karta nese
        jen jméno, roli a repliku; menší avatar a písmo */
-    body.phone .toast { font-size: 11px; padding: 4px 8px; max-width: 78vw; }
+    body.phone .toast { font-size: 11px; padding: 4px 30px 4px 8px; max-width: 78vw; }
+    body.phone .toast-x { width: 30px; height: 30px; font-size: 18px; opacity: .85; }
     body.phone .toast-intro .intro-bio { display: none; }
     body.phone .toast-intro .comm-ava { flex-basis: 36px; width: 36px; height: 36px; }
     .toast-comm b { color: #d8b34f; }

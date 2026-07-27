@@ -304,12 +304,24 @@ export class Panels implements HudView {
       + `</div>`
   }
 
-  /** toast overlay u plotu — zmizí po pár sekundách */
+  /** toast overlay u plotu — zmizí po pár sekundách, křížkem hned */
   private showToast(html: string, cls: string, ms: number): void {
     if (!this.toasts) return
     const el = document.createElement('div')
     el.className = `toast ${cls}`
     el.innerHTML = html
+    // zavírací křížek: toasty překrývají plot a dlouhé konverzace by jinak
+    // blokovaly výhled, dokud samy nevyprší (na telefonu zvlášť citelné)
+    const x = document.createElement('button')
+    x.type = 'button'
+    x.className = 'toast-x'
+    x.textContent = '×'
+    x.setAttribute('aria-label', t('toast.close'))
+    // zavírá se na click (pokryje i klávesnici — Enter/Space na buttonu);
+    // pointerdown jen stopne propagaci, ať klik nepropadne do HUD delegace
+    x.addEventListener('pointerdown', e => e.stopPropagation())
+    x.addEventListener('click', e => { e.stopPropagation(); el.remove() })
+    el.appendChild(x)
     this.toasts.appendChild(el)
     // strop toastů (telefon jen 2 — obrazovka je malá a karty velké); při
     // úklidu přednostně obětuj běžné zprávy — intro karty postav se ukazují
