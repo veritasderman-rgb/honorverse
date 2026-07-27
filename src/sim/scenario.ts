@@ -2,6 +2,7 @@
  * Scénářový systém: spawn lodí z definic a vyhodnocování triggerů
  * (skriptované zvraty misí mají přednost před doktrínou — design kap. 8.3).
  */
+import { L, classNameL } from './lang'
 import type {
   Scenario, ShipState, SimState, Subsystems, TriggerAction, TriggerCondition,
 } from './types'
@@ -164,10 +165,10 @@ function applyAction(state: SimState, a: TriggerAction): void {
           }
         }
       }
-      const className = ship ? SHIP_CLASSES[ship.classId]?.name ?? ship.classId : ''
+      const className = ship ? classNameL(ship.classId, SHIP_CLASSES[ship.classId]?.name ?? ship.classId) : ''
       state.events.push({
         t: state.t, kind: 'contactClassified',
-        text: a.text ?? `Kontakt identifikován: ${className}`,
+        text: a.text ?? `${L('Kontakt identifikován', 'Contact identified')}: ${className}`,
         shipId: a.shipId, slowdown: true,
       })
       break
@@ -182,7 +183,7 @@ function applyAction(state: SimState, a: TriggerAction): void {
         obj.state = a.kind === 'objectiveComplete' ? 'done' : 'failed'
         state.events.push({
           t: state.t, kind: 'objective',
-          text: a.text ?? `${a.kind === 'objectiveComplete' ? 'Úkol splněn' : 'Úkol selhal'}: ${obj.text}`,
+          text: a.text ?? `${a.kind === 'objectiveComplete' ? L('Úkol splněn', 'Objective complete') : L('Úkol selhal', 'Objective failed')}: ${obj.text}`,
           slowdown: true,
         })
       }
@@ -194,7 +195,7 @@ function applyAction(state: SimState, a: TriggerAction): void {
         && !state.objectives.some(o => o.id === a.objectiveId)) {
         state.objectives.push({ id: a.objectiveId, text: a.text, state: 'open' })
         state.events.push({
-          t: state.t, kind: 'objective', text: `Nový úkol: ${a.text}`, slowdown: true,
+          t: state.t, kind: 'objective', text: `${L('Nový úkol', 'New objective')}: ${a.text}`, slowdown: true,
         })
       }
       break

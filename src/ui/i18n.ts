@@ -95,6 +95,7 @@ const DICT: Record<string, { cs: string; en: string }> = {
   'brief.admiral': { cs: 'ADMIRALITA — BRIEFING', en: 'ADMIRALTY — BRIEFING' },
   'prep.arms': { cs: 'VÝZBROJ', en: 'ARMAMENT' },
   'prep.start': { cs: 'START', en: 'START' },
+  'prep.resume': { cs: '⏵ POKRAČOVAT', en: '⏵ RESUME' },
   'prep.back': { cs: 'ZPĚT', en: 'BACK' },
   'loadout.strike': { cs: 'Úderný', en: 'Strike' },
   'loadout.strike.desc': {

@@ -5,6 +5,7 @@
  * (resolveTerminal). CM jsou abstraktní: intercept se vyhodnotí okamžitě
  * při odpalu — deterministické, žádné letící objekty navíc.
  */
+import { L } from './lang'
 import type { MissileState, ShipState, SimState, Vec2 } from './types'
 import {
   ACTIVE_GUIDANCE_ECM_FACTOR, C, CM_COOLDOWN, CM_INTERCEPT_RANGE, CM_PK,
@@ -118,7 +119,7 @@ export function deployDecoy(state: SimState, ship: ShipState): void {
   for (const m of state.missiles) {
     if (m.targetId === ship.id && m.decoyChecked === true) m.decoyChecked = false
   }
-  say(`Návnada vypuštěna — táhne se za lodí (zásoba ${ship.decoys}).`)
+  say(L(`Návnada vypuštěna — táhne se za lodí (zásoba ${ship.decoys}).`, `Decoy deployed — streaming astern (${ship.decoys} in stock).`))
 }
 
 /** Průběžné vrstvy obrany: ECM/decoye a odpaly protiraket. */
@@ -146,7 +147,7 @@ export function updateDefenses(state: SimState, dt: number): void {
         state.events.push({
           t: state.t, kind: 'missileMiss', side: m.side, shipId: target.id,
           cause: 'decoy', salvoId: m.salvoId, pos: { ...m.pos },
-          text: `${target.name}: raketa svedena — návnada zničena`,
+          text: L(`${target.name}: raketa svedena — návnada zničena`, `${target.name}: missile decoyed — decoy destroyed`),
         })
         continue
       }
@@ -174,7 +175,7 @@ export function updateDefenses(state: SimState, dt: number): void {
         state.events.push({
           t: state.t, kind: 'missileMiss', side: m.side, shipId: target.id,
           cause: 'ecm', salvoId: m.salvoId, pos: { ...m.pos },
-          text: 'raketa svedena ECM/decoyi — ztráta zámku',
+          text: L('raketa svedena ECM/decoyi — ztráta zámku', 'missile seduced by ECM/decoys — lock lost'),
         })
       }
     }
@@ -241,7 +242,7 @@ export function updateDefenses(state: SimState, dt: number): void {
           // side = strana RAKETY (statistika), shipId = bránící se loď
           t: state.t, kind: 'missileKilled', shipId: ship.id, side: threat.side,
           cause: 'cm', salvoId: threat.salvoId, pos: { ...threat.pos },
-          text: `${ship.name}: protiraketa zničila útočnou raketu`,
+          text: L(`${ship.name}: protiraketa zničila útočnou raketu`, `${ship.name}: counter-missile killed an incoming missile`),
         })
       }
     }
@@ -292,7 +293,7 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
         // side = strana RAKETY (statistika), shipId = bránící se loď
         t: state.t, kind: 'missileKilled', shipId: target.id, side: missile.side,
         cause: 'pdlc', salvoId: missile.salvoId, pos: { ...missile.pos },
-        text: `${target.name}: bodová obrana sestřelila raketu`,
+        text: L(`${target.name}: bodová obrana sestřelila raketu`, `${target.name}: point defense shot down a missile`),
       })
       return
     }
@@ -306,7 +307,7 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
         state.events.push({
           t: state.t, kind: 'missileKilled', shipId: target.id, side: missile.side,
           cause: 'wedge', salvoId: missile.salvoId, pos: { ...missile.pos },
-          text: `${target.name}: raketa se roztříštila o klín`,
+          text: L(`${target.name}: raketa se roztříštila o klín`, `${target.name}: missile shattered on the wedge`),
         })
         return
       }
@@ -328,7 +329,7 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
     state.events.push({
       t: state.t, kind: 'missileMiss', side: missile.side, shipId: target.id,
       cause: 'dud', salvoId: missile.salvoId, pos: { ...missile.pos },
-      text: 'laserová hlavice detonovala mimo — žádný zásah',
+      text: L('laserová hlavice detonovala mimo — žádný zásah', 'laser head detonated wide — no hit'),
     })
     return
   }
@@ -338,7 +339,7 @@ export function resolveTerminal(state: SimState, missile: MissileState, target: 
     pos: { ...target.pos },
     // zásah do lodi hráče je důležitá událost (UI auto-zpomalení)
     slowdown: target.side === 'player',
-    text: `${target.name}: zásah laserovou hlavicí (${hits}× paprsek, ${aspect})`,
+    text: L(`${target.name}: zásah laserovou hlavicí (${hits}× paprsek, ${aspect})`, `${target.name}: laser-head hit (${hits}× beam, ${aspect})`),
   })
   // hláska taktického: pozorovaný zásah nepřítele (jednou na cíl)
   if (missile.side === 'player') voiceEnemyHit(state, target)

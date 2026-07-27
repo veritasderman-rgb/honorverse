@@ -237,6 +237,11 @@ export function missionBriefing(id: string, fallback: string): string {
 }
 
 /** text cíle mise v aktuálním jazyce (fallback: český text ze stavu) */
+/** EN text cíle bez ohledu na aktuální jazyk (pro mapování CS→EN v logu) */
+export function objectiveTextEn(missionId: string, objectiveId: string): string | undefined {
+  return EN[missionId]?.objectives[objectiveId]
+}
+
 export function objectiveText(missionId: string, objectiveId: string, fallback: string): string {
   return (getLang() === 'en' ? EN[missionId]?.objectives[objectiveId] : undefined) ?? fallback
 }

@@ -4,6 +4,7 @@
  *   2. náhodné události posádky za boje (taktik / inženýr / spojař) —
  *      deterministicky ze state.rng, hlášky přes eventy se speaker.
  */
+import { L, subsysL } from './lang'
 import type { Contact, RepairFocus, ShipState, Side, SimState, Subsystems } from './types'
 import {
   CREW_COMBAT_RANGE, CREW_EVENT_MEAN_TIME,
@@ -70,7 +71,7 @@ function updateRepairs(state: SimState, ship: ShipState, dt: number): void {
     if (v < REPAIR_CAP && nv >= REPAIR_CAP && ship.side === 'player') {
       state.events.push({
         t: state.t, kind: 'message', shipId: ship.id, side: ship.side, speaker: 'engineer',
-        text: `Inženýr: ${SUBSYSTEM_NAMES[key]} znovu online — máme ${Math.round(REPAIR_CAP * 100)} % výkonu!`,
+        text: `${L('Inženýr', 'Engineer')}: ${subsysL(SUBSYSTEM_NAMES, key)} ${L('znovu online — máme', 'back online — we have')} ${Math.round(REPAIR_CAP * 100)} % ${L('výkonu!', 'power!')}`,
       })
     }
   }

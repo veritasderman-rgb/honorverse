@@ -6,6 +6,7 @@
  *   - druhá vlna vrstvené salvy (pendingWave) — HI follow-up časovaný
  *     tak, aby dorazil ±10 s s hlavní LO vlnou.
  */
+import { L } from './lang'
 import type { Contact, FireControl, ShipState, Side, SimState, Vec2 } from './types'
 import { ENERGY_MAX_RANGE } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
@@ -116,7 +117,7 @@ export function updateFireControl(state: SimState): void {
         launchSalvo(state, ship, w.targetId, w.count, w.mode,
           { ignoreCooldown: true, side: w.sourceSide })
       } else {
-        say(state, ship, 'Druhá vlna zrušena — cíl už neexistuje.')
+        say(state, ship, L('Druhá vlna zrušena — cíl už neexistuje.', 'Second wave cancelled — target no longer exists.'))
       }
     }
 
@@ -185,8 +186,8 @@ export function updateFireControl(state: SimState): void {
       fc.engaged = inRange
       if (!doctrine) {
         say(state, ship, inRange
-          ? `Palebné řešení na ${target.name} — zahajuji palbu.`
-          : `${target.name} mimo poháněnou obálku — palba pozastavena.`, inRange)
+          ? L(`Palebné řešení na ${target.name} — zahajuji palbu.`, `Firing solution on ${target.name} — opening fire.`)
+          : L(`${target.name} mimo poháněnou obálku — palba pozastavena.`, `${target.name} outside the powered envelope — fire suspended.`), inRange)
       }
     }
 

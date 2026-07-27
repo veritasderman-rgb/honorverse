@@ -5,6 +5,7 @@
  * sekund (SimState.pendingComms). Roll ze state.rng probíhá až při DORUČENÍ.
  * AI se sama od sebe nikdy nevzdává — jen jako odpověď na výzvu.
  */
+import { L } from './lang'
 import type { ShipState, SimState, Speaker } from './types'
 import { C, SURRENDER_COOLDOWN, SURRENDER_WEAPONS_OUT_BONUS } from './constants'
 import { SHIP_CLASSES } from '../data/defs'
@@ -111,7 +112,7 @@ function acceptSurrender(state: SimState, target: ShipState, speaker: Speaker): 
   })
   state.events.push({
     t: state.t, kind: 'objective', shipId: target.id, side: target.side, slowdown: true,
-    text: `${target.name} kapituloval — klín vypnut, loď se vzdává.`,
+    text: L(`${target.name} kapituloval — klín vypnut, loď se vzdává.`, `${target.name} has struck her wedge — the ship surrenders.`),
   })
 }
 

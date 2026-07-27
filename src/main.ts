@@ -46,6 +46,7 @@ const plotContainer = document.getElementById('plot-container') as HTMLElement
 const topbar = document.getElementById('topbar') as HTMLElement
 
 const bridge = new SimBridge()
+bridge.lang = getLang() === 'en' ? 'en' : 'cs' // texty simu v jazyce hráče
 const plot = new TacticalPlot(canvas)
 // zvuk: AudioContext se odemyká prvním gestem (autoplay politika prohlížečů)
 const audio = new AudioManager()
@@ -509,6 +510,7 @@ function showStarMap(): void {
   // přepínač jazyka (CS ⟷ EN) — překreslí menu v novém jazyce
   onTap(el.querySelector('#btn-lang'), () => {
     track('lang_set', { to: toggleLang() })
+    bridge.lang = getLang() === 'en' ? 'en' : 'cs' // příští mise v novém jazyce
     applyStaticI18n()
     leave()
     showStarMap()
@@ -604,6 +606,42 @@ function showFleetHall(): void {
 }
 
 /** Stavba volné bitvy (E1): steppery flotil, vzdálenost, seed → BOJ. */
+// ---------- ukládání rozehrané mise (lokálně, jeden slot) ----------
+
+/** Save = kompletní SimState (rng i triggery žijí v něm — viz sim/rng.ts);
+ *  jen kampaň, skirmish/arkáda jsou krátké. Jeden slot: poslední rozehraná. */
+const SAVE_KEY = 'wob-mission-save'
+interface MissionSave { missionId: string; t: number; savedAt: number; state: SimState }
+
+function loadMissionSave(): MissionSave | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw) as MissionSave
+    return s && typeof s.missionId === 'string' && s.state ? s : null
+  } catch { return null }
+}
+function clearMissionSave(): void {
+  try { localStorage.removeItem(SAVE_KEY) } catch { /* noop */ }
+}
+/** poslední běžící stav (pro okamžitý save při zavření stránky) */
+let runningState: SimState | null = null
+let lastAutosaveAt = 0
+
+function autosaveMission(state: SimState): void {
+  if (currentMissionId === 'skirmish' || currentMissionId === '' || state.outcome !== 'running') return
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(
+      { missionId: currentMissionId, t: state.t, savedAt: Date.now(), state }))
+  } catch { /* plné úložiště — zkusíme příště */ }
+}
+
+// zavření/schování stránky (mobil: přepnutí aplikace) → okamžitý save
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && runningState) autosaveMission(runningState)
+})
+window.addEventListener('pagehide', () => { if (runningState) autosaveMission(runningState) })
+
 // ---------- arkáda: okamžitá bitva zblízka s limitem her ----------
 
 /** volných her za session (sessionStorage); bonusy za vyhrané mise navíc */
@@ -977,6 +1015,9 @@ function showMissionPrep(id: string): void {
     + `<div class="ld-row"><span>${t('prep.arms')}:</span> ${btns}</div>`
     + `<div id="ld-desc" class="dim">${t(`loadout.${sel}.desc`)}</div>`
     + `<div style="margin-top:12px"><button id="btn-start">${t('prep.start')}</button> `
+    + (loadMissionSave()?.missionId === id
+      ? `<button id="btn-resume" class="active">${t('prep.resume')} (${fmtTime(loadMissionSave()!.t)})</button> `
+      : '')
     + `<button id="btn-prep-back">${t('prep.back')}</button></div>`,
   )
   // video briefing (nebo statická scéna jako fallback)
@@ -998,8 +1039,20 @@ function showMissionPrep(id: string): void {
     savePreset(sel)
     el.remove()
     setMenuBg(false)
+    clearMissionSave()           // nový start = starý rozehraný save neplatí
     skipBriefing = true          // briefing byl tady — onReady rovnou spustí
     startCampaignMission(id, sel)
+  })
+  // pokračování rozehrané mise: obnova kompletního stavu simu z localStorage
+  onTap(el.querySelector('#btn-resume'), () => {
+    const save = loadMissionSave()
+    if (!save || save.missionId !== id) return
+    stopVo()
+    el.remove()
+    setMenuBg(false)
+    skipBriefing = true
+    track('mission_resume', { t: Math.round(save.t) }, id)
+    bridge.restore(save.state)
   })
 }
 
@@ -1240,8 +1293,18 @@ bridge.onSnapshot = (state, compression) => {
     navigator.vibrate?.(40)
   }
   controller.handleSnapshot(state, compression)
+  // autosave kampaně (~30 s) + stav pro okamžitý save při zavření stránky
+  if (state.outcome === 'running' && currentMissionId !== 'skirmish' && currentMissionId !== '') {
+    runningState = state
+    if (performance.now() - lastAutosaveAt > 30_000) {
+      lastAutosaveAt = performance.now()
+      autosaveMission(state)
+    }
+  }
   if (!outcomeShown && state.outcome !== 'running') {
     outcomeShown = true
+    runningState = null
+    clearMissionSave() // mise skončila — rozehraný save už neplatí
     controller.setCompression(0)
     // konec mise: čekající hlášky zahodit, ale ROZEHRANOU nechat doznít —
     // závěrečná komunikace (m01-c9 apod.) přichází ve stejném snapshotu

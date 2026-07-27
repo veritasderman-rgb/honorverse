@@ -75,6 +75,18 @@ export const MISSION_TEXT_EN: Record<string, string> = {
   'Zástěna základny mění vektor — jdou po nás. Průlom začíná.':
     'The base screen is changing vector — they are coming for us. The breakthrough begins.',
 
+  // ---------- přidané cíle (addObjective — pro řádek „New objective: …") ----------
+  'Znič pomocný křižník': 'Destroy the auxiliary cruiser',
+  '(Volitelné) Zachraň posádku Hermes — přibliž se na 500 tis. km':
+    '(Optional) Rescue the Hermes crew — close to 500k km',
+  '(Skrytý) Nezabij civilisty na palubě Meridianu':
+    '(Hidden) Do not kill the civilians aboard Meridian',
+  '(Volitelné) KNS Claymore přežije': '(Optional) KNS Claymore survives',
+  'Volba: stáhni se za hyperlimit — nebo dokonči útok':
+    'Choice: withdraw past the hyper limit — or finish the attack',
+  '(Volitelné) Znič zásobovací základnu Almadén':
+    '(Optional) Destroy the Almadén supply base',
+
   // ---------- popisky lodí a objektů (desc) ----------
   'Avalon Prime — trůnní svět Hvězdného království. Parlament, admiralita a královna Eleanor III.; miliarda lidí, kteří právě sledují oblohu.':
     'Avalon Prime — throne world of the Star Kingdom. Parliament, the Admiralty and Queen Eleanor III; a billion people who are watching the sky right now.',

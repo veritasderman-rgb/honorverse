@@ -17,13 +17,21 @@ export class SimBridge {
     }
   }
 
+  /** jazyk pro texty simu — nastavuje main dle getLang() před startem */
+  lang: 'cs' | 'en' = 'cs'
+
   start(scenarioId: string): void {
-    this.post({ kind: 'init', scenarioId })
+    this.post({ kind: 'init', scenarioId, lang: this.lang })
   }
 
   /** spustí custom bitvu (skirmish) z hotového scénáře */
   startScenario(scenario: Scenario): void {
-    this.post({ kind: 'init', scenarioId: scenario.id, scenario })
+    this.post({ kind: 'init', scenarioId: scenario.id, scenario, lang: this.lang })
+  }
+
+  /** obnoví uloženou misi z kompletního stavu simu */
+  restore(state: SimState): void {
+    this.post({ kind: 'restore', state, lang: this.lang })
   }
 
   sendOrder(order: Order): void {
