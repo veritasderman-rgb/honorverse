@@ -761,11 +761,13 @@ function showSkirmishBuilder(): void {
     const def = SHIP_CLASSES[cls]
     const nm = def ? shipClassName(def) : cls
     // plný název typu (Lehký křižník…) místo kódu; klepnutí otevře kartu třídy
-    // nepřátelský sloupec ukazuje imperiální jméno třídy (viz IMPERIAL_SURFACE)
+    // nepřátelský sloupec ukazuje imperiální jméno třídy (viz IMPERIAL_SURFACE);
+    // jméno třídy viditelně v řádku — tooltip na dotyku neexistuje
     const impNm = side === 'enemy' ? IMPERIAL_SURFACE[cls] : undefined
-    const tipNm = impNm ? (getLang() === 'en' ? impNm.nameEn : impNm.name) : nm
+    const rowNm = impNm ? (getLang() === 'en' ? impNm.nameEn : impNm.name) : nm
     return `<div class="sk-row">`
-      + `<button class="sk-name" data-clscard="${esc(cls)}" data-cardside="${side}" title="${esc(tipNm)} — ${esc(t('sk.detailTip'))}">${esc(t(`hull.${hull}`))}</button>`
+      + `<button class="sk-name" data-clscard="${esc(cls)}" data-cardside="${side}" title="${esc(rowNm)} — ${esc(t('sk.detailTip'))}">`
+      + `${esc(t(`hull.${hull}`))}<span class="sk-cls">${esc(rowNm)}</span></button>`
       + `<button class="sk-step" data-sk="dec" data-side="${side}" data-cls="${cls}">−</button>`
       + `<span class="sk-n" id="sk-${side}-${cls}">${cfg[side][cls] ?? 0}</span>`
       + `<button class="sk-step" data-sk="inc" data-side="${side}" data-cls="${cls}">+</button>`
