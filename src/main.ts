@@ -874,6 +874,7 @@ const MISSION_VIDEOS: Record<string, string> = {
   mission07: 'brief-mission07', mission08: 'brief-mission08',
   mission09: 'brief-mission09', mission10: 'brief-mission10',
   mission11: 'brief-mission11',
+  side01: 'brief-side01', side02: 'brief-side02', side03: 'brief-side03',
 }
 
 /**
