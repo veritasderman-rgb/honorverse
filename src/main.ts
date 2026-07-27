@@ -285,7 +285,7 @@ function missionAvailable(id: string, cleared: readonly string[]): boolean {
  */
 /** klipy filmového intra — po dojetí se střídají, ať krátká smyčka nebije
  *  do očí; další soubor stačí nahrát do public/vid/ a přidat sem */
-const CINE_CLIPS = ['vid/intro-battle.mp4', 'vid/brief-mission02.mp4', 'vid/brief-mission06.mp4']
+const CINE_CLIPS = ['vid/intro-battle.mp4', 'vid/intro-battle-2.mp4', 'vid/brief-mission02.mp4', 'vid/brief-mission06.mp4']
 
 function showCinematicIntro(onDone: () => void): void {
   stopVo()
