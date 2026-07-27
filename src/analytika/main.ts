@@ -3,11 +3,15 @@
  * hry (česky): KPI karty, denní graf (Canvas 2D, bez závislostí), funnel
  * misí, udržení tutoriálu a segmenty jazyk × zařízení.
  */
+import { inject } from '@vercel/analytics'
 import {
   fetchView, fmtDur, kpis, orderFunnel, tutorialFunnel,
   type DailyRow, type FunnelRow, type SegmentRow, type TutorialRow,
 } from './data'
 import { SCENARIOS } from '../data/missions'
+
+// Initialize Vercel Web Analytics
+inject()
 
 const $ = (id: string): HTMLElement => document.getElementById(id)!
 
