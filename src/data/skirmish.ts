@@ -29,6 +29,19 @@ export interface SkirmishConfig {
   seed: number
 }
 
+/**
+ * Imperiální „tvář" nepřátelské strany: stejné trupy (parametry se nemění),
+ * ale karta třídy v builderu ukazuje imperiální jméno třídy a ilustraci —
+ * jinak měly obě strany stejný popisek i obrázek.
+ */
+export const IMPERIAL_SURFACE: Record<string, { name: string; nameEn: string; img: string }> = {
+  'dd-vichr': { name: 'třída Cádiz', nameEn: 'Cádiz class', img: 'ship-imperial-dd' },
+  'cl-sokol': { name: 'třída Sevilla', nameEn: 'Sevilla class', img: 'ship-imperial-cl' },
+  'ca-bastion': { name: 'třída Burgos', nameEn: 'Burgos class', img: 'ship-imperial-ca' },
+  'bc-praporec': { name: 'třída Aragon', nameEn: 'Aragon class', img: 'ship-imperial-bc' },
+  'dn-vladar': { name: 'třída Toledo', nameEn: 'Toledo class', img: 'ship-dn-imperial' },
+}
+
 /** jmenné zásobníky stran — kódová jména (DD-1) měly obě flotily stejná
  *  a na plotu splývaly; vlastní jména strany odliší na první pohled */
 const ROYAL_NAMES = [
