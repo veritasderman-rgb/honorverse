@@ -36,6 +36,18 @@ export const CAMPAIGN_INTRO: string =
   + 'od míru k válce. Tvoje mise nejsou epizody: každá z nich posouvá válku, '
   + 'často aniž to v tu chvíli tušíš.'
 
+/**
+ * Filmové intro na titulní obrazovce: krátké epické věty — zobrazují se
+ * jako titulky nad videem souboje a zároveň tvoří text voiceoveru
+ * (audio/vo/cinematic-<lang>.mp3, viz docs/VO_SCRIPT.md).
+ */
+export const CINEMATIC_LINES: readonly string[] = [
+  'Vítej ve světě vesmírných bitev.',
+  'Lodě se tu ženou prázdnotou přes miliony kilometrů — a každý rozkaz se měří v odvaze.',
+  'Kapitáni a kapitánky Královského námořnictva stojí neochvějně za svou panovnicí.',
+  'Ve věku, kdy každá mise rozhoduje o osudu království.',
+]
+
 export interface MissionStory {
   prolog: string
   epilog: string
@@ -394,6 +406,13 @@ export const CAMPAIGN_INTRO_EN: string =
   + 'Avalon\'s road from peace to war. Your missions are not episodes: every '
   + 'one of them moves the war, often without you knowing it at the time.'
 
+export const CINEMATIC_LINES_EN: readonly string[] = [
+  'Welcome to the world of war among the stars.',
+  'Here ships race through a void of millions of kilometres — and every order is measured in courage.',
+  'The captains of the Royal Navy stand unshaken behind their sovereign.',
+  'In an age when every mission decides the fate of a kingdom.',
+]
+
 export const MISSION_STORY_EN: Record<string, MissionStory> = {
   mission01: {
     prolog:
@@ -744,6 +763,11 @@ export const DEFEAT_GENERIC_EN: string =
 /** úvod kampaně v aktuálním jazyce */
 export function campaignIntro(): string {
   return getLang() === 'en' ? CAMPAIGN_INTRO_EN : CAMPAIGN_INTRO
+}
+
+/** věty filmového intra v aktuálním jazyce */
+export function cinematicLines(): readonly string[] {
+  return getLang() === 'en' ? CINEMATIC_LINES_EN : CINEMATIC_LINES
 }
 
 /** příběh mise v aktuálním jazyce (fallback čeština, když EN mutace chybí) */

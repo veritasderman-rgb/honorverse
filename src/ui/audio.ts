@@ -122,6 +122,8 @@ export class AudioManager {
   private finalDone = false
 
   private menuMode = true
+  /** hudba dočasně ztlumená (filmové intro hraje vlastní zvuk) */
+  private ducked = false
   private lastState: SimState | null = null
 
   private settings = loadSettings()
@@ -157,7 +159,7 @@ export class AudioManager {
     this.masterGain.gain.value = this.settings.muted ? 0 : 1
     this.masterGain.connect(ctx.destination)
     this.musicGain = ctx.createGain()
-    this.musicGain.gain.value = this.settings.music
+    this.musicGain.gain.value = this.ducked ? 0 : this.settings.music
     this.musicGain.connect(this.masterGain)
     this.sfxGain = ctx.createGain()
     this.sfxGain.gain.value = this.settings.sfx
@@ -200,7 +202,13 @@ export class AudioManager {
   setMusicVolume(v: number): void {
     this.settings.music = Math.min(1, Math.max(0, v))
     this.save()
-    if (this.ctx) this.ramp(this.musicGain, this.settings.music, 0.05)
+    if (this.ctx && !this.ducked) this.ramp(this.musicGain, this.settings.music, 0.05)
+  }
+
+  /** dočasné ztlumení hudby (filmové intro) — nesahá na uložené nastavení */
+  duck(on: boolean): void {
+    this.ducked = on
+    if (this.ctx) this.ramp(this.musicGain, on ? 0 : this.settings.music, 0.4)
   }
 
   setSfxVolume(v: number): void {

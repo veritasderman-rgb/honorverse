@@ -29,7 +29,7 @@ import {
   applyLoadout, LOADOUTS, loadPreset, presetById, savePreset, type LoadoutId,
 } from './data/loadout'
 import { applyBonusRewards } from './data/rewards'
-import { campaignIntro, defeatGeneric, missionStory } from './data/story'
+import { campaignIntro, cinematicLines, defeatGeneric, missionStory } from './data/story'
 import {
   CAMPAIGN_NODES, GALAXY, GALAXY_TILT, isMissionUnlocked, NEBULAE, podReward,
   shipRewards, type CampaignNode,
@@ -262,22 +262,74 @@ function missionAvailable(id: string, cleared: readonly string[]): boolean {
   return unlockAllOn() || isMissionUnlocked(id, cleared)
 }
 
-/** úvod kampaně (první spuštění): CAMPAIGN_INTRO + POKRAČOVAT → výběr mise */
-function showCampaignIntro(onDone: () => void): void {
-  const el = overlay(
-    `<h2>${t('intro.title')}</h2>`
-    + `<div class="brief story">${esc(campaignIntro())}</div>`
-    + `<button id="btn-intro-continue">${t('intro.continue')}</button>`,
-  )
-  el.classList.add('menu')
-  setMenuBg(true)
-  // namluvený úvod kampaně (existuje-li nahrávka)
-  el.querySelector('h2')?.after(voPlayer('intro'))
-  onTap(el.querySelector('#btn-intro-continue'), () => {
-    stopVo()
+/**
+ * Filmové intro (titulní obrazovka): video souboje lodí přes celou obrazovku,
+ * epické titulky a voiceover (audio/vo/cinematic-<lang>.mp3, existuje-li).
+ * Video jede nejdřív ztlumené pod titulní kartou (autoplay bez zvuku projde
+ * všude); zvuk, vyprávění a titulky startuje až tlačítko — uživatelské gesto,
+ * po kterém prohlížeče přehrávání se zvukem dovolí. Křížek kdykoli přeskočí.
+ */
+function showCinematicIntro(onDone: () => void): void {
+  stopVo()
+  const el = document.createElement('div')
+  el.id = 'cine'
+  el.innerHTML =
+    `<video src="vid/intro-battle.mp4" muted autoplay loop playsinline preload="auto"></video>`
+    + `<div id="cine-caption"></div>`
+    + `<div id="cine-title"><h1>WALL OF BATTLE</h1>`
+    + `<button id="cine-enter">${t('cine.enter')}</button></div>`
+    + `<button id="cine-skip" aria-label="${t('cine.skip')}" title="${t('cine.skip')}">×</button>`
+  document.body.appendChild(el)
+  const vid = el.querySelector('video')!
+  const caption = el.querySelector<HTMLElement>('#cine-caption')!
+  audio.duck(true)
+
+  // VO: připravit dopředu; hraje se jen když se nahrávka stihla načíst
+  const vo = new Audio(`audio/vo/cinematic-${getLang()}.mp3`)
+  vo.preload = 'auto'
+  let voReady = false
+  vo.addEventListener('canplaythrough', () => { voReady = true }, { once: true })
+
+  const timers: number[] = []
+  let finished = false
+  const finish = (): void => {
+    if (finished) return
+    finished = true
+    for (const id of timers) clearTimeout(id)
+    vo.pause()
+    vid.pause()
+    audio.duck(false)
     markIntroSeen()
     el.remove()
     onDone()
+  }
+  onTap(el.querySelector('#cine-skip'), () => { track('cine_skip'); finish() })
+
+  const LINE_MS = 5200 // jedna věta: nájezd, čtení, odchod (viz CSS animace)
+  onTap(el.querySelector('#cine-enter'), () => {
+    el.querySelector('#cine-title')?.remove()
+    // restart od začátku se zvukem — výbuchy z videa jsou součást zážitku
+    vid.muted = false
+    vid.currentTime = 0
+    void vid.play().catch(() => { /* blokováno — titulky pojedou i tak */ })
+    if (voReady) void vo.play().catch(() => { /* bez VO */ })
+    track('cine_start')
+    const lines = cinematicLines()
+    lines.forEach((text, i) => {
+      timers.push(window.setTimeout(() => {
+        caption.textContent = text
+        caption.classList.remove('show')
+        void caption.offsetWidth // restart CSS animace mezi větami
+        caption.classList.add('show')
+      }, i * LINE_MS))
+    })
+    // konec po titulcích; rozehrané vyprávění nechat doznít (tvrdý strop)
+    const capEnd = lines.length * LINE_MS + 1200
+    timers.push(window.setTimeout(() => {
+      if (vo.paused || vo.ended) { finish(); return }
+      vo.addEventListener('ended', finish, { once: true })
+      timers.push(window.setTimeout(finish, 20_000))
+    }, capEnd))
   })
 }
 
@@ -387,6 +439,7 @@ function showStarMap(): void {
     + `<button id="btn-hall-toggle">${t('menu.hall')}</button>`
     + `<button id="btn-skirmish">${t('menu.skirmish')}</button>`
     + `<button id="btn-fleet">${t('menu.fleet')}</button>`
+    + `<button id="btn-cine">${t('menu.intro')}</button>`
     + `<button id="btn-lang" class="dim">${t('menu.lang')}</button>`
     + `<button id="btn-unlock-all" class="${unlocked ? 'active' : 'dim'}">`
     + `${unlocked ? t('menu.unlockedAll') : t('menu.unlockAll')}</button>`
@@ -405,6 +458,8 @@ function showStarMap(): void {
 
   onTap(el.querySelector('#btn-skirmish'), () => { el.remove(); showSkirmishBuilder() })
   onTap(el.querySelector('#btn-fleet'), () => { el.remove(); showFleetHall() })
+  // přehrát filmové intro znovu (mapa zůstává pod ním)
+  onTap(el.querySelector('#btn-cine'), () => showCinematicIntro(() => { /* zpět na mapu */ }))
   // přepínač jazyka (CS ⟷ EN) — překreslí menu v novém jazyce
   onTap(el.querySelector('#btn-lang'), () => {
     track('lang_set', { to: toggleLang() })
@@ -443,10 +498,14 @@ function showStarMap(): void {
 
   const toggle = el.querySelector<HTMLButtonElement>('#btn-story-toggle')
   const body = el.querySelector<HTMLElement>('#story-body')
+  let storyVoAdded = false
   onTap(toggle, () => {
     const open = body!.style.display !== 'none'
     body!.style.display = open ? 'none' : 'block'
     toggle!.textContent = open ? t('menu.story') : t('menu.storyOpen')
+    // namluvený úvod kampaně přehrávat s otevřeným textem (dřív první spuštění)
+    if (open) stopVo()
+    else if (!storyVoAdded) { storyVoAdded = true; body!.prepend(voPlayer('intro')) }
   })
 
   // klepnutí / Enter / mezerník na odemčené soustavě → příprava mise. SVG <g>
@@ -1064,7 +1123,7 @@ const requested = params.get('mission')
 if (requested && SCENARIOS[requested] && missionAvailable(requested, loadCleared())) {
   showMissionPrep(requested)
 } else if (!introSeen()) {
-  showCampaignIntro(showStarMap)
+  showCinematicIntro(showStarMap)
 } else {
   showStarMap()
 }

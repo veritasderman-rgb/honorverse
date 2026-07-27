@@ -20,6 +20,8 @@ Vygenerováno z `src/data/story.ts` — needituj ručně, spusť
 | --- | --- | --- |
 | `intro-cs.mp3` | Úvod kampaně (CS) | ~111 s |
 | `intro-en.mp3` | Úvod kampaně (EN) | ~143 s |
+| `cinematic-cs.mp3` | Filmové intro (titulní obrazovka) — epicky, pomalu, s patosem (CS) | ~17 s |
+| `cinematic-en.mp3` | Filmové intro (titulní obrazovka) — epicky, pomalu, s patosem (EN) | ~21 s |
 | `mission01-prolog-cs.mp3` | mission01 — prolog (CS) | ~18 s |
 | `mission01-prolog-en.mp3` | mission01 — prolog (EN) | ~21 s |
 | `mission01-epilog-cs.mp3` | mission01 — epilog (výhra) (CS) _(volitelné)_ | ~14 s |
@@ -132,6 +134,16 @@ Vygenerováno z `src/data/story.ts` — needituj ručně, spusť
 > On the other side of the map lies the Doradan Empire: twenty systems, one man. Caudillo Ferrante Salazar seized power after a succession crisis "for a single term" — nineteen years ago. The Empire lives off its gold fleets: convoys of fuel isotopes that crawl to the capital twice a year and pay for everything — the court, the fleet, the rations, the silence. But the refineries are aging, the convoys are thinning, privateers keep plucking at them — and the toll from the Avalon Junction would refloat the Empire for a generation. Salazar's plan has three phases: destabilize the Marches with pirates by proxy, provoke an incident that paints Avalon as the aggressor in neutral eyes, and finally the Grand Army — a strike at the Junction from a secretly built anchorage in the Cádiz system.
 >
 > You are Lieutenant Alex Rowan, Royal Avalon Navy. The campaign follows your service from customs patrol to command of a strike squadron — and Avalon's road from peace to war. Your missions are not episodes: every one of them moves the war, often without you knowing it at the time.
+
+## Filmové intro (titulní obrazovka) — epicky, pomalu, s patosem
+
+### `cinematic-cs.mp3`
+
+> Vítej ve světě vesmírných bitev. Lodě se tu ženou prázdnotou přes miliony kilometrů — a každý rozkaz se měří v odvaze. Kapitáni a kapitánky Královského námořnictva stojí neochvějně za svou panovnicí. Ve věku, kdy každá mise rozhoduje o osudu království.
+
+### `cinematic-en.mp3`
+
+> Welcome to the world of war among the stars. Here ships race through a void of millions of kilometres — and every order is measured in courage. The captains of the Royal Navy stand unshaken behind their sovereign. In an age when every mission decides the fate of a kingdom.
 
 ## mission01 — prolog
 
