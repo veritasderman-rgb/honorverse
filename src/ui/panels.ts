@@ -97,13 +97,13 @@ export const SHIP_IMAGES: Record<string, string> = {
   'dd-vichr': 'ship-dd', 'cl-sokol': 'ship-cl', 'ca-bastion': 'ship-ca',
   'merch-freighter': 'ship-merch', 'merch-runner': 'ship-merch',
   'merch-qship': 'ship-qship', 'disp-courier': 'ship-courier',
-  // těžké třídy a stanice: příběhové ilustrace (public/img/scene-*.png)
-  'bc-praporec': 'scene-bc-pods',
-  'dn-vladar': 'scene-dn-majesty', 'dn-ural': 'scene-dn-majesty',
-  'station-zeta': 'scene-shipyard',
-  'cl-korzar': 'ship-cl', 'dd-korzar': 'ship-dd',
-  DD: 'ship-dd', CL: 'ship-cl', CA: 'ship-ca', BC: 'scene-bc-pods',
-  DN: 'scene-dn-majesty', STN: 'scene-shipyard',
+  'bc-praporec': 'ship-bc',
+  'dn-vladar': 'ship-dn', 'dn-ural': 'ship-dn-imperial',
+  'station-zeta': 'ship-station',
+  'cl-korzar': 'ship-pirate-cl', 'dd-korzar': 'ship-pirate-dd',
+  'planet': 'planet',
+  DD: 'ship-dd', CL: 'ship-cl', CA: 'ship-ca', BC: 'ship-bc',
+  DN: 'ship-dn', STN: 'ship-station', PLT: 'planet',
   MERCH: 'ship-merch', DB: 'ship-courier',
 }
 
