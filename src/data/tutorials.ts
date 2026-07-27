@@ -352,14 +352,16 @@ const MISSION00_STEPS: TutorialStep[] = [
     done: (s, ui) => (own(s, ui)?.throttle ?? 0) >= 0.99,
   },
   {
-    anchor: '[data-comp="100"]',
+    anchor: '.tb-comp',
     text: {
-      cs: 'Vesmír je veliký a přesuny trvají. Zrychli čas na 100× — u '
-        + 'důležité události ho hra sama vrátí na 1× (a v klidných pasážích '
-        + 'zase sama přidá).',
-      en: 'Space is big and transits take time. Speed time up to 100× — the '
-        + 'game drops back to 1× at important events (and speeds up again '
-        + 'in quiet stretches).',
+      cs: 'ZDE ovládáš čas: vyšší násobek (10×, 100×…) čas zrychlí, 1× ho '
+        + 'vrátí do reálného tempa a ⏸ zastaví úplně. U důležité události '
+        + 'hra sama zpomalí na 1× — a v klidných pasážích zase sama přidá. '
+        + 'Zrychli teď na 100×.',
+      en: 'THIS is the time control: a higher multiplier (10×, 100×…) speeds '
+        + 'time up, 1× returns to real time and ⏸ pauses completely. The '
+        + 'game slows to 1× on important events by itself — and speeds up '
+        + 'again in quiet stretches. Speed up to 100× now.',
     },
     done: (s, ui) => ui.compression >= 10,
   },
@@ -385,6 +387,38 @@ const MISSION00_STEPS: TutorialStep[] = [
         + 'you away.)',
     },
     done: s => s.contacts.player.some(c => c.shipId === 3 && c.idQuality >= 1),
+  },
+  {
+    anchor: '.ob',
+    text: {
+      cs: 'OVLÁDÁNÍ ZBRANÍ — každé tlačítko dělá něco jiného:\n'
+        + '• SALVA 2 / SALVA 4 / PLNÁ — odpal až 2, až 4, nebo všechny šachty '
+        + 'boku (víc, než má loď šachet, nevystřelíš — Vichr má 3)\n'
+        + '• SALVA 2+1 — vrstvená: druhá vlna dopadne SPOLEČNĚ s první\n'
+        + '• OBĚ SALVY — dvojitá salva z obou boků (loď se mezi nimi otočí)\n'
+        + '• PLOŠINY — jednorázový úder z tažených raketových podů\n'
+        + '• ŘÍZENÉ — salva letí na řídicím spoji lodi (ztráta spoje = slábnoucí '
+        + 'zámek); přepnutím na SAMOSTATNÉ je „vystřel a zapomeň"\n'
+        + '• +RUŠIČKA — jedna raketa salvy se obětuje jako rušička\n'
+        + '• AUTO — taktický důstojník pak střílí sám\n'
+        + '• ENERGIE — energetické baterie zblízka (pod 500 tis. km)\n'
+        + '• NÁVNADA svede příchozí rakety; KLÍN a AKT. SENZORY řídí obranu a průzkum\n'
+        + 'Pro dnešek bude stačit SALVA 4.',
+      en: 'WEAPON CONTROLS — every button does something different:\n'
+        + '• VOLLEY 2 / VOLLEY 4 / FULL — launch up to 2, up to 4, or every '
+        + 'tube on the broadside (you can\'t fire more tubes than the ship '
+        + 'has — a Vichr carries 3)\n'
+        + '• VOLLEY 2+1 — layered: the second wave lands TOGETHER with the first\n'
+        + '• BOTH SIDES — a double salvo from both broadsides (the ship rolls between them)\n'
+        + '• PODS — a one-shot strike from the towed missile pods\n'
+        + '• GUIDED — the salvo rides your ship\'s control link (lose the link '
+        + 'and the lock erodes); switch to AUTONOMOUS for fire-and-forget\n'
+        + '• +JAMMER — one missile of the salvo sacrifices itself as a jammer\n'
+        + '• AUTO — the tactical officer keeps firing on his own\n'
+        + '• ENERGY — close-range energy batteries (under 500k km)\n'
+        + '• DECOY seduces incoming missiles; WEDGE and ACT. SENSORS drive defense and recon\n'
+        + 'For today, VOLLEY 4 will do.',
+    },
   },
   {
     anchor: '[data-act="salvo4"]',
