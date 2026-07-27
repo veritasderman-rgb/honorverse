@@ -249,6 +249,8 @@ export function updateTriggers(state: SimState, scenario: Scenario): void {
     if (trigger.once && trigger.fired) continue
     if (!trigger.conditions.every(c => evalCondition(state, c))) continue
     for (const action of trigger.actions) applyAction(state, action)
-    if (trigger.once) trigger.fired = true
+    // fired žije v kopii scénáře (WeakMap engine) — perzistentní stopa pro
+    // save/restore jde do state.firedTriggers (viz scenarioFor)
+    if (trigger.once) { trigger.fired = true; (state.firedTriggers ??= []).push(trigger.id) }
   }
 }

@@ -157,14 +157,17 @@ export class UIController {
   private updateAutoCruise(state: SimState, sawPriority: boolean): void {
     const now = performance.now()
     const missilesLive = state.missiles.some(m => m.phase !== 'dead')
-    const own = this.ownShipId != null ? state.ships.find(s => s.id === this.ownShipId) : null
+    // blízkost měříme ke VŠEM živým lodím hráče — bitva křídla se nesmí
+    // zrychlit jen proto, že vlajková loď zrovna křižuje jinde (Codex review)
+    const ours = state.ships.filter(s => s.side === 'player' && !s.destroyed)
     let hostiles = 0
     let nearHostile = false
     for (const c of state.contacts.player) {
       const tgt = state.ships.find(s => s.id === c.shipId)
       if (tgt?.side !== 'enemy' || tgt.destroyed || tgt.surrendered) continue
       hostiles++
-      if (own && dist(own.pos, contactEstPos(c)) < AUTOCRUISE_NEAR_KM) nearHostile = true
+      const est = contactEstPos(c)
+      if (ours.some(s => dist(s.pos, est) < AUTOCRUISE_NEAR_KM)) nearHostile = true
     }
     const busy = sawPriority || missilesLive || nearHostile
     if (busy) { this.quietSince = null; return }

@@ -535,6 +535,10 @@ export interface SimState {
   objectives: Objective[]
   outcome: 'running' | 'win' | 'lose'
   scenarioId: string
+  /** id už vystřelených once-triggerů — fired žije v kopii scénáře (WeakMap
+   *  engine), tohle je perzistentní stopa pro save/restore rozehrané mise.
+   *  Volitelné kvůli ručně stavěným stavům v testech; engine si ho doplní. */
+  firedTriggers?: string[]
 }
 
 // ---------- API enginu (implementuje sim/engine.ts) ----------

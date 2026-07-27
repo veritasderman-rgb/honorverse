@@ -60,4 +60,10 @@ export class CombatStatsTracker {
 
   /** reset — volat při startu nové mise */
   reset(): void { this.stats = emptyStats() }
+
+  /** obnova ze save rozehrané mise — jinak by skóre po POKRAČOVAT počítalo
+   *  jen události po obnově (rozbitá přesnost i leaderboard) */
+  restore(s: CombatStats): void {
+    this.stats = { ...emptyStats(), ...s, ourLoss: { ...s.ourLoss }, incLoss: { ...s.incLoss } }
+  }
 }

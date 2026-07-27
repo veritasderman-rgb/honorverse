@@ -611,7 +611,16 @@ function showFleetHall(): void {
 /** Save = kompletní SimState (rng i triggery žijí v něm — viz sim/rng.ts);
  *  jen kampaň, skirmish/arkáda jsou krátké. Jeden slot: poslední rozehraná. */
 const SAVE_KEY = 'wob-mission-save'
-interface MissionSave { missionId: string; t: number; savedAt: number; state: SimState }
+interface MissionSave {
+  missionId: string
+  t: number
+  savedAt: number
+  state: SimState
+  /** akumulovaná bojová statistika (skóre/leaderboard) — žije v UI, ne v simu */
+  stats?: CombatStats
+}
+/** statistika čekající na obnovu — onReady ji aplikuje PO svém resetu */
+let pendingStatsRestore: CombatStats | null = null
 
 function loadMissionSave(): MissionSave | null {
   try {
@@ -632,7 +641,7 @@ function autosaveMission(state: SimState): void {
   if (currentMissionId === 'skirmish' || currentMissionId === '' || state.outcome !== 'running') return
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(
-      { missionId: currentMissionId, t: state.t, savedAt: Date.now(), state }))
+      { missionId: currentMissionId, t: state.t, savedAt: Date.now(), state, stats: controller.stats.report }))
   } catch { /* plné úložiště — zkusíme příště */ }
 }
 
@@ -1051,6 +1060,7 @@ function showMissionPrep(id: string): void {
     el.remove()
     setMenuBg(false)
     skipBriefing = true
+    pendingStatsRestore = save.stats ?? null
     track('mission_resume', { t: Math.round(save.t) }, id)
     bridge.restore(save.state)
   })
@@ -1271,6 +1281,8 @@ bridge.onReady = scenario => {
   panels.setSimpleHud(maxRank <= 1)
   stopVoLines()            // čistý start — žádné hlásky z minulé mise
   controller.stats.reset() // bojová statistika (sdílený tracker) — per mise
+  // POKRAČOVAT: statistika ze save (jinak by skóre počítalo jen od obnovy)
+  if (pendingStatsRestore) { controller.stats.restore(pendingStatsRestore); pendingStatsRestore = null }
   panels.resetStats()      // + HUD logy a rozpracované salvy
   plot.setHyperlimit(scenario.hyperlimit ?? null)
   plot.setEnvironment(scenario.decor, scenario.ambient)
