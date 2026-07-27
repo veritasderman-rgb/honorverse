@@ -296,8 +296,125 @@ const MISSION03_STEPS: TutorialStep[] = [
   },
 ]
 
+/** MISE 0 — akademie: úplné základy (kamera, čas, kurz, senzory, salva) */
+const MISSION00_STEPS: TutorialStep[] = [
+  {
+    anchor: null,
+    text: {
+      cs: 'Vítej na akademii, kadete. Tohle je taktický displej — tvoje loď '
+        + 'je zelená značka, vzdálenosti jsou skutečné miliony kilometrů. '
+        + 'Dnes nikdo nestřílí zpátky; projdeme úplné základy.',
+      en: 'Welcome to the academy, cadet. This is the tactical display — your '
+        + 'ship is the green marker, and the distances are real millions of '
+        + 'kilometres. Nobody shoots back today; we\'ll cover the very basics.',
+    },
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'Nejdřív kamera: kolečkem myši (nebo štípnutím prstů) přibližuješ '
+        + 'a oddaluješ, tažením posouváš mapu. Vyzkoušej si to a pokračuj.',
+      en: 'Camera first: zoom with the mouse wheel (or pinch), drag to pan '
+        + 'the map. Try it, then continue.',
+    },
+  },
+  {
+    anchor: '[data-fold="contacts"]',
+    text: {
+      cs: 'Vpravo nahoře je seznam KONTAKTŮ. Tvůj první cíl letu je '
+        + 'navigační bóje Alfa — na displeji nese značku ◎. Klepni na ni '
+        + '(na displeji, nebo v seznamu).',
+      en: 'Top right is the CONTACTS list. Your first waypoint is nav buoy '
+        + 'Alfa — it carries the ◎ marker on the display. Tap it (on the '
+        + 'display or in the list).',
+    },
+    done: (s, ui) => isObjectiveShip(s, ui.targetId),
+  },
+  {
+    anchor: '[data-act="course"]',
+    text: {
+      cs: 'Teď kurz: klepni na KURZ SEM a pak na místo u bóje. Loď si '
+        + 'spočítá otočku, zrychlení i brzdění sama — ty velíš, ona letí.',
+      en: 'Now the course: tap COURSE HERE, then a spot near the buoy. The '
+        + 'ship computes the turn, burn and braking herself — you command, '
+        + 'she flies.',
+    },
+    done: (s, ui) => own(s, ui)?.nav != null,
+  },
+  {
+    anchor: '[data-act="throttle:100"]',
+    text: {
+      cs: 'Tah rozhoduje, jak rychle se rozkaz stane pohybem: nastav 100 %. '
+        + '(Nad 100 % je nouzový výkon — ten si šetři na horší dny.)',
+      en: 'Throttle decides how fast orders become motion: set 100%. '
+        + '(Above 100% is emergency power — save that for worse days.)',
+    },
+    done: (s, ui) => (own(s, ui)?.throttle ?? 0) >= 0.99,
+  },
+  {
+    anchor: '[data-comp="100"]',
+    text: {
+      cs: 'Vesmír je veliký a přesuny trvají. Zrychli čas na 100× — u '
+        + 'důležité události ho hra sama vrátí na 1× (a v klidných pasážích '
+        + 'zase sama přidá).',
+      en: 'Space is big and transits take time. Speed time up to 100× — the '
+        + 'game drops back to 1× at important events (and speeds up again '
+        + 'in quiet stretches).',
+    },
+    done: (s, ui) => ui.compression >= 10,
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'Teď jen doleť k bóji — sleduj, jak se vzdálenost v seznamu '
+        + 'kontaktů krátí. Instruktorka se ozve, až budeš u ní.',
+      en: 'Now just fly to the buoy — watch the range shrink in the contacts '
+        + 'list. The instructor will call when you arrive.',
+    },
+    done: s => s.objectives.find(o => o.id === 'obj-buoy')?.state === 'done',
+  },
+  {
+    anchor: '[data-act="sensors"]',
+    text: {
+      cs: 'Ostrá část: na okruhu stojí cvičný kýl Beta. Zapni AKTIVNÍ '
+        + 'SENZORY — pasivní odposlech ti řekne, ŽE tam něco je; aktivní '
+        + 'radar ti řekne CO. (V boji se tím ale prozradíš.)',
+      en: 'Live-fire part: training hulk Beta sits on the circuit. Switch '
+        + 'ACTIVE SENSORS on — passive listening tells you something is '
+        + 'there; active radar tells you WHAT. (In combat it also gives '
+        + 'you away.)',
+    },
+    done: s => s.contacts.player.some(c => c.shipId === 3 && c.idQuality >= 1),
+  },
+  {
+    anchor: '[data-act="salvo4"]',
+    text: {
+      cs: 'Cíl klasifikován. Vyber kýl Beta jako cíl a pošli SALVU 4 — '
+        + 'rakety poletí desítky sekund, u cíle bez obrany ale dopadnou '
+        + 'všechny. První ostrá salva tvé kariéry, kadete.',
+      en: 'Target classified. Select hulk Beta as your target and send '
+        + 'VOLLEY 4 — the missiles fly for tens of seconds, but against an '
+        + 'undefended target they all strike home. The first live salvo of '
+        + 'your career, cadet.',
+    },
+    done: s => s.missiles.some(m => m.side === 'player')
+      || s.ships.find(x => x.id === 3)?.destroyed === true,
+  },
+  {
+    anchor: null,
+    text: {
+      cs: 'Salva letí — přibliž si ji na displeji a sleduj dolet. Až kýl '
+        + 'zmizí z displeje, akademie tě pouští do služby.',
+      en: 'The salvo is away — zoom in and watch it run. When the hulk '
+        + 'disappears from the display, the academy clears you for duty.',
+    },
+    done: s => s.outcome === 'win',
+  },
+]
+
 /** tutoriály po misích; mise bez záznamu tutoriál nemá */
 export const TUTORIALS: Record<string, TutorialStep[]> = {
+  mission00: MISSION00_STEPS,
   mission01: MISSION01_STEPS,
   mission02: MISSION02_STEPS,
   mission03: MISSION03_STEPS,

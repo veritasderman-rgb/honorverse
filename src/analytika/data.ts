@@ -45,7 +45,7 @@ export interface SegmentRow {
 
 /** kampaňové pořadí misí — funnel se řadí podle linie, ne abecedně */
 export const MISSION_ORDER = [
-  'mission01', 'mission02', 'mission03', 'side01', 'mission04', 'mission05',
+  'mission00', 'mission01', 'mission02', 'mission03', 'side01', 'mission04', 'mission05',
   'side02', 'mission06', 'mission07', 'mission08', 'side03', 'mission09',
   'mission10', 'mission11', 'skirmish',
 ]

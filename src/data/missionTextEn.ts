@@ -75,6 +75,22 @@ export const MISSION_TEXT_EN: Record<string, string> = {
   'Zástěna základny mění vektor — jdou po nás. Průlom začíná.':
     'The base screen is changing vector — they are coming for us. The breakthrough begins.',
 
+  // ---------- mise 0 (akademie) ----------
+  'Instruktorka Sarnow: „Vítej na okruhu, kadete. Bez nervů — dnes po tobě nikdo nestřílí. Nejdřív letecké základy: doleť k bóji Alfa. Displej tě povede."':
+    'Instructor Sarnow: "Welcome to the circuit, cadet. Relax — nobody shoots back today. Flight basics first: fly to buoy Alfa. The display will guide you."',
+  'Instruktorka Sarnow: „Čistý průlet, kadete. Teď ostrá část: na okruhu stojí cvičný kýl Beta. Zapni aktivní senzory, klasifikuj ho a pošli mu první ostrou salvu tvé kariéry."':
+    'Instructor Sarnow: "Clean pass, cadet. Now the live part: training hulk Beta sits on the circuit. Light up your active sensors, classify her and send her the first live salvo of your career."',
+  'Taktický: „Cíl klasifikován — vyřazený trup, žádná obrana. Palebné řešení připraveno, kapitáne. Až řekneš."':
+    'Tactical: "Target classified — decommissioned hull, no defenses. Firing solution ready, captain. On your word."',
+  'První salva, první zásah. Akademie tě pouští do služby — celní hlídka u Křižovatky čeká.':
+    'First salvo, first hit. The academy clears you for duty — the customs picket at the Watchgate is waiting.',
+  'Navigační bóje cvičného okruhu akademie. Generace kadetů ji míjely na první hlídce — a pár jich do ní i narazilo.':
+    'Nav buoy of the academy training circuit. Generations of cadets passed her on their first watch — and a few ran into her.',
+  'Vyřazený nákladní trup odtažený na okruh jako terč. Pohon mrtvý, zbraně žádné — jeho jediná práce je stát v cestě salvám kadetů.':
+    'A decommissioned freighter hull towed onto the circuit as a target. Drive dead, no weapons — her only job is to stand in the way of cadet salvos.',
+  'Avalon Prime — trůnní svět Království. Z orbity vypadá mírově; právě proto existuje flotila.':
+    'Avalon Prime — throne world of the Kingdom. From orbit it looks peaceful; that is exactly why the fleet exists.',
+
   // ---------- přidané cíle (addObjective — pro řádek „New objective: …") ----------
   'Znič pomocný křižník': 'Destroy the auxiliary cruiser',
   '(Volitelné) Zachraň posádku Hermes — přibliž se na 500 tis. km':

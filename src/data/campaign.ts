@@ -27,7 +27,10 @@ export interface CampaignNode {
  * pravého horního (Cádiz, finále). Pořadí `requires` = kampaňová posloupnost.
  */
 export const CAMPAIGN_NODES: CampaignNode[] = [
-  { id: 'mission01', x: 80, y: 520 },
+  // akademie: výcvik úplných začátků — startovní uzel kampaně
+  // (y tak, aby popisek uzlu na y+32 zůstal uvnitř viewBoxu 600)
+  { id: 'mission00', x: 45, y: 555 },
+  { id: 'mission01', x: 80, y: 520, requires: 'mission00' },
   { id: 'mission02', x: 195, y: 445, requires: 'mission01' },
   { id: 'mission03', x: 300, y: 505, requires: 'mission02' },
   { id: 'mission04', x: 415, y: 410, requires: 'mission03' },
@@ -160,5 +163,8 @@ export const NEBULAE: { x: number; y: number; rx: number; ry: number; hue: numbe
 export function isMissionUnlocked(id: string, cleared: readonly string[]): boolean {
   const n = CAMPAIGN_NODES.find(node => node.id === id)
   if (!n) return false
+  // už vyčištěná mise zůstává hratelná i kdyby se řetěz požadavků změnil
+  // (např. veterán z dob, kdy kampaň začínala misí 1, ne akademií)
+  if (cleared.includes(id)) return true
   return !n.requires || cleared.includes(n.requires)
 }

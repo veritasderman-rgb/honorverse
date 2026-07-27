@@ -37,6 +37,7 @@ export interface MissionScore {
 
 /** par čas (s) a násobič obtížnosti mise */
 export const MISSION_PAR: Record<string, { par: number; mult: number }> = {
+  mission00: { par: 3_000, mult: 0.5 }, // akademie: krátký výcvik, poloviční váha
   mission01: { par: 8_000, mult: 1.0 },
   mission02: { par: 6_000, mult: 1.1 },
   mission03: { par: 5_000, mult: 1.1 },

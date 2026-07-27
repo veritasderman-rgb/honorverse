@@ -1,5 +1,6 @@
 /** Registr misí kampaně. */
 import type { Scenario } from '../../sim/types'
+import { mission00 } from './mission00'
 import { mission01 } from './mission01'
 import { mission02 } from './mission02'
 import { mission03 } from './mission03'
@@ -16,6 +17,7 @@ import { side02 } from './side02'
 import { side03 } from './side03'
 
 export const SCENARIOS: Record<string, Scenario> = {
+  [mission00.id]: mission00,
   [mission01.id]: mission01,
   [mission02.id]: mission02,
   [mission03.id]: mission03,
