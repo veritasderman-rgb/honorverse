@@ -60,6 +60,10 @@ const DICT: Record<string, { cs: string; en: string }> = {
   // úvod kampaně
   'intro.title': { cs: 'WALL OF BATTLE — KAMPAŇ', en: 'WALL OF BATTLE — CAMPAIGN' },
   'intro.continue': { cs: 'POKRAČOVAT', en: 'CONTINUE' },
+  // filmové intro (titulní obrazovka)
+  'cine.enter': { cs: '▶ VSTOUPIT DO BITVY', en: '▶ ENTER THE BATTLE' },
+  'cine.skip': { cs: 'přeskočit intro', en: 'skip intro' },
+  'menu.intro': { cs: '🎬 INTRO', en: '🎬 INTRO' },
   // voiceover (namluvené prology/epilogy)
   'vo.play': { cs: '🔊 ▶ komentář', en: '🔊 ▶ voiceover' },
   'vo.pause': { cs: '🔊 ⏸ komentář', en: '🔊 ⏸ voiceover' },

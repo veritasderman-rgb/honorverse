@@ -8,14 +8,18 @@
  */
 import { writeFileSync } from 'node:fs'
 import {
-  CAMPAIGN_INTRO, CAMPAIGN_INTRO_EN, DEFEAT_GENERIC, DEFEAT_GENERIC_EN,
-  MISSION_STORY, MISSION_STORY_EN,
+  CAMPAIGN_INTRO, CAMPAIGN_INTRO_EN, CINEMATIC_LINES, CINEMATIC_LINES_EN,
+  DEFEAT_GENERIC, DEFEAT_GENERIC_EN, MISSION_STORY, MISSION_STORY_EN,
 } from '../src/data/story.ts'
 
 interface Entry { name: string; label: string; cs: string; en: string; optional?: boolean }
 
 const entries: Entry[] = [
   { name: 'intro', label: 'Úvod kampaně', cs: CAMPAIGN_INTRO, en: CAMPAIGN_INTRO_EN },
+  {
+    name: 'cinematic', label: 'Filmové intro (titulní obrazovka) — epicky, pomalu, s patosem',
+    cs: CINEMATIC_LINES.join(' '), en: CINEMATIC_LINES_EN.join(' '),
+  },
 ]
 
 for (const id of Object.keys(MISSION_STORY)) {
