@@ -85,22 +85,22 @@ export const mission10: Scenario = {
     // na detekci svazu (< 40 mil. km) přejde do lovu — FÁZE 1 (průlom)
     // leží záměrně DALEKO před polem podů (< 60 mil. km od základny)
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'IDS Córdoba',
+      classId: 'ca-burgos', side: 'enemy', name: 'IDS Córdoba',
       pos: { x: -70_000_000, y: 6_000_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'IDS Granada',
+      classId: 'ca-burgos', side: 'enemy', name: 'IDS Granada',
       pos: { x: -70_000_000, y: -6_000_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'IDS Altair',
+      classId: 'cl-sevilla', side: 'enemy', name: 'IDS Altair',
       pos: { x: -66_000_000, y: 0 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'IDS Sirius',
+      classId: 'cl-sevilla', side: 'enemy', name: 'IDS Sirius',
       pos: { x: -68_000_000, y: 2_500_000 }, vel: { x: 250, y: 0 },
       doctrine: 'freighter',
     },

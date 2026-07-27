@@ -56,12 +56,12 @@ export const side03: Scenario = {
       pos: { x: 0, y: -1_500_000 }, vel: { x: 260, y: 0 }, doctrine: 'player',
     },
     {
-      classId: 'dd-vichr', side: 'enemy', name: 'IDS Tercio',
+      classId: 'dd-cadiz', side: 'enemy', name: 'IDS Tercio',
       pos: { x: 30_000_000, y: 4_000_000 }, vel: { x: 0, y: -150 },
       doctrine: 'hunter', activeSensors: true,
     },
     {
-      classId: 'dd-vichr', side: 'enemy', name: 'IDS Bandera',
+      classId: 'dd-cadiz', side: 'enemy', name: 'IDS Bandera',
       pos: { x: 33_000_000, y: -4_000_000 }, vel: { x: 0, y: 150 },
       doctrine: 'hunter', activeSensors: true,
     },

@@ -58,8 +58,8 @@ const secondLine = (): Subsystems => ({
  * sled 2 (rezervy) jen polovinu papírového stavu */
 const MAGAZINES: Record<string, { m1: number; c1: number; m2: number; c2: number }> = {
   'dn-ural': { m1: 300, c1: 300, m2: 400, c2: 350 },
-  'ca-bastion': { m1: 100, c1: 80, m2: 140, c2: 210 },
-  'cl-sokol': { m1: 60, c1: 50, m2: 75, c2: 170 },
+  'ca-burgos': { m1: 100, c1: 80, m2: 140, c2: 210 },
+  'cl-sevilla': { m1: 60, c1: 50, m2: 75, c2: 170 },
 }
 
 /** útočník sledu: „přistál" na hyperlimitu, kurz na stanici (brzdí k cíli).
@@ -172,9 +172,9 @@ export const mission09: Scenario = {
       actions: [
         { kind: 'message', text: 'Translace potvrzena — první sled invaze přistál na hyperlimitu a najíždí na Křižovatku! V čele dreadnought!' },
         invader(9101, 'dn-ural', 'IDS Toledo', 200_000_000, 42_000_000, 1),
-        invader(9102, 'ca-bastion', 'IDS Bellatrix', 200_000_000, 40_000_000, 1),
-        invader(9103, 'ca-bastion', 'IDS Antares', 200_000_000, 44_000_000, 1),
-        invader(9104, 'cl-sokol', 'IDS Rigel', 203_000_000, 38_000_000, 1),
+        invader(9102, 'ca-burgos', 'IDS Bellatrix', 200_000_000, 40_000_000, 1),
+        invader(9103, 'ca-burgos', 'IDS Antares', 200_000_000, 44_000_000, 1),
+        invader(9104, 'cl-sevilla', 'IDS Rigel', 203_000_000, 38_000_000, 1),
       ],
     },
     {
@@ -211,10 +211,10 @@ export const mission09: Scenario = {
           kind: 'comm', vo: 'm09-c4', speaker: 'station',
           text: 'Kontrola Křižovatka: „Nové translační stopy — mínus sto devadesát na mínus šedesát! Jsou za vámi, opakuji, druhý sled je MEZI vámi a stanicí! Vladaři, tady jsou tři tisíce lidí!"',
         },
-        invader(9201, 'ca-bastion', 'IDS Deneb', -190_000_000, -60_000_000, 2),
-        invader(9202, 'ca-bastion', 'IDS Dubhe', -193_000_000, -58_000_000, 2),
-        invader(9203, 'cl-sokol', 'IDS Mizar', -190_000_000, -56_000_000, 2),
-        invader(9204, 'cl-sokol', 'IDS Alkor', -193_000_000, -62_000_000, 2),
+        invader(9201, 'ca-burgos', 'IDS Deneb', -190_000_000, -60_000_000, 2),
+        invader(9202, 'ca-burgos', 'IDS Dubhe', -193_000_000, -58_000_000, 2),
+        invader(9203, 'cl-sevilla', 'IDS Mizar', -190_000_000, -56_000_000, 2),
+        invader(9204, 'cl-sevilla', 'IDS Alkor', -193_000_000, -62_000_000, 2),
       ],
     },
 

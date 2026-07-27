@@ -70,18 +70,18 @@ export const mission07: Scenario = {
     // úsporný výkon kompenzátorů (throttle 0.5 — vlečou pody a šetří stroje)
     // a nese jen pohotovostní palebný příděl raket — zato má PODY (zvrat).
     {
-      classId: 'dd-vichr', side: 'enemy', name: 'IDS Lanza',
+      classId: 'dd-cadiz', side: 'enemy', name: 'IDS Lanza',
       pos: { x: 5_000_000, y: 2_500_000 }, vel: { x: -300, y: 0 },
       doctrine: 'escort', activeSensors: true, throttle: 0.5, missiles: 30,
     },
     {
-      classId: 'dd-vichr', side: 'enemy', name: 'IDS Tormenta',
+      classId: 'dd-cadiz', side: 'enemy', name: 'IDS Tormenta',
       pos: { x: 5_000_000, y: -2_500_000 }, vel: { x: -300, y: 0 },
       doctrine: 'escort', activeSensors: true, throttle: 0.5, missiles: 30,
     },
     {
       // eskortní lehký křižník — na vleku raketové pody (zvrat!)
-      classId: 'cl-sokol', side: 'enemy', name: 'IDS Centinela',
+      classId: 'cl-sevilla', side: 'enemy', name: 'IDS Centinela',
       pos: { x: 8_000_000, y: 0 }, vel: { x: -300, y: 0 },
       doctrine: 'escort', activeSensors: true, throttle: 0.5, missiles: 40,
     },

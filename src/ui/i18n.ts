@@ -9,16 +9,14 @@ export type Lang = 'cs' | 'en'
 
 const LANG_KEY = 'wob-lang'
 
-/** detekce jazyka: uložená volba > prohlížeč (cs/sk → čeština) > ANGLIČTINA */
+/** Jazyk: uložená volba > ANGLIČTINA. Hra začíná vždy anglicky — čeština
+ *  se zapíná aktivně tlačítkem jazyka (volba se pak pamatuje). */
 function detectLang(): Lang {
   try {
     const saved = localStorage.getItem(LANG_KEY)
     if (saved === 'cs' || saved === 'en') return saved
   } catch { /* noop */ }
-  try {
-    const nav = (navigator.language || (navigator.languages && navigator.languages[0]) || 'en').toLowerCase()
-    return nav.startsWith('cs') || nav.startsWith('sk') ? 'cs' : 'en'
-  } catch { return 'en' }
+  return 'en'
 }
 
 let current: Lang = detectLang()
