@@ -15,6 +15,23 @@ interface MissionSurfaceEn {
 }
 
 const EN: Record<string, MissionSurfaceEn> = {
+  mission00: {
+    title: 'Academy: First Watch',
+    briefing:
+      'Welcome to the academy, cadet. This is the training circuit above '
+      + 'Avalon Prime — no enemy, no risk, just you, the destroyer ANS Kadet '
+      + 'and an instructor on the line.\n\n'
+      + 'Tasks: (1) fly to nav buoy Alfa, (2) find training hulk Beta, '
+      + 'classify her with your sensors and destroy her with the first live '
+      + 'salvo of your career.\n\n'
+      + 'TRAINING: camera and time, course and throttle, sensors and a '
+      + 'missile volley — everything you need before we clear you for '
+      + 'customs picket.',
+    objectives: {
+      'obj-buoy': 'Fly to buoy Alfa (close to 500k km)',
+      'obj-hulk': 'Classify and destroy training hulk Beta',
+    },
+  },
   mission01: {
     title: 'Watchgate Patrol',
     briefing:

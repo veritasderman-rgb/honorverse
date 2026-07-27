@@ -43,7 +43,10 @@ describe('hvězdná mapa kampaně', () => {
   })
 
   it('startovní mise je odemčená i bez postupu', () => {
-    expect(isMissionUnlocked('mission01', [])).toBe(true)
+    expect(isMissionUnlocked('mission00', [])).toBe(true)
+    // kampaň začíná akademií — mise 1 se odemyká jejím splněním
+    expect(isMissionUnlocked('mission01', [])).toBe(false)
+    expect(isMissionUnlocked('mission01', ['mission00'])).toBe(true)
   })
 
   it('navazující mise je zamčená, dokud není splněn požadavek', () => {

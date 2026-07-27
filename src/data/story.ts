@@ -60,6 +60,19 @@ export interface MissionStory {
 }
 
 export const MISSION_STORY: Record<string, MissionStory> = {
+  mission00: {
+    prolog:
+      'Každý admirál flotily začínal stejně: na cvičném okruhu nad Avalonem '
+      + 'Prime, v torpédoborci s vyleštěnou přídí a instruktorem na lince. '
+      + 'Dnes je řada na tobě, kadete. Žádný nepřítel, žádná sláva — jen '
+      + 'kurz, tah, senzory a tvá první ostrá salva. To, co se naučíš dnes, tě '
+      + 'jednou udrží naživu.',
+    epilog:
+      'Cvičný kýl Beta se rozpadl přesně podle učebnice a instruktorka '
+      + 'Sarnow poprvé neřekla „špatně". Akademie ti podepsala výkaz: '
+      + 'způsobilý pro službu. Zítra ráno se hlásíš na ANS Dauntless — '
+      + 'celní hlídka u Strážné brány. Nudné přidělení, říkají. Uvidíme.',
+  },
   mission01: {
     prolog:
       'Rutinní celní služba u Avalonské křižovatky — nejnudnější přidělení, '
@@ -414,6 +427,20 @@ export const CINEMATIC_LINES_EN: readonly string[] = [
 ]
 
 export const MISSION_STORY_EN: Record<string, MissionStory> = {
+  mission00: {
+    prolog:
+      'Every admiral of the fleet started the same way: on the training '
+      + 'circuit above Avalon Prime, in a destroyer with a polished bow and '
+      + 'an instructor on the line. Today it is your turn, cadet. No enemy, '
+      + 'no glory — just course, throttle, sensors and your first live '
+      + 'salvo. What you learn today will one day keep you alive.',
+    epilog:
+      'Training hulk Beta came apart exactly by the book, and for the first '
+      + 'time Instructor Sarnow did not say "wrong". The academy signed your '
+      + 'record: fit for duty. Tomorrow morning you report to ANS Dauntless '
+      + '— customs picket at the Watchgate. A boring assignment, they say. '
+      + 'We shall see.',
+  },
   mission01: {
     prolog:
       'Routine customs duty at the Avalon Junction — the dullest posting the '

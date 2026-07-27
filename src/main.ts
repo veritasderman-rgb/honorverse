@@ -12,7 +12,7 @@ import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
 import { clearVoLinesQueue, configureVoLines, stopVoLines, voLinesOnEvents } from './ui/voLines'
-import { fmtDec, fmtNum, getLang, t, t as tr, tf, toggleLang } from './ui/i18n'
+import { fmtDec, fmtNum, getLang, setLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
 import { shipClassLore, shipClassName } from './data/shipsEn'
 import type { CombatStats } from './ui/combatStats'
@@ -305,7 +305,10 @@ function showCinematicIntro(onDone: () => void): void {
     `<video src="${CINE_CLIPS[0]}" muted autoplay playsinline preload="auto"></video>`
     + `<div id="cine-caption"></div>`
     + `<div id="cine-title"><h1>WALL OF BATTLE</h1>`
-    + `<button id="cine-enter">${t('cine.enter')}</button></div>`
+    + `<div id="cine-enter-row">`
+    + `<button class="cine-enter" data-lang="en">ENTER</button>`
+    + `<button class="cine-enter" data-lang="cs">VSTUPTE</button>`
+    + `</div></div>`
     + `<button id="cine-skip" aria-label="${t('cine.skip')}" title="${t('cine.skip')}">×</button>`
   document.body.appendChild(el)
   const vid = el.querySelector('video')!
@@ -319,11 +322,9 @@ function showCinematicIntro(onDone: () => void): void {
     void vid.play().catch(() => { /* pauza — nevadí, titulky jedou */ })
   })
 
-  // VO: připravit dopředu; hraje se jen když se nahrávka stihla načíst
-  const vo = new Audio(`audio/vo/cinematic-${getLang()}.mp3`)
-  vo.preload = 'auto'
+  // VO se vytváří až po volbě jazyka (ENTER/VSTUPTE) — do té doby ticho
+  let vo: HTMLAudioElement | null = null
   let voReady = false
-  vo.addEventListener('canplaythrough', () => { voReady = true }, { once: true })
 
   const timers: number[] = []
   let finished = false
@@ -331,7 +332,7 @@ function showCinematicIntro(onDone: () => void): void {
     if (finished) return
     finished = true
     for (const id of timers) clearTimeout(id)
-    vo.pause()
+    vo?.pause()
     vid.pause()
     audio.duck(false)
     markIntroSeen()
@@ -341,16 +342,30 @@ function showCinematicIntro(onDone: () => void): void {
   onTap(el.querySelector('#cine-skip'), () => { track('cine_skip'); finish() })
 
   const LINE_MS = 5200 // jedna věta: nájezd, čtení, odchod (viz CSS animace)
-  onTap(el.querySelector('#cine-enter'), () => {
+  // vstup = volba jazyka: ENTER (en) / VSTUPTE (cs); volba se uloží
+  const enter = (lang: 'cs' | 'en'): void => {
+    if (getLang() !== lang) {
+      setLang(lang)
+      bridge.lang = lang
+      applyStaticI18n()
+      track('lang_set', { to: lang })
+    }
+    // VO ve zvoleném jazyce — načítá se až od kliknutí
+    const v = new Audio(`audio/vo/cinematic-${lang}.mp3`)
+    vo = v
+    v.preload = 'auto'
+    v.addEventListener('canplaythrough', () => { voReady = true }, { once: true })
     el.querySelector('#cine-title')?.remove()
     // restart od začátku se zvukem — výbuchy z videa jsou součást zážitku;
     // globální mute a hlasitost efektů ale platí i tady (Codex review)
     vid.muted = audio.muted
     vid.volume = audio.sfxVolume
-    vo.volume = audio.sfxVolume
+    v.volume = audio.sfxVolume
     vid.currentTime = 0
     void vid.play().catch(() => { /* blokováno — titulky pojedou i tak */ })
-    if (voReady && !audio.muted) void vo.play().catch(() => { /* bez VO */ })
+    const tryVo = (): void => { if (!audio.muted) void v.play().catch(() => { /* bez VO */ }) }
+    if (voReady) tryVo()
+    else v.addEventListener('canplaythrough', tryVo, { once: true })
     track('cine_start')
     const lines = cinematicLines()
     lines.forEach((text, i) => {
@@ -364,11 +379,14 @@ function showCinematicIntro(onDone: () => void): void {
     // konec po titulcích; rozehrané vyprávění nechat doznít (tvrdý strop)
     const capEnd = lines.length * LINE_MS + 1200
     timers.push(window.setTimeout(() => {
-      if (vo.paused || vo.ended) { finish(); return }
-      vo.addEventListener('ended', finish, { once: true })
+      if (v.paused || v.ended) { finish(); return }
+      v.addEventListener('ended', finish, { once: true })
       timers.push(window.setTimeout(finish, 20_000))
     }, capEnd))
-  })
+  }
+  for (const b of el.querySelectorAll<HTMLElement>('.cine-enter')) {
+    onTap(b, () => enter(b.getAttribute('data-lang') === 'cs' ? 'cs' : 'en'))
+  }
 }
 
 /** stav soustavy na mapě podle postupu kampaně */
@@ -845,6 +863,7 @@ function showSkirmishBuilder(): void {
 
 /** úvodní scéna mise (public/img/<hodnota>.png) */
 const MISSION_SCENES: Record<string, string> = {
+  mission00: 'scene-dd-patrol',
   mission01: 'scene-dd-patrol',      // královský DD na celní hlídce
   mission02: 'scene-convoy',
   mission03: 'scene-qship',          // obchodník odhaluje skrytý arzenál (Mercator!)
@@ -868,6 +887,7 @@ const MISSION_SCENES: Record<string, string> = {
  * scénu (MISSION_SCENES). Viz docs/VIDEO_BRIEFINGS.md.
  */
 const MISSION_VIDEOS: Record<string, string> = {
+  mission00: 'brief-mission00',
   mission01: 'brief-mission01', mission02: 'brief-mission02',
   mission03: 'brief-mission03', mission04: 'brief-mission04',
   mission05: 'brief-mission05', mission06: 'brief-mission06',
