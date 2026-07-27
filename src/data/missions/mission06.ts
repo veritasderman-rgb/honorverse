@@ -51,17 +51,17 @@ export const mission06: Scenario = {
     },
     {
       // pronásledovatelé: nepoškození a rychlejší — dohánějí
-      classId: 'ca-bastion', side: 'enemy', name: 'IDS Vega',
+      classId: 'ca-burgos', side: 'enemy', name: 'IDS Vega',
       pos: { x: -35_000_000, y: 2_000_000 }, vel: { x: 9_000, y: 0 },
       doctrine: 'hunter', activeSensors: true,
     },
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'IDS Deneb',
+      classId: 'ca-burgos', side: 'enemy', name: 'IDS Deneb',
       pos: { x: -35_000_000, y: -2_000_000 }, vel: { x: 9_000, y: 0 },
       doctrine: 'hunter', activeSensors: true,
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'IDS Mizar',
+      classId: 'cl-sevilla', side: 'enemy', name: 'IDS Mizar',
       pos: { x: -37_000_000, y: 0 }, vel: { x: 9_000, y: 0 },
       doctrine: 'hunter', activeSensors: true,
     },

@@ -65,17 +65,17 @@ export const mission08: Scenario = {
     },
     // imperiální stěna: tichý drift ve formaci; na kontakt přejde do lovu
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'IDS Polaris',
+      classId: 'ca-burgos', side: 'enemy', name: 'IDS Polaris',
       pos: { x: 60_000_000, y: 4_000_000 }, vel: { x: -600, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'ca-bastion', side: 'enemy', name: 'IDS Procyon',
+      classId: 'ca-burgos', side: 'enemy', name: 'IDS Procyon',
       pos: { x: 60_000_000, y: -4_000_000 }, vel: { x: -600, y: 0 },
       doctrine: 'freighter',
     },
     {
-      classId: 'cl-sokol', side: 'enemy', name: 'IDS Capella',
+      classId: 'cl-sevilla', side: 'enemy', name: 'IDS Capella',
       pos: { x: 63_000_000, y: 0 }, vel: { x: -600, y: 0 },
       doctrine: 'freighter',
     },

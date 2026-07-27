@@ -100,7 +100,7 @@ describe('registrace misí 9–10', () => {
     expect(base.pos).toEqual({ x: -120_000_000, y: 0 })
     // zástěna (2× CA + 2× CL) startuje jako tichý drift
     expect(M10_PATROL.map(id => shipById(state, id)?.classId))
-      .toEqual(['ca-bastion', 'ca-bastion', 'cl-sokol', 'cl-sokol'])
+      .toEqual(['ca-burgos', 'ca-burgos', 'cl-sevilla', 'cl-sevilla'])
     for (const id of M10_PATROL) expect(shipById(state, id)?.doctrine).toBe('freighter')
     // strážný dreadnought u základny s podříznutými zásobníky
     const guardian = shipById(state, M10_GUARDIAN)!
@@ -127,9 +127,9 @@ describe('mise 9 — Velká armáda', () => {
     // sled 1 = první linie: subsystémy plné, ale zásobníky podříznuté (mise 7)
     expect(lead.subsystems.sensors).toBe(1)
     expect(lead.missiles).toBe(300)
-    expect(shipById(state, 9102)?.classId).toBe('ca-bastion')
-    expect(shipById(state, 9103)?.classId).toBe('ca-bastion')
-    expect(shipById(state, 9104)?.classId).toBe('cl-sokol')
+    expect(shipById(state, 9102)?.classId).toBe('ca-burgos')
+    expect(shipById(state, 9103)?.classId).toBe('ca-burgos')
+    expect(shipById(state, 9104)?.classId).toBe('cl-sevilla')
     expect(shipById(state, 9201)).toBeUndefined() // sled 2 ještě ne
   })
 
@@ -139,7 +139,7 @@ describe('mise 9 — Velká armáda', () => {
     state.t = 5_400
     updateTriggers(state, scenario)
     const lead = shipById(state, 9201)!
-    expect(lead.classId).toBe('ca-bastion')
+    expect(lead.classId).toBe('ca-burgos')
     expect(lead.pos).toEqual({ x: -190_000_000, y: -60_000_000 })
     // opačná strana: sled 1 na +x, sled 2 na −x
     expect(Math.sign(lead.pos.x)).toBe(-Math.sign(shipById(state, 9101)!.pos.x))
@@ -149,9 +149,9 @@ describe('mise 9 — Velká armáda', () => {
     expect(lead.subsystems.pdlc).toBe(0.7)
     expect(lead.subsystems.cm).toBe(0.7)
     expect(lead.missiles).toBe(140)
-    expect(shipById(state, 9202)?.classId).toBe('ca-bastion')
-    expect(shipById(state, 9203)?.classId).toBe('cl-sokol')
-    expect(shipById(state, 9204)?.classId).toBe('cl-sokol')
+    expect(shipById(state, 9202)?.classId).toBe('ca-burgos')
+    expect(shipById(state, 9203)?.classId).toBe('cl-sevilla')
+    expect(shipById(state, 9204)?.classId).toBe('cl-sevilla')
     expect(state.events.some(e => e.kind === 'message'
       && e.text.includes('Druhý sbor vystupuje z hyperu na opačné straně soustavy'))).toBe(true)
     expect(state.events.some(e => e.kind === 'comm' && e.speaker === 'station'

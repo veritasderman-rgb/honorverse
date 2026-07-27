@@ -45,7 +45,7 @@ const screen = (classId: string, name: string, x: number, y: number): Scenario['
  * krvácejí a doky nestíhají): DN 400, CA 160, CL 90, DD 50 raket.
  */
 const IMP_MAGS: Record<string, number> = {
-  'dn-ural': 400, 'ca-bastion': 160, 'cl-sokol': 90, 'dd-vichr': 50,
+  'dn-ural': 400, 'ca-burgos': 160, 'cl-sevilla': 90, 'dd-cadiz': 50,
 }
 const imp = (classId: string, name: string, x: number, y: number,
   doctrine: 'hunter' | 'escort' = 'hunter'): Scenario['ships'][0] => ({
@@ -99,22 +99,22 @@ export const mission11: Scenario = {
     imp('dn-ural', 'IDS Sevilla', 40_000_000, -600_000),
     imp('dn-ural', 'IDS Córdoba', 40_000_000, 1_800_000),
     imp('dn-ural', 'IDS Granada', 40_000_000, -1_800_000),
-    imp('ca-bastion', 'IDS Alcázar', 38_500_000, 900_000),
-    imp('ca-bastion', 'IDS Escorial', 38_500_000, -900_000),
-    imp('ca-bastion', 'IDS Alhambra', 38_500_000, 2_400_000),
-    imp('ca-bastion', 'IDS Aranjuez', 38_500_000, -2_400_000),
-    imp('ca-bastion', 'IDS Segovia', 38_500_000, 3_900_000),
-    imp('ca-bastion', 'IDS Toro', 38_500_000, -3_900_000),
-    imp('cl-sokol', 'IDS Jerez', 37_000_000, 600_000, 'escort'),
-    imp('cl-sokol', 'IDS Cádiz', 37_000_000, -600_000, 'escort'),
-    imp('cl-sokol', 'IDS Málaga', 37_000_000, 1_800_000, 'escort'),
-    imp('cl-sokol', 'IDS Bilbao', 37_000_000, -1_800_000, 'escort'),
-    imp('cl-sokol', 'IDS Vigo', 37_000_000, 3_000_000, 'escort'),
-    imp('cl-sokol', 'IDS Ferrol', 37_000_000, -3_000_000, 'escort'),
-    imp('dd-vichr', 'IDS Lanza', 36_000_000, 1_200_000, 'escort'),
-    imp('dd-vichr', 'IDS Espada', 36_000_000, -1_200_000, 'escort'),
-    imp('dd-vichr', 'IDS Daga', 36_000_000, 2_700_000, 'escort'),
-    imp('dd-vichr', 'IDS Puñal', 36_000_000, -2_700_000, 'escort'),
+    imp('ca-burgos', 'IDS Alcázar', 38_500_000, 900_000),
+    imp('ca-burgos', 'IDS Escorial', 38_500_000, -900_000),
+    imp('ca-burgos', 'IDS Alhambra', 38_500_000, 2_400_000),
+    imp('ca-burgos', 'IDS Aranjuez', 38_500_000, -2_400_000),
+    imp('ca-burgos', 'IDS Segovia', 38_500_000, 3_900_000),
+    imp('ca-burgos', 'IDS Toro', 38_500_000, -3_900_000),
+    imp('cl-sevilla', 'IDS Jerez', 37_000_000, 600_000, 'escort'),
+    imp('cl-sevilla', 'IDS Cádiz', 37_000_000, -600_000, 'escort'),
+    imp('cl-sevilla', 'IDS Málaga', 37_000_000, 1_800_000, 'escort'),
+    imp('cl-sevilla', 'IDS Bilbao', 37_000_000, -1_800_000, 'escort'),
+    imp('cl-sevilla', 'IDS Vigo', 37_000_000, 3_000_000, 'escort'),
+    imp('cl-sevilla', 'IDS Ferrol', 37_000_000, -3_000_000, 'escort'),
+    imp('dd-cadiz', 'IDS Lanza', 36_000_000, 1_200_000, 'escort'),
+    imp('dd-cadiz', 'IDS Espada', 36_000_000, -1_200_000, 'escort'),
+    imp('dd-cadiz', 'IDS Daga', 36_000_000, 2_700_000, 'escort'),
+    imp('dd-cadiz', 'IDS Puñal', 36_000_000, -2_700_000, 'escort'),
     {
       // zásobovací základna za stěnou — statický objekt (paměťové zakreslení)
       classId: 'station-zeta', side: 'enemy', name: 'Základna Almadén',

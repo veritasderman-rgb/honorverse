@@ -48,17 +48,17 @@ export const mission04: Scenario = {
     },
     {
       // imperiální hlídka A — kousek nad driftovou trasou (v koridoru)
-      classId: 'cl-sokol', side: 'enemy', name: 'IDS Antares',
+      classId: 'cl-sevilla', side: 'enemy', name: 'IDS Antares',
       pos: { x: 60_000_000, y: 5_000_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
       // imperiální hlídka B — těžký křižník pod trasou (nutná korekce k −y)
-      classId: 'ca-bastion', side: 'enemy', name: 'IDS Rigel',
+      classId: 'ca-burgos', side: 'enemy', name: 'IDS Rigel',
       pos: { x: 95_000_000, y: -7_500_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
       // imperiální hlídka C — nejhlouběji, zpět nad trasou (korekce k +y)
-      classId: 'cl-sokol', side: 'enemy', name: 'IDS Altair',
+      classId: 'cl-sevilla', side: 'enemy', name: 'IDS Altair',
       pos: { x: 130_000_000, y: 5_500_000 }, vel: { x: 0, y: 0 }, doctrine: 'freighter',
     },
     {
