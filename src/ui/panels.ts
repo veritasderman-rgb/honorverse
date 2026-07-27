@@ -25,6 +25,7 @@ import { type CombatStats } from './combatStats'
 import { fmtDec, fmtNum, getLang, t, tf } from './i18n'
 import { CHARACTERS } from '../data/characters'
 import { objectiveText } from '../data/briefings'
+import { MISSION_TEXT_EN } from '../data/missionTextEn'
 
 /** stav UI vrstvy předávaný z controlleru (src/ui/input.ts) */
 export interface UiState {
@@ -92,7 +93,7 @@ const SUBSYS: { key: keyof Subsystems; label: string }[] = [
 
 /** české názvy rolí + iniciály fallbacku (soubory avatarů dle docs/ART_PROMPTS.md) */
 /** ilustrace tříd lodí (public/img/<hodnota>.png) — klíč je classId nebo hullCode */
-const SHIP_IMAGES: Record<string, string> = {
+export const SHIP_IMAGES: Record<string, string> = {
   'dd-vichr': 'ship-dd', 'cl-sokol': 'ship-cl', 'ca-bastion': 'ship-ca',
   'merch-freighter': 'ship-merch', 'merch-runner': 'ship-merch',
   'merch-qship': 'ship-qship', 'disp-courier': 'ship-courier',
@@ -344,6 +345,16 @@ export class Panels implements HudView {
     this.introduced.clear()
   }
 
+  /** kadetský HUD: vlajková loď DD a menší → bez statistik, salv a plné
+   *  mřížky subsystémů; od lehkého křižníku výš plný HUD (volá main.ts) */
+  private simpleHud = false
+
+  setSimpleHud(on: boolean): void {
+    if (this.simpleHud === on) return
+    this.simpleHud = on
+    this.rerender()
+  }
+
   /** mluvčí už v TÉTO misi dostali intro kartu postavy */
   private introduced = new Set<string>()
 
@@ -384,10 +395,13 @@ export class Panels implements HudView {
       const logText = spk && ev.kind !== 'message' ? `${spk}: ${ev.text}` : ev.text
       this.log.unshift({ t: ev.t, text: logText, warn: !!ev.slowdown || ev.kind === 'shipDestroyed' })
 
-      // komunikace → comm log + výrazný toast
+      // komunikace → comm log vpravo VŽDY; výrazný toast vlevo jen pro
+      // PRIORITNÍ zprávy (slowdown = mise/zvrat) — rutinní operativa
+      // posádky (opravy, zámky, sigint) by jinak překryla půl obrazovky
       if (ev.kind === 'comm' && ev.speaker) {
         this.commLog.unshift({ t: ev.t, speaker: ev.speaker, text: ev.text })
         if (this.commLog.length > 8) this.commLog.length = 8
+        if (!ev.slowdown) continue
         // PRVNÍ replika mluvčího v misi → intro karta postavy (jméno, role,
         // medailonek) — a NESE rovnou i tu repliku: jeden toast místo dvou,
         // jinak by kartu v dávce komunikací vytlačil strop 4 toastů dřív,
@@ -517,11 +531,11 @@ export class Panels implements HudView {
     this.hudTl.innerHTML =
       this.panelFleet(state, ui)
       + this.panelOwnShip(own, state)
-      + this.panelStats(ui)
+      + (this.simpleHud ? '' : this.panelStats(ui))
     this.hudTr.innerHTML =
       this.panelContacts(state, own, ui)
       + this.panelTargetDetail(state, own, ui)
-      + this.panelSalvo(state, own, ui)
+      + (this.simpleHud ? '' : this.panelSalvo(state, own, ui))
       + this.panelObjectives(state)
     this.hudBottom.innerHTML = this.panelOrders(state, own, ui)
     this.hudBr.innerHTML =
@@ -623,7 +637,10 @@ export class Panels implements HudView {
     const impAvg = (own.subsystems.impellerFwd + own.subsystems.impellerAft) / 2
     const accG = own.wedgeOn ? own.throttle * (def?.maxAccelG ?? 0) * impAvg : 0
     const hullPct = def ? Math.max(0, own.hull / def.hullPoints) : 1
-    const rows = SUBSYS.map(s => {
+    // kadetský HUD (DD): mřížku subsystémů ukazuj jen tam, kde hoří —
+    // zdravá loď žádnou nepotřebuje a nováčka zeď procent jen zahltí
+    const subsysList = this.simpleHud ? SUBSYS.filter(s => own.subsystems[s.key] < 0.995) : SUBSYS
+    const rows = subsysList.map(s => {
       const v = own.subsystems[s.key]
       const cls = pctClass(v)
       // ↗ = damage-control čety na subsystému pracují (polní oprava běží)
@@ -722,7 +739,7 @@ export class Panels implements HudView {
       + fireRow
       + waveRow
       + repairRow
-      + `<div class="subsys-grid">${rows}</div>`)
+      + (rows ? `<div class="subsys-grid">${rows}</div>` : ''))
   }
 
   private panelContacts(state: SimState, own: ShipState | null, ui: UiState): string {
@@ -835,7 +852,8 @@ export class Panels implements HudView {
     // popisek objektu ze scénáře (planety, stanice, sondy, bóje, civilní
     // provoz): neutrálům se ukazuje hned, ostatním od klasifikace
     if (tgtShip?.desc !== undefined && (tgtShip.side === 'neutral' || c.idQuality >= 1)) {
-      body += `<div class="cls-lore">${esc(tgtShip.desc)}</div>`
+      const desc = getLang() === 'en' ? (MISSION_TEXT_EN[tgtShip.desc] ?? tgtShip.desc) : tgtShip.desc
+      body += `<div class="cls-lore">${esc(desc)}</div>`
     }
 
     if (c.idQuality >= 2 && tDef && !civil) {

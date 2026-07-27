@@ -347,7 +347,9 @@ export class AudioManager {
           else this.sfx('hitEnemy', 1.5)
           break
         case 'comm':
-          this.sfx('comm')
+          // pípnutí jen k prioritní komunikaci (mise/zvrat) — rutinní
+          // operativa posádky jde tiše do pravého panelu
+          if (ev.slowdown) this.sfx('comm')
           break
         case 'objective':
           this.sfx('objective')

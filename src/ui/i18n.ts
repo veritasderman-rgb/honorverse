@@ -64,6 +64,30 @@ const DICT: Record<string, { cs: string; en: string }> = {
   'cine.enter': { cs: '▶ VSTOUPIT DO BITVY', en: '▶ ENTER THE BATTLE' },
   'cine.skip': { cs: 'přeskočit intro', en: 'skip intro' },
   'menu.intro': { cs: '🎬 INTRO', en: '🎬 INTRO' },
+  // plné názvy typů trupů (skirmish, karta třídy)
+  'hull.DD': { cs: 'Torpédoborec', en: 'Destroyer' },
+  'hull.CL': { cs: 'Lehký křižník', en: 'Light cruiser' },
+  'hull.CA': { cs: 'Těžký křižník', en: 'Heavy cruiser' },
+  'hull.BC': { cs: 'Bitevní křižník', en: 'Battlecruiser' },
+  'hull.DN': { cs: 'Dreadnought', en: 'Dreadnought' },
+  'hull.MERCH': { cs: 'Obchodní loď', en: 'Merchantman' },
+  'hull.STN': { cs: 'Orbitální stanice', en: 'Orbital station' },
+  'hull.DB': { cs: 'Kurýrní loď', en: 'Dispatch courier' },
+  'hull.PRB': { cs: 'Sonda', en: 'Probe' },
+  'hull.PLT': { cs: 'Planeta', en: 'Planet' },
+  'clscard.close': { cs: 'ZAVŘÍT', en: 'CLOSE' },
+  'sk.detailTip': { cs: 'klepni pro detail třídy', en: 'tap for class details' },
+  // arkáda
+  'menu.arcade': { cs: '⚡ ARKÁDA', en: '⚡ ARCADE' },
+  'arcade.tip': {
+    cs: 'Okamžitá bitva zblízka — náhodná sestava, žádný briefing. 5 her na sezení, +1 za každou vyhranou misi kampaně.',
+    en: 'Instant close-range battle — random line-up, no briefing. 5 games per session, +1 for every campaign mission you win.',
+  },
+  'arcade.noneTitle': { cs: 'ARKÁDA VYČERPÁNA', en: 'ARCADE SPENT' },
+  'arcade.none': {
+    cs: 'Limit arkádových her pro tohle sezení je vyčerpaný. Další hru získáš za každou vyhranou misi kampaně — nebo se vrať později.',
+    en: 'You have used up this session\'s arcade games. Win a campaign mission to earn another — or come back later.',
+  },
   // voiceover (namluvené prology/epilogy)
   'vo.play': { cs: '🔊 ▶ komentář', en: '🔊 ▶ voiceover' },
   'vo.pause': { cs: '🔊 ⏸ komentář', en: '🔊 ⏸ voiceover' },

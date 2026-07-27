@@ -100,7 +100,7 @@ function updateEmergencyPower(state: SimState, ship: ShipState, dt: number): voi
   if (ship.doctrine === 'player') {
     state.events.push({
       t: state.t, kind: 'comm', shipId: ship.id, side: ship.side,
-      speaker: 'engineer', slowdown: true, voId: `eng-redline-${msgIdx + 1}`,
+      speaker: 'engineer', slowdown: false, voId: `eng-redline-${msgIdx + 1}`,
       text: `${msg} (${SUBSYSTEM_NAMES[key]} na ${Math.round(ship.subsystems[key] * 100)} %)`,
     })
   }
@@ -116,7 +116,7 @@ function maybeCrewEvent(state: SimState, ship: ShipState, dt: number): void {
     ship.buffs.lockBonus = LOCK_BUFF
     ship.buffs.lockUntil = state.t + LOCK_BUFF_TIME
     state.events.push({
-      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'tactical', slowdown: true, voId: 'crew-event-lock',
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'tactical', slowdown: false, voId: 'crew-event-lock',
       text: `Našel jsem mezeru v jejich obranném vzorci — zámek našich raket +${Math.round(LOCK_BUFF * 100)} % `
         + `na ${Math.round(LOCK_BUFF_TIME / 60)} minut.`,
     })
@@ -128,7 +128,7 @@ function maybeCrewEvent(state: SimState, ship: ShipState, dt: number): void {
     ship.buffs.repairBonus = REPAIR_BUFF
     ship.buffs.repairUntil = state.t + REPAIR_BUFF_TIME
     state.events.push({
-      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'engineer', slowdown: true, voId: 'crew-event-repair',
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'engineer', slowdown: false, voId: 'crew-event-repair',
       text: `Přepojil jsem záložní okruhy — opravy pojedou ${REPAIR_BUFF}× rychleji, `
         + `vydrží to ${Math.round(REPAIR_BUFF_TIME / 60)} minut.`,
     })
@@ -154,12 +154,12 @@ function maybeCrewEvent(state: SimState, ship: ShipState, dt: number): void {
     }
     const className = SHIP_CLASSES[target.classId]?.name ?? target.classId
     state.events.push({
-      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'comms', slowdown: true,
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'comms', slowdown: false,
       text: `Zachytil jsem jejich komunikaci — kontakt #${target.id} je ${className}.`,
     })
   } else {
     state.events.push({
-      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'comms', slowdown: true, voId: 'crew-event-sigint',
+      t: state.t, kind: 'comm', shipId: ship.id, side: ship.side, speaker: 'comms', slowdown: false, voId: 'crew-event-sigint',
       text: 'Zachycená nepřátelská komunikace — šifrovaná. Nahrávám pro rozvědku.',
     })
   }
