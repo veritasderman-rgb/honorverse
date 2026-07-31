@@ -3,8 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "claude/honorverse-game-design-7mee5d": true,
-      "claude/*": false,
-      "dependabot/*": false
+      "claude/**": false,
+      "dependabot/**": false
     }
   },
   "rewrites": [
