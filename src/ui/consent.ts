@@ -67,9 +67,14 @@ function loadGa(gtag: (...args: unknown[]) => void): void {
 /** gtag zůstává po ruce, aby šla lišta znovu otevřít z nabídky. */
 let gtagRef: ((...args: unknown[]) => void) | null = null
 
+/** Dokud je lišta otevřená, drží se tu gtag — jazyk se dá zvolit až na
+ *  filmovém intru, takže texty se pak musí překreslit. */
+let openBannerGtag: ((...args: unknown[]) => void) | null = null
+
 /** Spodní lišta se souhlasem — jen dokud se hráč nerozhodne. */
 function showBanner(gtag: (...args: unknown[]) => void): void {
   document.getElementById('cookie-consent')?.remove()
+  openBannerGtag = gtag
 
   const bar = document.createElement('div')
   bar.id = 'cookie-consent'
@@ -100,6 +105,7 @@ function showBanner(gtag: (...args: unknown[]) => void): void {
         /* private mode — volba platí jen pro tuto návštěvu */
       }
       gtag('consent', 'update', { analytics_storage: choice })
+      openBannerGtag = null
       bar.remove()
     })
     return b
@@ -108,6 +114,12 @@ function showBanner(gtag: (...args: unknown[]) => void): void {
   buttons.append(mk(t('consent.decline'), false, 'denied'), mk(t('consent.accept'), true, 'granted'))
   bar.append(text, buttons)
   document.body.appendChild(bar)
+}
+
+/** Překreslí otevřenou lištu v aktuálním jazyce. Když hráč už odpověděl (nebo
+ *  GA neběží), neudělá nic. Volá se po volbě jazyka na filmovém intru. */
+export function refreshConsentBanner(): void {
+  if (openBannerGtag) showBanner(openBannerGtag)
 }
 
 /** Je měření vůbec zapnuté? Podle toho se v nabídce ukazuje volba souhlasu. */
