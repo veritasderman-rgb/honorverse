@@ -44,11 +44,13 @@ function ensureGtag(): (...args: unknown[]) => void {
   return window.gtag
 }
 
-function consentPayload(choice: Choice) {
+/** Reklamní souhlas zůstává vždycky denied — lišta mluví jen o měření
+ *  návštěvnosti, na reklamní účely se neptá, tak je nesmíme udělit. */
+function consentDefaults(choice: Choice) {
   return {
-    ad_storage: choice,
-    ad_user_data: choice,
-    ad_personalization: choice,
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
     analytics_storage: choice,
   }
 }
@@ -62,8 +64,18 @@ function loadGa(gtag: (...args: unknown[]) => void): void {
   gtag('config', GA_ID)
 }
 
+/** gtag zůstává po ruce, aby šla lišta znovu otevřít z nabídky. */
+let gtagRef: ((...args: unknown[]) => void) | null = null
+
+/** Dokud je lišta otevřená, drží se tu gtag — jazyk se dá zvolit až na
+ *  filmovém intru, takže texty se pak musí překreslit. */
+let openBannerGtag: ((...args: unknown[]) => void) | null = null
+
 /** Spodní lišta se souhlasem — jen dokud se hráč nerozhodne. */
 function showBanner(gtag: (...args: unknown[]) => void): void {
+  document.getElementById('cookie-consent')?.remove()
+  openBannerGtag = gtag
+
   const bar = document.createElement('div')
   bar.id = 'cookie-consent'
   bar.style.cssText =
@@ -92,7 +104,8 @@ function showBanner(gtag: (...args: unknown[]) => void): void {
       } catch {
         /* private mode — volba platí jen pro tuto návštěvu */
       }
-      gtag('consent', 'update', consentPayload(choice))
+      gtag('consent', 'update', { analytics_storage: choice })
+      openBannerGtag = null
       bar.remove()
     })
     return b
@@ -103,13 +116,31 @@ function showBanner(gtag: (...args: unknown[]) => void): void {
   document.body.appendChild(bar)
 }
 
+/** Překreslí otevřenou lištu v aktuálním jazyce. Když hráč už odpověděl (nebo
+ *  GA neběží), neudělá nic. Volá se po volbě jazyka na filmovém intru. */
+export function refreshConsentBanner(): void {
+  if (openBannerGtag) showBanner(openBannerGtag)
+}
+
+/** Je měření vůbec zapnuté? Podle toho se v nabídce ukazuje volba souhlasu. */
+export function analyticsConfigured(): boolean {
+  return !!GA_ID
+}
+
+/** Znovu otevře lištu se souhlasem — z nabídky, kdykoli. Souhlas musí jít
+ *  odvolat stejně snadno, jako se dával. */
+export function openConsentSettings(): void {
+  if (gtagRef) showBanner(gtagRef)
+}
+
 /** Zavolat jednou při bootstrapu, po nastavení jazyka. */
 export function initAnalytics(): void {
   if (!GA_ID) return
 
   const gtag = ensureGtag()
+  gtagRef = gtag
   const stored = storedChoice()
-  gtag('consent', 'default', { ...consentPayload(stored ?? 'denied'), wait_for_update: 500 })
+  gtag('consent', 'default', { ...consentDefaults(stored ?? 'denied'), wait_for_update: 500 })
 
   if (import.meta.env.PROD) loadGa(gtag)
   if (!stored) showBanner(gtag)

@@ -11,7 +11,7 @@ import { Panels, SHIP_IMAGES, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
-import { initAnalytics } from './ui/consent'
+import { analyticsConfigured, initAnalytics, openConsentSettings, refreshConsentBanner } from './ui/consent'
 import { clearVoLinesQueue, configureVoLines, stopVoLines, voLinesOnEvents } from './ui/voLines'
 import { fmtDec, fmtNum, getLang, setLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
@@ -351,6 +351,8 @@ function showCinematicIntro(onDone: () => void): void {
       setLang(lang)
       bridge.lang = lang
       applyStaticI18n()
+      // lišta se souhlasem vznikla ještě před touhle volbou — přepsat texty
+      refreshConsentBanner()
       track('lang_set', { to: lang })
     }
     // VO ve zvoleném jazyce — načítá se až od kliknutí
@@ -500,6 +502,8 @@ function showStarMap(): void {
     + `<button id="btn-fleet">${t('menu.fleet')}</button>`
     + `<button id="btn-cine">${t('menu.intro')}</button>`
     + `<button id="btn-lang" class="dim">${t('menu.lang')}</button>`
+    + (analyticsConfigured()
+      ? `<button id="btn-cookies" class="dim">${t('menu.cookies')}</button>` : '')
     + `<button id="btn-unlock-all" class="${unlocked ? 'active' : 'dim'}">`
     + `${unlocked ? t('menu.unlockedAll') : t('menu.unlockAll')}</button>`
     + `</div>`
@@ -545,6 +549,8 @@ function showStarMap(): void {
     showStarMap()
   })
   // testovací přepínač: odemkne/zamkne všechny soustavy a p��ekreslí mapu
+  // souhlas s cookies jde kdykoli změnit i odvolat
+  onTap(el.querySelector('#btn-cookies'), () => openConsentSettings())
   onTap(el.querySelector('#btn-unlock-all'), () => {
     setUnlockAll(!unlockAllOn())
     leave()

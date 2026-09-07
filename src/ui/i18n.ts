@@ -47,6 +47,7 @@ const DICT: Record<string, { cs: string; en: string }> = {
   },
   'consent.accept': { cs: 'Souhlasím', en: 'Accept' },
   'consent.decline': { cs: 'Odmítnout', en: 'Decline' },
+  'menu.cookies': { cs: '🍪 SOUHLAS S COOKIES', en: '🍪 COOKIE CONSENT' },
   // hvězdná mapa / menu
   'map.title': { cs: 'HVĚZDNÁ MAPA', en: 'STAR CHART' },
   'map.progress': { cs: 'Postup kampaně:', en: 'Campaign progress:' },
