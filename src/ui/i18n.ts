@@ -40,6 +40,13 @@ export function toggleLang(): Lang {
 
 /** slovník: klíč → { cs, en } */
 const DICT: Record<string, { cs: string; en: string }> = {
+  // souhlas s cookies (GA4)
+  'consent.text': {
+    cs: 'Hra měří anonymní návštěvnost (Google Analytics). Bez souhlasu se neukládají žádné cookies.',
+    en: 'This game measures anonymous traffic (Google Analytics). No cookies are stored without your consent.',
+  },
+  'consent.accept': { cs: 'Souhlasím', en: 'Accept' },
+  'consent.decline': { cs: 'Odmítnout', en: 'Decline' },
   // hvězdná mapa / menu
   'map.title': { cs: 'HVĚZDNÁ MAPA', en: 'STAR CHART' },
   'map.progress': { cs: 'Postup kampaně:', en: 'Campaign progress:' },
