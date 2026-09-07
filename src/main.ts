@@ -545,6 +545,8 @@ function showStarMap(): void {
     track('lang_set', { to: toggleLang() })
     bridge.lang = getLang() === 'en' ? 'en' : 'cs' // příští mise v novém jazyce
     applyStaticI18n()
+    // lišta se souhlasem visí mimo menu, takže ji překreslení mapy mine
+    refreshConsentBanner()
     leave()
     showStarMap()
   })

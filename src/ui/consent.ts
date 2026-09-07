@@ -144,4 +144,15 @@ export function initAnalytics(): void {
 
   if (import.meta.env.PROD) loadGa(gtag)
   if (!stored) showBanner(gtag)
+
+  // Volba padlá v jiné záložce. Bez tohohle by tahle jela dál s původním
+  // souhlasem až do přenačtení, takže odvolání by chvíli neplatilo.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== null && e.key !== CONSENT_KEY) return
+    const choice = storedChoice()
+    if (!choice) return
+    gtag('consent', 'update', { analytics_storage: choice })
+    openBannerGtag = null
+    document.getElementById('cookie-consent')?.remove()
+  })
 }
