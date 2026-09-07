@@ -11,6 +11,7 @@ import { Panels, SHIP_IMAGES, esc, fmtTime, type HudView } from './ui/panels'
 import { MobileHud } from './ui/mobileHud'
 import { TutorialView } from './ui/tutorialView'
 import { track } from './ui/analytics'
+import { initAnalytics } from './ui/consent'
 import { clearVoLinesQueue, configureVoLines, stopVoLines, voLinesOnEvents } from './ui/voLines'
 import { fmtDec, fmtNum, getLang, setLang, t, t as tr, tf, toggleLang } from './ui/i18n'
 import { missionBriefing, missionTitle, objectiveText } from './data/briefings'
@@ -45,6 +46,9 @@ import { localizeEventText } from './data/localizeEvent'
 
 // Initialize Vercel Web Analytics
 inject()
+
+// GA4 + lišta souhlasu; jazyk je hotový už při importu i18n modulu.
+initAnalytics()
 
 const canvas = document.getElementById('plot') as HTMLCanvasElement
 const plotContainer = document.getElementById('plot-container') as HTMLElement
